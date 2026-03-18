@@ -36,7 +36,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   // 네트워크 상태
-  const [mode, setMode] = useState('error');
+  const [mode, setMode] = useState('connecting');
   const [chain, setChain] = useState(null);
   const [blockHeight, setBlockHeight] = useState(null);
   const [mempoolCount, setMempoolCount] = useState(null);
@@ -54,10 +54,7 @@ export default function App() {
   const peersRef = useRef(peers);
   peersRef.current = peers;
 
-  // TX 프레임 배치 카운터 (초당 TX 수)
-  const txTimestampsRef = useRef([]);
-
-  // TX 파티클 생성
+  // TX 파티클 생성 (txPerSec는 어댑터의 txPerSec 이벤트로만 관리)
   const spawnTxParticle = useCallback((txData) => {
     const { w, h } = getCanvasDims();
     const { x: cx, y: cy } = getNodeCenter(w, h);
@@ -66,13 +63,6 @@ export default function App() {
     const from = currentPeers[Math.floor(Math.random() * currentPeers.length)];
     const particle = createTxParticle(from, { x: cx, y: cy }, txData.txid);
     setParticles((prev) => [...prev, particle]);
-
-    // 초당 TX 카운트 업데이트
-    const now = Date.now();
-    txTimestampsRef.current.push(now);
-    const cutoff = now - 1000;
-    txTimestampsRef.current = txTimestampsRef.current.filter((t) => t > cutoff);
-    setTxPerSec(txTimestampsRef.current.length);
   }, []);
 
   // 블록 파티클 생성 (모든 피어로 전파)
@@ -103,6 +93,9 @@ export default function App() {
 
   // 데이터 소스 구독 useEffect
   useEffect(() => {
+    // 소스 전환 시 연결 중 상태로 초기화
+    setMode('connecting');
+
     const ds = createDataSource(sourceType, { url: customNodeUrl });
     const unsubs = [];
 
@@ -119,6 +112,7 @@ export default function App() {
 
     unsubs.push(ds.subscribe('tx', (data) => spawnTxParticle(data)));
 
+    // txPerSec는 어댑터에서 emit하는 값만 사용 (이중 계산 제거)
     unsubs.push(ds.subscribe('txPerSec', ({ value }) => setTxPerSec(value)));
 
     unsubs.push(ds.subscribe('block:received', (data) => {
@@ -127,6 +121,7 @@ export default function App() {
     }));
 
     unsubs.push(ds.subscribe('block:validated', (data) => {
+      // minedCount가 포함된 블록 데이터를 recentBlocks에 추가
       setRecentBlocks((prev) => [data, ...prev].slice(0, MAX_RECENT_BLOCKS));
     }));
 
@@ -134,11 +129,25 @@ export default function App() {
       spawnBlockParticles(data);
     }));
 
+    unsubs.push(ds.subscribe('block:mined', ({ count }) => {
+      // mined TX 수는 block:validated 이벤트의 minedCount 필드로 이미 전달됨
+      // 여기서는 별도 처리 불필요 (로그만)
+      console.log(`[App] ${count} txs confirmed in block`);
+    }));
+
     unsubs.push(ds.subscribe('mempool', ({ count }) => setMempoolCount(count)));
 
     unsubs.push(ds.subscribe('fees', ({ fastestFee }) => setFeeRate(fastestFee)));
 
     unsubs.push(ds.subscribe('difficulty', (da) => setDiffAdj(da)));
+
+    // removed/replaced TX는 mempool 카운트가 mempoolInfo로 자동 갱신되므로 별도 처리 불필요
+    unsubs.push(ds.subscribe('tx:removed', ({ count }) => {
+      console.log(`[App] ${count} txs removed from mempool`);
+    }));
+    unsubs.push(ds.subscribe('tx:replaced', ({ count }) => {
+      console.log(`[App] ${count} txs replaced (RBF)`);
+    }));
 
     return () => {
       unsubs.forEach((u) => u());
@@ -153,8 +162,7 @@ export default function App() {
     setSourceType(newType);
     setCustomNodeUrl(newUrl);
     setSettingsOpen(false);
-    // 상태 초기화
-    setMode('error');
+    // 상태 초기화 (mode는 useEffect에서 'connecting'으로 설정)
     setRecentBlocks([]);
     setMempoolCount(null);
     setFeeRate(null);

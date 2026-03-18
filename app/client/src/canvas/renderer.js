@@ -146,8 +146,9 @@ function drawText(ctx, text, x, y, { color = COLORS.hudText, size = 11, bold = f
 
 function drawStatusDot(ctx, x, y, mode) {
   const color =
-    mode === 'live' ? COLORS.dotGreen :
-    mode === 'electrum' ? COLORS.dotGreen :
+    mode === 'live'       ? COLORS.dotGreen :
+    mode === 'electrum'   ? COLORS.dotGreen :
+    mode === 'connecting' ? COLORS.dotOrange :
     COLORS.dotRed;
   ctx.beginPath();
   ctx.arc(x, y, 5, 0, Math.PI * 2);
@@ -204,19 +205,16 @@ function drawHud(ctx, state, w, h) {
   ny += 16;
   drawText(ctx, `Height: ${state.blockHeight != null ? state.blockHeight.toLocaleString() : '—'}`, nl, ny, { size: 10 });
   ny += 16;
-  // Peers → Fee
   const feeStr = state.feeRate != null ? `${state.feeRate} sat/vB` : '—';
   drawText(ctx, `Fee:    ${feeStr}`, nl, ny, { size: 10 });
   ny += 16;
   drawText(ctx, `Mempool:${state.mempoolCount != null ? ' ' + state.mempoolCount.toLocaleString() + ' tx' : ' —'}`, nl, ny, { size: 10 });
   ny += 16;
-  // Sync → Diff
   const diffStr = state.diffAdj != null
     ? `${state.diffAdj.progressPercent.toFixed(1)}% (~${state.diffAdj.remainingBlocks})`
     : '—';
   drawText(ctx, `Diff:   ${diffStr}`, nl, ny, { size: 10 });
   ny += 16;
-  // TX/s
   drawText(ctx, `TX/s:   ${state.txPerSec != null ? Number(state.txPerSec).toFixed(1) : '0.0'}`, nl, ny, { size: 10 });
 
   // ── 상태 패널 ──
@@ -228,12 +226,14 @@ function drawHud(ctx, state, w, h) {
   sy += 22;
   drawStatusDot(ctx, sl + 5, sy - 4, state.mode);
   const connLabel =
-    state.mode === 'live' ? 'mempool.space' :
-    state.mode === 'electrum' ? 'Electrum WSS' :
+    state.mode === 'live'       ? 'mempool.space' :
+    state.mode === 'electrum'   ? 'Electrum WSS' :
+    state.mode === 'connecting' ? 'Connecting...' :
     'Disconnected';
   const connColor =
-    state.mode === 'live' ? COLORS.dotGreen :
-    state.mode === 'electrum' ? COLORS.dotGreen :
+    state.mode === 'live'       ? COLORS.dotGreen :
+    state.mode === 'electrum'   ? COLORS.dotGreen :
+    state.mode === 'connecting' ? COLORS.dotOrange :
     COLORS.dotRed;
   drawText(ctx, `  ${connLabel}`, sl + 2, sy, { size: 10, color: connColor });
 
@@ -255,9 +255,12 @@ function drawHud(ctx, state, w, h) {
       const hash = b.hash ? b.hash.slice(0, 10) + '…' : '—';
       drawText(ctx, `#${b.height ?? '?'} ${hash}`, bl, by, { size: 10 });
       by += 13;
-      const txInfo = b.txCount != null ? `${b.txCount} txs` : '? txs';
-      const verif = b.merkleOk ? '✓' : '✗';
-      drawText(ctx, `  ${txInfo} ${verif}`, bl, by, {
+      // minedCount가 있으면 "X confirmed / Y total", 없으면 "X txs"
+      const txInfo = b.minedCount != null
+        ? `  ${b.minedCount} confirmed / ${b.txCount ?? '?'} total`
+        : `  ${b.txCount ?? '?'} txs`;
+      const verif = b.merkleOk ? ' ✓' : ' ✗';
+      drawText(ctx, txInfo + verif, bl, by, {
         size: 9, color: b.merkleOk ? COLORS.dotGreen : COLORS.dotRed,
       });
       if (b.pool) {

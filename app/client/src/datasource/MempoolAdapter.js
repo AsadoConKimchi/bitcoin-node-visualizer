@@ -43,6 +43,7 @@ export class MempoolAdapter extends EventBus {
 
       // 원하는 이벤트 스트림 구독 요청
       this._ws.send(JSON.stringify({ action: 'want', data: ['blocks', 'stats', 'mempool-blocks'] }));
+      // mempool TX 델타 추적 요청
       this._ws.send(JSON.stringify({ 'track-mempool-txids': true }));
 
       this.emit('__connected', {});
@@ -80,20 +81,31 @@ export class MempoolAdapter extends EventBus {
   // ── 메시지 파싱 ─────────────────────────────────────────────────────────────
 
   _handleMessage(msg) {
-    // 새 블록
-    if (msg.block) {
-      this._handleBlock(msg.block);
-    }
-
-    // mempool TX 델타
+    // mempool TX 델타 — 블록 이벤트보다 먼저 처리해서 minedCount를 블록에 포함
+    let minedCount = 0;
     if (msg['mempool-txids']) {
       const delta = msg['mempool-txids'];
+
       if (delta.added?.length) {
         this._queueTxs(delta.added);
       }
       if (delta.mined?.length) {
-        this.emit('block:mined', { txids: delta.mined, count: delta.mined.length });
+        minedCount = delta.mined.length;
+        this.emit('block:mined', { txids: delta.mined, count: minedCount });
       }
+      if (delta.removed?.length) {
+        // mempool에서 만료/수수료 부족으로 제거된 TX
+        this.emit('tx:removed', { count: delta.removed.length });
+      }
+      if (delta.replaced?.length) {
+        // RBF 교체된 TX
+        this.emit('tx:replaced', { count: delta.replaced.length });
+      }
+    }
+
+    // 새 블록 — minedCount와 함께 처리
+    if (msg.block) {
+      this._handleBlock(msg.block, minedCount);
     }
 
     // mempool 통계
@@ -122,13 +134,14 @@ export class MempoolAdapter extends EventBus {
     }
   }
 
-  _handleBlock(block) {
+  _handleBlock(block, minedCount = 0) {
     const data = {
       hash: block.id,
       height: block.height,
       txCount: block.tx_count,
       pool: block.extras?.pool?.name ?? null,
       feeRange: block.extras?.feeRange ?? null,
+      minedCount,
     };
 
     // 3단계 블록 애니메이션
@@ -175,7 +188,7 @@ export class MempoolAdapter extends EventBus {
       }, i * stagger);
     });
 
-    // 초당 TX 수 계산용 타임스탬프 갱신 (1초 이전 항목 제거)
+    // 초당 TX 수 계산 (1초 이전 항목 제거)
     const cutoff = Date.now() - 1000;
     this._txTimestamps = this._txTimestamps.filter((t) => t > cutoff);
     this.emit('txPerSec', { value: this._txTimestamps.length });
@@ -221,6 +234,7 @@ export class MempoolAdapter extends EventBus {
           pool: b.extras?.pool?.name ?? null,
           feeRange: b.extras?.feeRange ?? null,
           merkleOk: true,
+          minedCount: null, // 초기 데이터는 mined 카운트 없음
         })),
       });
 
