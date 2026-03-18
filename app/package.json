@@ -1,0 +1,27 @@
+{
+  "name": "bitcoin-node-visualizer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "concurrently \"node server/index.js\" \"vite client --host\"",
+    "build": "vite build client",
+    "start": "node server/index.js",
+    "preview": "vite preview client"
+  },
+  "dependencies": {
+    "bitcoinjs-lib": "^5.2.0",
+    "ecpair": "^2.1.0",
+    "express": "^4.18.0",
+    "tiny-secp256k1": "^2.2.0",
+    "ws": "^8.14.0",
+    "zeromq": "^6.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.0",
+    "concurrently": "^8.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "vite": "^5.0.0"
+  }
+}

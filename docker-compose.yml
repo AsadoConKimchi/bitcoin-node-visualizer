@@ -1,0 +1,34 @@
+version: "3.7"
+
+services:
+  app:
+    image: bitcoin-node-visualizer:latest
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    stop_grace_period: 1m
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      # Bitcoin Core RPC
+      BITCOIN_RPC_HOST: ${APP_BITCOIN_NODE_IP:-bitcoin}
+      BITCOIN_RPC_PORT: ${APP_BITCOIN_RPC_PORT:-8332}
+      BITCOIN_RPC_USER: ${APP_BITCOIN_RPC_USER:-umbrel}
+      BITCOIN_RPC_PASS: ${APP_BITCOIN_RPC_PASS:-umbrel}
+      # ZMQ (optional — app falls back to RPC polling if unavailable)
+      BITCOIN_ZMQ_HOST: ${APP_BITCOIN_NODE_IP:-bitcoin}
+      BITCOIN_ZMQ_RAWBLOCK_PORT: ${APP_BITCOIN_ZMQ_RAWBLOCK_PORT:-28332}
+      BITCOIN_ZMQ_RAWTX_PORT: ${APP_BITCOIN_ZMQ_RAWTX_PORT:-28333}
+      # Server
+      PORT: 3000
+      NODE_ENV: production
+    networks:
+      - default
+      - bitcoin_default  # adjust to your Umbrel Bitcoin network name
+
+networks:
+  default:
+  bitcoin_default:
+    external: true
+    name: ${BITCOIN_NETWORK_NAME:-bitcoin_default}

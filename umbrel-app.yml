@@ -1,0 +1,24 @@
+manifestVersion: 1
+id: bitcoin-node-visualizer
+category: bitcoin
+name: Bitcoin Node Visualizer
+version: "1.0.0"
+tagline: Real-time Bitcoin block & transaction canvas visualization
+description: >
+  Visualize your Bitcoin Core full node in real time.
+  Watch blocks being received, validated, and propagated across peers
+  through a live Canvas animation. Supports ZMQ push events with
+  automatic RPC polling fallback.
+developer: AsadoConKimchi
+website: https://github.com/AsadoConKimchi/bitcoin-node-visualizer
+dependencies:
+  - bitcoin
+repo: https://github.com/AsadoConKimchi/bitcoin-node-visualizer
+support: https://github.com/AsadoConKimchi/bitcoin-node-visualizer/issues
+port: 3000
+gallery:
+  - 1.jpg
+  - 2.jpg
+path: ""
+defaultUsername: ""
+defaultPassword: ""
