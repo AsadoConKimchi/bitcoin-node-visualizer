@@ -84,9 +84,9 @@ export function updateParticles(particles) {
     }
   }
 
-  // 완료 파티클 제거 (최대 200개 제한)
+  // 완료 파티클 제거 (최대 500개 제한)
   const active = particles.filter((p) => !p.done);
-  return active.length > 200 ? active.slice(-200) : active;
+  return active.length > 500 ? active.slice(-500) : active;
 }
 
 function lerp(a, b, t) { return a + (b - a) * t; }

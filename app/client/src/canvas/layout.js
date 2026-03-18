@@ -68,11 +68,11 @@ export function getHudLayout(w, h) {
   const panelW = 220;
   const panelH = 180;
   return {
-    // 좌상단 패널 (노드 정보)
-    nodePanel: { x: pad, y: pad, w: panelW, h: panelH },
+    // 좌상단 패널 (노드 정보) — TX/s 항목 추가로 높이 증가
+    nodePanel: { x: pad, y: pad, w: panelW, h: 210 },
     // 우상단 패널 (연결 상태)
-    statusPanel: { x: w - panelW - pad, y: pad, w: panelW, h: 120 },
-    // 좌하단 패널 (최근 블록)
-    blockPanel: { x: pad, y: h - 200 - pad, w: panelW, h: 200 },
+    statusPanel: { x: w - panelW - pad, y: pad, w: panelW, h: 100 },
+    // 좌하단 패널 (최근 블록) — pool, fee 추가로 높이 증가
+    blockPanel: { x: pad, y: h - 270 - pad, w: panelW, h: 270 },
   };
 }
