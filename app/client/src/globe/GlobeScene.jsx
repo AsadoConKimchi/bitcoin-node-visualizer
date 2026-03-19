@@ -76,7 +76,7 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings }, r
     globe.pointLat('lat');
     globe.pointLng('lng');
     globe.pointAltitude(0.015);
-    globe.pointRadius((d) => (d.isMyNode ? 1.0 : d.isMyPeer ? 0.7 : 0.25));
+    globe.pointRadius((d) => (d.isMyNode ? 2.5 : d.isMyPeer ? 0.7 : 0.25));
     globe.pointColor((d) => (d.isMyNode ? '#f7931a' : d.isMyPeer ? '#22c55e' : '#4a7dff'));
     globe.pointsMerge(false);
 

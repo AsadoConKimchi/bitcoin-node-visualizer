@@ -106,7 +106,16 @@ export class NodeDataManager {
       const peerPoints = await this._fetchPeers();
       if (!this._destroyed) this._onUpdate([...bgPoints, ...peerPoints, MY_NODE]);
     } else {
-      if (!this._destroyed) this._onUpdate([...bgPoints, MY_NODE]);
+      // mempool 모드: bitnodes 데이터에서 가상 피어 8~12개 선택
+      const peerCount = 8 + Math.floor(Math.random() * 5);
+      const shuffled = [...bgPoints].sort(() => Math.random() - 0.5);
+      const virtualPeers = shuffled.slice(0, peerCount).map((p) => ({
+        ...p,
+        isMyPeer: true,
+        subver: '/Satoshi:27.0.0/',
+      }));
+      const remaining = shuffled.slice(peerCount);
+      if (!this._destroyed) this._onUpdate([...remaining, ...virtualPeers, MY_NODE]);
     }
   }
 
