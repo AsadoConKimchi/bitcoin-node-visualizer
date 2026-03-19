@@ -79,11 +79,24 @@ async function processRawBlock(buf) {
       ? block.transactions.map((tx) => tx.getId())
       : [];
 
+    // merkleRoot/prevHash를 in-place reverse 전에 미리 캡처
+    const headerMerkleRoot = Buffer.from(block.merkleRoot).reverse().toString('hex');
+    const headerPrevHash = Buffer.from(block.prevHash).reverse().toString('hex');
+
     // Merkle 재검증
     const calcRoot = block.transactions ? calcMerkleRoot(txids) : null;
     const merkleMatch =
       calcRoot === null ||
-      calcRoot === block.merkleRoot.reverse().toString('hex');
+      calcRoot === headerMerkleRoot;
+
+    // coinbase 보상 계산 (첫 TX의 아웃풋 합)
+    const coinbaseValue = block.transactions?.[0]
+      ? block.transactions[0].outs.reduce((s, o) => s + o.value, 0)
+      : null;
+    // 블록 weight 계산 (전체 TX weight 합)
+    const blockWeight = block.transactions
+      ? block.transactions.reduce((s, tx) => s + tx.weight(), 0)
+      : null;
 
     const summary = {
       hash: blockHash,
@@ -93,12 +106,19 @@ async function processRawBlock(buf) {
       time: block.timestamp,
       merkleOk: merkleMatch,
       source: 'zmq',
+      version: block.version,
+      nBits: block.bits,
+      prevHash: headerPrevHash,
+      merkleRoot: headerMerkleRoot,
+      txidSample: txids.length <= 8 ? txids : [...txids.slice(0, 4), ...txids.slice(-4)],
+      coinbaseValue,
+      weight: blockWeight,
     };
 
-    // 단계별 이벤트 방출
+    // 단계별 이벤트 방출 (500ms 간격)
     broadcaster.broadcast('block:received', summary);
-    broadcaster.broadcast('block:validated', { ...summary, merkleOk: merkleMatch });
-    broadcaster.broadcast('block:propagated', summary);
+    setTimeout(() => broadcaster.broadcast('block:validated', { ...summary, merkleOk: merkleMatch }), 500);
+    setTimeout(() => broadcaster.broadcast('block:propagated', summary), 1000);
 
     console.log(
       `[validator] 블록 수신 height=? hash=${blockHash.slice(0, 12)}... txs=${txids.length} merkle=${merkleMatch ? 'OK' : 'FAIL'}`
@@ -122,6 +142,12 @@ async function processBlock(block, source = 'rpc') {
     const calcRoot = calcMerkleRoot(txids);
     const merkleOk = calcRoot === block.merkleroot;
 
+    // coinbase 보상 (RPC verbosity=2 → tx[0].vout 합산)
+    const coinbaseTx = block.tx?.[0];
+    const coinbaseValue = coinbaseTx?.vout
+      ? Math.round(coinbaseTx.vout.reduce((s, o) => s + (o.value || 0), 0) * 1e8)
+      : null;
+
     const summary = {
       hash: block.hash,
       height: block.height,
@@ -132,11 +158,18 @@ async function processBlock(block, source = 'rpc') {
       difficulty: block.difficulty,
       merkleOk,
       source,
+      version: block.version,
+      nBits: block.bits,
+      prevHash: block.previousblockhash,
+      merkleRoot: block.merkleroot,
+      txidSample: txids.length <= 8 ? txids : [...txids.slice(0, 4), ...txids.slice(-4)],
+      coinbaseValue,
     };
 
+    // 단계별 이벤트 방출 (500ms 간격)
     broadcaster.broadcast('block:received', summary);
-    broadcaster.broadcast('block:validated', summary);
-    broadcaster.broadcast('block:propagated', summary);
+    setTimeout(() => broadcaster.broadcast('block:validated', summary), 500);
+    setTimeout(() => broadcaster.broadcast('block:propagated', summary), 1000);
 
     console.log(
       `[validator] 블록 처리 height=${block.height} hash=${block.hash.slice(0, 12)}... txs=${txids.length} merkle=${merkleOk ? 'OK' : 'FAIL'}`

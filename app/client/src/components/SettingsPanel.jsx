@@ -1,172 +1,151 @@
-/**
- * SettingsPanel — 데이터 소스 설정 UI
- * Canvas 위에 position: absolute로 표시
- * HUD 스타일 매칭 (검정 배경, 주황 테두리, Courier New)
- */
-
 import React, { useState } from 'react';
 
-export default function SettingsPanel({ sourceType, customNodeUrl, onConnect, onClose }) {
+export default function SettingsPanel({ sourceType, serverUrl, onConnect, onClose }) {
   const [selectedType, setSelectedType] = useState(sourceType);
-  const [urlInput, setUrlInput] = useState(customNodeUrl || '');
+  const [serverInput, setServerInput] = useState(serverUrl || '');
+  const [testing, setTesting] = useState(false);
+  const [testError, setTestError] = useState('');
+  const [testWarning, setTestWarning] = useState('');
 
-  function handleConnect() {
-    onConnect(selectedType, selectedType === 'electrum' ? urlInput.trim() : '');
+  async function handleConnect() {
+    if (selectedType === 'mempool') {
+      onConnect('mempool', '');
+      return;
+    }
+
+    const url = serverInput.trim();
+
+    if (!url) {
+      onConnect('server', '');
+      return;
+    }
+
+    setTesting(true);
+    setTestError('');
+    setTestWarning('');
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`${url}/health`, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!res.ok) throw new Error(`서버 응답 오류 (${res.status})`);
+      const json = await res.json();
+      if (!json.ok) throw new Error('서버가 준비되지 않음');
+
+      if (json.rpcConnected === false) {
+        setTestWarning('서버 연결됨, Bitcoin Core 미연결 (RPC 오류)');
+      }
+
+      onConnect('server', url);
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        setTestError('연결 시간 초과 (5초). URL을 확인하세요.');
+      } else {
+        setTestError(`연결 실패: ${err.message}`);
+      }
+    } finally {
+      setTesting(false);
+    }
   }
 
+  const canConnect = selectedType === 'mempool' || selectedType === 'server';
+
   return (
-    <div style={styles.overlay}>
-      <div style={styles.panel}>
+    <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
+      <div className="bg-[rgba(0,0,0,0.92)] border border-btc-orange rounded-md
+                     px-6 py-5 w-[380px] font-mono text-btc-orange
+                     max-sm:w-[calc(100vw-32px)] max-sm:px-4">
         {/* 헤더 */}
-        <div style={styles.header}>
-          <span style={styles.title}>DATA SOURCE</span>
-          <button style={styles.closeBtn} onClick={onClose}>✕</button>
+        <div className="flex justify-between items-center mb-5">
+          <span className="text-base font-bold tracking-wider">DATA SOURCE</span>
+          <button
+            className="bg-transparent border-none text-btc-orange cursor-pointer text-lg px-1 hover:opacity-70"
+            onClick={onClose}
+          >
+            ✕
+          </button>
         </div>
 
         {/* mempool.space 옵션 */}
-        <label style={styles.option}>
+        <label className="flex items-start gap-2.5 mb-3.5 cursor-pointer">
           <input
             type="radio"
             name="sourceType"
             value="mempool"
             checked={selectedType === 'mempool'}
-            onChange={() => setSelectedType('mempool')}
-            style={styles.radio}
+            onChange={() => { setSelectedType('mempool'); setTestError(''); setTestWarning(''); }}
+            className="accent-btc-orange w-4 h-4 cursor-pointer mt-0.5 shrink-0"
           />
-          <span style={styles.optionLabel}>mempool.space (Public)</span>
+          <div>
+            <div className="text-sm mb-0.5">mempool.space (Demo)</div>
+            <div className="text-xs text-[#a16207]">공개 데이터로 시각화. 노드 불필요.</div>
+          </div>
         </label>
 
-        {/* Electrum 옵션 */}
-        <label style={styles.option}>
+        {/* My Full Node 옵션 */}
+        <label className="flex items-start gap-2.5 mb-3.5 cursor-pointer">
           <input
             type="radio"
             name="sourceType"
-            value="electrum"
-            checked={selectedType === 'electrum'}
-            onChange={() => setSelectedType('electrum')}
-            style={styles.radio}
+            value="server"
+            checked={selectedType === 'server'}
+            onChange={() => { setSelectedType('server'); setTestError(''); setTestWarning(''); }}
+            className="accent-btc-orange w-4 h-4 cursor-pointer mt-0.5 shrink-0"
           />
-          <span style={styles.optionLabel}>Custom Node (Electrum WSS)</span>
+          <div>
+            <div className="text-sm mb-0.5">My Full Node</div>
+            <div className="text-xs text-[#a16207]">내 Bitcoin Core에 연결된 서버 필요.</div>
+          </div>
         </label>
 
-        {/* Electrum URL 입력 */}
-        {selectedType === 'electrum' && (
-          <input
-            type="text"
-            value={urlInput}
-            onChange={(e) => setUrlInput(e.target.value)}
-            placeholder="wss://your-node:50004"
-            style={styles.urlInput}
-            autoFocus
-          />
+        {/* 서버 URL 입력 */}
+        {selectedType === 'server' && (
+          <div className="mt-1">
+            {sourceType === 'server' && !serverUrl && (
+              <div className="text-xs text-success mb-1.5">✓ Self-hosted (자동 감지)</div>
+            )}
+            <div className="text-xs text-[#a16207] mb-1">서버 URL (비워두면 same-origin)</div>
+            <input
+              type="text"
+              value={serverInput}
+              onChange={(e) => { setServerInput(e.target.value); setTestError(''); setTestWarning(''); }}
+              placeholder="http://100.x.x.x:3000"
+              className="w-full bg-black/70 border border-[#a16207] rounded
+                        text-btc-orange font-mono text-sm px-2.5 py-2 mb-1
+                        outline-none focus:border-btc-orange"
+              autoFocus
+              disabled={testing}
+            />
+            {testError && (
+              <div className="text-xs text-error mt-1 mb-1 leading-snug">{testError}</div>
+            )}
+            {testWarning && (
+              <div className="text-xs text-orange-500 mt-1 mb-1 leading-snug">{testWarning}</div>
+            )}
+          </div>
         )}
 
         {/* 버튼 행 */}
-        <div style={styles.buttonRow}>
-          <button style={styles.connectBtn} onClick={handleConnect}>Connect</button>
-          <button style={styles.cancelBtn} onClick={onClose}>Cancel</button>
+        <div className="flex justify-end gap-2.5 mt-5">
+          <button
+            className={`bg-btc-orange border-none rounded text-black font-mono font-bold
+                       text-sm px-5 py-2 ${(!canConnect || testing) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-btc-orange/90'}`}
+            onClick={handleConnect}
+            disabled={!canConnect || testing}
+          >
+            {testing ? 'Testing...' : 'Connect'}
+          </button>
+          <button
+            className="bg-transparent border border-[#a16207] rounded text-[#a16207]
+                      font-mono text-sm px-4 py-2 cursor-pointer hover:border-btc-orange hover:text-btc-orange"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
         </div>
       </div>
     </div>
   );
 }
-
-const styles = {
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'rgba(0,0,0,0.6)',
-    zIndex: 10,
-  },
-  panel: {
-    background: 'rgba(0,0,0,0.92)',
-    border: '1px solid #f7931a',
-    borderRadius: 6,
-    padding: '20px 24px',
-    width: 340,
-    fontFamily: "'Courier New', monospace",
-    color: '#f7931a',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  closeBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#f7931a',
-    cursor: 'pointer',
-    fontSize: 16,
-    padding: '0 4px',
-  },
-  option: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
-    cursor: 'pointer',
-  },
-  radio: {
-    accentColor: '#f7931a',
-    width: 16,
-    height: 16,
-    cursor: 'pointer',
-  },
-  optionLabel: {
-    fontSize: 13,
-  },
-  urlInput: {
-    width: '100%',
-    background: 'rgba(0,0,0,0.7)',
-    border: '1px solid #a16207',
-    borderRadius: 4,
-    color: '#f7931a',
-    fontFamily: "'Courier New', monospace",
-    fontSize: 12,
-    padding: '8px 10px',
-    marginTop: 4,
-    marginBottom: 8,
-    boxSizing: 'border-box',
-    outline: 'none',
-  },
-  buttonRow: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 20,
-  },
-  connectBtn: {
-    background: '#f7931a',
-    border: 'none',
-    borderRadius: 4,
-    color: '#000',
-    fontFamily: "'Courier New', monospace",
-    fontWeight: 'bold',
-    fontSize: 12,
-    padding: '8px 20px',
-    cursor: 'pointer',
-  },
-  cancelBtn: {
-    background: 'none',
-    border: '1px solid #a16207',
-    borderRadius: 4,
-    color: '#a16207',
-    fontFamily: "'Courier New', monospace",
-    fontSize: 12,
-    padding: '8px 16px',
-    cursor: 'pointer',
-  },
-};

@@ -1,19 +1,23 @@
 /**
- * MempoolAdapter — mempool.space 공개 API 어댑터
+ * MempoolAdapter — mempool.space (또는 커스텀 Mempool 인스턴스) API 어댑터
  * WebSocket: wss://mempool.space/api/v1/ws
  * REST: https://mempool.space/api/...
  */
 
 import { EventBus } from './EventBus.js';
 
-const WS_URL = 'wss://mempool.space/api/v1/ws';
-const REST_BASE = 'https://mempool.space/api';
+const DEFAULT_BASE = 'https://mempool.space';
 const REST_POLL_INTERVAL = 30_000;
 const MAX_RECONNECT_DELAY = 30_000;
 
 export class MempoolAdapter extends EventBus {
-  constructor() {
+  constructor(baseUrl = '') {
     super();
+    const base = (baseUrl || DEFAULT_BASE).replace(/\/+$/, '');
+    const isSecure = base.startsWith('https');
+    this._wsUrl = `${isSecure ? 'wss' : 'ws'}://${base.replace(/^https?:\/\//, '')}/api/v1/ws`;
+    this._restBase = `${base}/api`;
+
     this._ws = null;
     this._reconnectTimer = null;
     this._reconnectDelay = 1000;
@@ -35,7 +39,7 @@ export class MempoolAdapter extends EventBus {
     if (this._destroyed) return;
     if (this._ws && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) return;
 
-    this._ws = new WebSocket(WS_URL);
+    this._ws = new WebSocket(this._wsUrl);
 
     this._ws.addEventListener('open', () => {
       console.log('[MempoolAdapter] WS 연결됨');
@@ -106,6 +110,11 @@ export class MempoolAdapter extends EventBus {
     // 새 블록 — minedCount와 함께 처리
     if (msg.block) {
       this._handleBlock(msg.block, minedCount);
+    }
+
+    // mempool-blocks (수수료 분포 데이터)
+    if (msg['mempool-blocks']) {
+      this.emit('mempool:blocks', msg['mempool-blocks']);
     }
 
     // mempool 통계
@@ -211,10 +220,10 @@ export class MempoolAdapter extends EventBus {
     if (this._destroyed) return;
     try {
       const [blocksRes, mempoolRes, feesRes, daRes] = await Promise.all([
-        fetch(`${REST_BASE}/blocks`),
-        fetch(`${REST_BASE}/mempool`),
-        fetch(`${REST_BASE}/v1/fees/recommended`),
-        fetch(`${REST_BASE}/v1/difficulty-adjustment`),
+        fetch(`${this._restBase}/blocks`),
+        fetch(`${this._restBase}/mempool`),
+        fetch(`${this._restBase}/v1/fees/recommended`),
+        fetch(`${this._restBase}/v1/difficulty-adjustment`),
       ]);
 
       const recentBlocks = blocksRes.ok ? await blocksRes.json() : [];

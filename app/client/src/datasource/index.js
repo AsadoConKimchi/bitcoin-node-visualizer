@@ -4,19 +4,21 @@
  */
 
 import { MempoolAdapter } from './MempoolAdapter.js';
+import { ServerAdapter } from './ServerAdapter.js';
 import { ElectrumAdapter } from './ElectrumAdapter.js';
 
 /**
- * @param {'mempool'|'electrum'} type
+ * @param {'mempool' | 'server' | 'electrum'} type
  * @param {{ url?: string }} [options]
- * @returns {MempoolAdapter | ElectrumAdapter}
+ * @returns {MempoolAdapter | ServerAdapter | ElectrumAdapter}
  */
 export function createDataSource(type, options = {}) {
-  switch (type) {
-    case 'electrum':
-      return new ElectrumAdapter(options.url);
-    case 'mempool':
-    default:
-      return new MempoolAdapter();
+  if (type === 'server') {
+    return new ServerAdapter(options.url);
   }
+  if (type === 'electrum') {
+    return new ElectrumAdapter(options.url);
+  }
+  // 기본: mempool.space 공개 API
+  return new MempoolAdapter(options.url);
 }

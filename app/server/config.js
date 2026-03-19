@@ -1,5 +1,9 @@
 'use strict';
 
+// .env.local → .env 순서로 로드 (Vite 컨벤션 맞춤)
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env.local') });
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+
 const config = {
   // 서버
   port: parseInt(process.env.PORT || '3000', 10),

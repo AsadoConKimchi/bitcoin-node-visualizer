@@ -11,6 +11,10 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    // dev proxy 제거 — 백엔드 불필요, 브라우저가 mempool.space WS에 직접 연결
+    proxy: {
+      '/health': 'http://localhost:3000',
+      '/api': 'http://localhost:3000',
+      '/ws': { target: 'ws://localhost:3000', ws: true },
+    },
   },
 });

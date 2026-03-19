@@ -1,0 +1,119 @@
+import React, { useRef, useState, useEffect } from 'react';
+
+const STATUS_COLOR = {
+  'active': 'text-success',
+  'valid-fork': 'text-orange-500',
+  'valid-headers': 'text-yellow-400',
+  'headers-only': 'text-yellow-700',
+  'invalid': 'text-error',
+};
+
+const STATUS_LABEL = {
+  'active': 'ACTIVE',
+  'valid-fork': 'FORK',
+  'valid-headers': 'HEADERS',
+  'headers-only': 'HDR-ONLY',
+  'invalid': 'INVALID',
+};
+
+export default function ChainTipsPanel({ chaintips }) {
+  if (!chaintips?.length) return null;
+
+  const prevActiveRef = useRef(null);
+  const [reorgEvent, setReorgEvent] = useState(null);
+
+  const activeTip = chaintips.find((t) => t.status === 'active');
+
+  useEffect(() => {
+    if (!activeTip) return;
+    const prev = prevActiveRef.current;
+    if (prev && prev.hash !== activeTip.hash) {
+      const depth = prev.height - activeTip.height + 1;
+      setReorgEvent({
+        prevHash: prev.hash,
+        prevHeight: prev.height,
+        newHash: activeTip.hash,
+        newHeight: activeTip.height,
+        depth: Math.abs(depth) || 1,
+        time: Date.now(),
+      });
+      const t = setTimeout(() => setReorgEvent(null), 15000);
+      return () => clearTimeout(t);
+    }
+    prevActiveRef.current = { hash: activeTip.hash, height: activeTip.height };
+  }, [activeTip?.hash]);
+
+  const sorted = [...chaintips].sort((a, b) => {
+    if (a.status === 'active') return -1;
+    if (b.status === 'active') return 1;
+    return b.height - a.height;
+  });
+
+  const forks = sorted.filter((t) => t.status !== 'active');
+
+  return (
+    <div className="absolute top-14 right-4 bg-panel-bg-light border border-btc-orange/40
+                    rounded-md px-3.5 py-2.5 font-mono text-sm text-btc-orange
+                    backdrop-blur-sm leading-7 min-w-[260px] max-w-[320px] z-8
+                    max-sm:right-2 max-sm:min-w-[220px]">
+      {/* Reorg 배너 */}
+      {reorgEvent && (
+        <div className="bg-red-900 border border-error rounded px-2 py-1.5 mb-2
+                       text-xs text-red-300 text-center"
+             style={{ animation: 'pulse 1s infinite alternate' }}>
+          ⚠ REORG 감지 — 깊이 {reorgEvent.depth}블록
+          <div className="text-error/50 text-[9px]">
+            #{reorgEvent.prevHeight} → #{reorgEvent.newHeight}
+          </div>
+        </div>
+      )}
+
+      {/* 헤더 */}
+      <div className="flex justify-between items-center mb-1.5 pb-1.5 border-b border-btc-orange/20">
+        <span className="font-bold text-xs tracking-widest">▸ CHAIN TIPS</span>
+        <span className="text-btc-orange/30 text-xs">{chaintips.length} tips</span>
+      </div>
+
+      {/* Active 팁 */}
+      {activeTip && (
+        <div className="mb-1.5 pb-1.5 border-b border-btc-orange/10">
+          <div className="flex justify-between gap-2">
+            <span className="text-success text-xs">● ACTIVE</span>
+            <span className="text-btc-orange">#{activeTip.height.toLocaleString()}</span>
+          </div>
+          <div className="text-btc-orange/30 text-xs">
+            {activeTip.hash?.slice(0, 16)}…
+          </div>
+        </div>
+      )}
+
+      {/* 분기 기록 */}
+      {forks.length === 0 ? (
+        <div className="text-btc-orange/25 text-xs">분기 없음</div>
+      ) : (
+        forks.map((tip) => {
+          const isReverted = reorgEvent && tip.hash === reorgEvent.prevHash;
+          return (
+            <div
+              key={tip.hash}
+              className={`mb-1 ${isReverted ? 'opacity-50 border-l-2 border-error pl-1.5' : ''}`}
+            >
+              <div className="flex justify-between gap-2">
+                <span className={`text-xs ${isReverted ? 'text-error' : (STATUS_COLOR[tip.status] || 'text-orange-500')}`}>
+                  {isReverted ? 'REVERTED' : (STATUS_LABEL[tip.status] || tip.status.toUpperCase())}
+                </span>
+                <span className={isReverted ? 'text-muted' : 'text-btc-orange'}>
+                  #{tip.height.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between text-btc-orange/30 text-xs">
+                <span>{tip.hash?.slice(0, 12)}…</span>
+                {tip.branchlen > 0 && <span>{tip.branchlen} blk</span>}
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}

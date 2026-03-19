@@ -91,6 +91,39 @@ async function getBlockchainInfo() {
   return rpcCall('getblockchaininfo');
 }
 
+/** 멤풀 정책/상태 반환 (최소fee, 최대크기, 현재사용량 등) */
+async function getMempoolInfo() {
+  return rpcCall('getmempoolinfo');
+}
+
+/** 체인 분기 기록 반환 (stale/orphan blocks 포함) */
+async function getChainTips() {
+  return rpcCall('getchaintips');
+}
+
+/** 수수료 추정 반환 (목표 블록 수 기준) */
+async function estimateSmartFee(blocks = 6) {
+  return rpcCall('estimatesmartfee', [blocks]);
+}
+
+/** UTXO 세트 통계 반환 (느림 — 60초 타임아웃, 서버에서 캐시 필요) */
+async function getTxOutSetInfo() {
+  const id = ++_reqId;
+  const res = await fetch(RPC_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Basic ${AUTH}`,
+    },
+    body: JSON.stringify({ jsonrpc: '1.1', id, method: 'gettxoutsetinfo', params: [] }),
+    signal: AbortSignal.timeout(60_000),
+  });
+  if (!res.ok) throw new Error(`RPC HTTP ${res.status}: gettxoutsetinfo`);
+  const json = await res.json();
+  if (json.error) throw new Error(`RPC error [${json.error.code}]: ${json.error.message}`);
+  return json.result;
+}
+
 module.exports = {
   getBlockCount,
   getBlockHash,
@@ -101,4 +134,8 @@ module.exports = {
   getNetworkInfo,
   getPeerInfo,
   getBlockchainInfo,
+  getMempoolInfo,
+  getChainTips,
+  estimateSmartFee,
+  getTxOutSetInfo,
 };

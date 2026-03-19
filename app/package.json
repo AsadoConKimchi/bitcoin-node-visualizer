@@ -11,17 +11,24 @@
   },
   "dependencies": {
     "bitcoinjs-lib": "^5.2.0",
+    "cors": "^2.8.0",
+    "dotenv": "^17.3.1",
     "ecpair": "^2.1.0",
     "express": "^4.18.0",
+    "geoip-lite": "^1.4.0",
+    "three": "^0.183.2",
+    "three-globe": "^2.45.1",
     "tiny-secp256k1": "^2.2.0",
     "ws": "^8.14.0",
     "zeromq": "^6.0.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
     "@vitejs/plugin-react": "^4.0.0",
     "concurrently": "^8.0.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
+    "tailwindcss": "^4.2.2",
     "vite": "^5.0.0"
   }
 }

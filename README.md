@@ -1,6 +1,6 @@
 # Bitcoin Node Visualizer
 
-Real-time Bitcoin network visualization — watch blocks being received, validated, and propagated across peers through a live Canvas animation.
+Real-time Bitcoin network visualization — watch blocks being received, validated, and propagated across peers on an interactive 3D globe.
 
 **Public website**: https://fullnode-visualizer.vercel.app — open in any browser, no setup required.
 
@@ -9,82 +9,67 @@ Real-time Bitcoin network visualization — watch blocks being received, validat
 ## Modes
 
 ### Default: mempool.space (Public)
-Connects directly to `wss://mempool.space/api/v1/ws` from your browser. No backend server needed. Shows live mainnet blocks, transactions, mempool stats, fee rates, and difficulty adjustment.
+Connects to `wss://mempool.space/api/v1/ws` from your browser. No backend needed. Shows live mainnet blocks, transactions, mempool stats, fee rates, and difficulty adjustment.
 
-### Custom Node: Electrum WSS
-Connect to your own full node via a Fulcrum Electrum server (WSS). Block events come from your node; mempool/fee data is supplemented from mempool.space REST.
+### Self-hosted: Bitcoin Core (Full Node)
+Run the included Node.js server alongside Bitcoin Core. The client auto-detects the server on page load (`/health` check) — no popup, no manual configuration. Shows full-node-exclusive data unavailable from mempool.space.
 
 ---
 
 ## Features
 
-- **Real-time TX visualization**: Every mempool transaction appears as an orange particle flying from peers to the center node. Frame-batched so 50+ tx/s doesn't drop frames.
-- **3-stage block animation**: Block arrival (peer → node) → validation pulse (+500ms) → propagation to all peers (+1s)
-- **HUD panels**: Fee rate, mempool count, difficulty adjustment progress, TX/s, recent blocks with pool name and fee range
-- **Custom node support**: Switch to your Fulcrum WSS endpoint via the settings panel (⚙ Node Settings button)
-- **Particle system**: Up to 500 simultaneous particles — TX bubbles (orange), block packets (green squares)
-- **Umbrel-native**: Docker multi-stage build also available for self-hosting
+- **3D globe**: Real nodes rendered as points (bitnodes.io + actual Bitcoin peers). Arcs animate block propagation and peer-to-peer traffic.
+- **3-stage block animation**: Arrival (peer → node) → validation → propagation to peers
+- **HUD panel**: Fee rate, mempool count + usage (MB/max), min relay fee, difficulty adjustment, TX/s, connection status
+- **Block verification overlay**: Merkle root verification visualization
+- **TX verification overlay**: Signature/script verification display
+- **Chain strip**: Recent blocks with pool name, height, and TX count
+- **Mempool panel**: Mempool block visualization
+- **Self-hosted extras** (server mode only):
+  - Mempool policy: TX count + usage/max MB + min relay fee (`getmempoolinfo`)
+  - Chain tips panel: Stale/fork/orphan block history (`getchaintips`)
+  - Node-estimated fee rates (`estimatesmartfee`)
+- **Auto-detection**: On load, client probes `/health`. Success → same-origin server mode (no popup). Failure → mempool.space fallback.
 
 ---
 
-## Custom Node (Electrum WSS) Setup
+## Self-Hosted Setup (Umbrel / Docker)
 
 ### Requirements
-- A Bitcoin full node with [Fulcrum](https://github.com/cculianu/Fulcrum) installed and running
-- Fulcrum WSS port accessible from your browser (default: `50004`)
+- Bitcoin Core (or Bitcoin Knots) with RPC enabled
+- Optional: ZMQ for real-time block/tx events (falls back to RPC polling)
 
-### Fulcrum configuration (`fulcrum.conf`)
-```ini
-# Enable SSL/WSS
-ssl = 0.0.0.0:50004
-cert = /path/to/fullchain.pem
-key  = /path/to/privkey.pem
-```
-
-### Connecting
-1. Open https://fullnode-visualizer.vercel.app
-2. Click **⚙ Node Settings** (bottom right)
-3. Select **Custom Node (Electrum WSS)**
-4. Enter your WSS URL: `wss://your-node-ip:50004`
-5. Click **Connect**
-
-> **Note**: Your browser must be able to reach the WSS endpoint. For home nodes, this typically requires port forwarding and a valid TLS certificate (self-signed certs will be rejected by browsers).
-
----
-
-## Umbrel Self-Hosting
-
-### Sideload Installation
+### Quick Start
 
 ```bash
-# 1. Clone onto your Umbrel home server
+# Clone
 git clone https://github.com/AsadoConKimchi/bitcoin-node-visualizer.git
 cd bitcoin-node-visualizer
 
-# 2. Build the Docker image
+# Build Docker image
 docker build -t bitcoin-node-visualizer:latest ./app
 
-# 3. Find your Umbrel Bitcoin network name
+# Set your Bitcoin network name
 export BITCOIN_NETWORK_NAME=bitcoin_default
 
-# 4. Start
+# Start
 docker compose up -d
 
-# 5. Open http://<umbrel-ip>:3000
+# Open http://<host-ip>:3000
+# The app auto-detects the server — no settings popup needed
 ```
 
-### ZMQ Configuration (for real-time mode)
+### ZMQ Configuration (recommended for real-time mode)
 
-Add to your `bitcoin.conf`:
+Add to `bitcoin.conf`:
 ```ini
 zmqpubrawblock=tcp://0.0.0.0:28332
 zmqpubrawtx=tcp://0.0.0.0:28333
 ```
 
-On Umbrel, edit via:
-`umbrel/app-data/bitcoin/data/bitcoin/bitcoin.conf`
+On Umbrel: `umbrel/app-data/bitcoin/data/bitcoin/bitcoin.conf`
 
-Then restart Bitcoin Core. Without ZMQ, the server falls back to RPC polling.
+Restart Bitcoin Core after editing. Without ZMQ, the server falls back to RPC polling automatically.
 
 ### Environment Variables
 
@@ -107,7 +92,11 @@ Then restart Bitcoin Core. Without ZMQ, the server falls back to RPC polling.
 | Umbrel OS (latest) | `bitcoin_default` |
 | Umbrel 0.5.x | `umbrel_main_network` |
 
-Check yours with: `docker network ls | grep -i bitcoin`
+Check yours: `docker network ls | grep -i bitcoin`
+
+### Remote Access (Tailscale)
+
+If accessing the self-hosted server from outside the local network, configure a Tailscale IP in Settings → My Full Node → `http://100.x.x.x:3000`.
 
 ---
 
@@ -117,9 +106,13 @@ Check yours with: `docker network ls | grep -i bitcoin`
 cd app
 npm install
 
-# Frontend dev server only (connects to mempool.space directly)
+# Frontend only (connects to mempool.space directly)
 npm run dev
 # → http://localhost:5173
+
+# Frontend + backend (full node mode)
+node server/index.js &
+npm run dev
 ```
 
 **Build:**
@@ -133,46 +126,75 @@ npm run build
 ## Architecture
 
 ```
-                    ┌──────────────┐
-                    │   App.jsx    │
-                    │ (상태 관리)   │
-                    └──────┬───────┘
-                           │ subscribe(type, cb)
-                    ┌──────▼───────┐
-                    │  DataSource  │  (어댑터 패턴)
-                    │  connect()   │
-                    │  subscribe() │
-                    │  destroy()   │
-                    └───┬──────┬───┘
-                        │      │
-          ┌─────────────▼─┐  ┌─▼──────────────────┐
-          │MempoolAdapter │  │  ElectrumAdapter    │
-          │(기본, 공개)    │  │  (커스텀 노드)       │
-          │WS+REST 직접   │  │  Fulcrum WSS 직접   │
-          └───────────────┘  └─────────────────────┘
+Browser (React + Three.js globe)
+  │
+  ├─ Auto-detect: fetch /health (2s timeout)
+  │    ├─ OK  → ServerAdapter (same-origin, no popup)
+  │    └─ Fail → MempoolAdapter (mempool.space WS+REST)
+  │
+  └─ Manual override via ⚙ Node Settings
+
+ServerAdapter
+  ├─ WebSocket /ws  — init, tx, block:received/validated/propagated, mempool
+  └─ REST polling (30s)
+       ├─ /api/info          → chain, height, peers
+       ├─ /api/mempool       → TX count
+       ├─ /api/peers         → peer geolocations (GeoIP)
+       ├─ /api/mempool/info  → policy: min fee, max size, usage (getmempoolinfo)
+       ├─ /api/chaintips     → fork history (getchaintips)
+       └─ /api/fees          → fee estimates 1/3/6 blocks (estimatesmartfee)
+
+MempoolAdapter
+  ├─ WebSocket wss://mempool.space/api/v1/ws
+  └─ REST https://mempool.space/api/v1/...
+
+Node.js Server (app/server/)
+  ├─ Bitcoin Core RPC (rpc.js)
+  ├─ ZMQ listener → broadcaster.js → WebSocket clients
+  ├─ Fallback: RPC polling when ZMQ unavailable
+  └─ GeoIP peer location (geoip-lite)
 ```
 
 ```
 client/src/
   datasource/
-    EventBus.js        — 이벤트 버스 클래스
+    EventBus.js        — pub/sub base class
     MempoolAdapter.js  — mempool.space WS + REST
-    ElectrumAdapter.js — Fulcrum WSS + REST 하이브리드
-    index.js           — createDataSource() 팩토리
+    ServerAdapter.js   — self-hosted server WS + REST (same-origin support)
+    index.js           — createDataSource() factory
   components/
-    SettingsPanel.jsx  — 데이터 소스 설정 UI
-  canvas/
-    layout.js          — 위치, 색상 팔레트
-    particles.js       — TX 버블 / 블록 패킷 물리
-    renderer.js        — Canvas 드로우 함수
-    Universe.jsx       — Canvas 컴포넌트 + 애니메이션 루프
-  App.jsx              — 상태 관리, 이벤트 → state
+    HudPanels.jsx      — top-left info panel (adapts to source type)
+    ChainTipsPanel.jsx — fork/stale block history (server mode only)
+    SettingsPanel.jsx  — data source settings
+    ToggleBar.jsx      — panel visibility toggles
+    MempoolPanel.jsx   — mempool block visualization
+    ChainStrip.jsx     — recent blocks strip
+    BlockDetailPanel.jsx
+    BlockVerifyPanel.jsx
+    TxVerifyPanel.jsx
+    VerificationOverlay.jsx
+  globe/
+    GlobeScene.jsx     — Three.js globe (react-globe.gl)
+    nodeData.js        — node point data manager
+  verification/
+    BlockVerificationState.js
+    TxVerificationState.js
+  App.jsx              — state management, auto-detection, event routing
 ```
+
+---
 
 ## Connection Status (HUD)
 
-| Color | Meaning |
+| Indicator | Meaning |
 |---|---|
-| 🟢 Green | Connected (mempool.space or Electrum) |
-| 🟠 Orange | Connecting... |
-| 🔴 Red | Disconnected |
+| `● LIVE` (green) | Connected |
+| `◌ CONNECTING` (orange) | Connecting / reconnecting |
+| `○ DISCONNECTED` (red) | Connection lost |
+
+### Data Source Label (bottom of HUD)
+
+| Label | Meaning |
+|---|---|
+| `mempool.space` | Public API mode |
+| `self-hosted node` | Connected to your Bitcoin Core |

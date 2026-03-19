@@ -3,6 +3,7 @@
  * Electrum 프로토콜은 개별 mempool TX 스트리밍 불가
  * → 블록: Electrum 직접 수신
  * → Mempool/TX 파티클: mempool.space REST 보조 (하이브리드)
+ * → 주소/UTXO 조회: Electrum scripthash 프로토콜 사용
  */
 
 import { EventBus } from './EventBus.js';
@@ -86,12 +87,8 @@ export class ElectrumAdapter extends EventBus {
 
   async _handshake() {
     try {
-      // 버전 협상
       await this._call('server.version', ['Bitcoin Node Visualizer', '1.4']);
-
-      // 새 블록 헤더 구독
       this._send({ method: 'blockchain.headers.subscribe', params: [], id: this._msgId++ });
-
       this.emit('__connected', {});
     } catch (e) {
       console.error('[ElectrumAdapter] 핸드셰이크 실패:', e);
@@ -103,7 +100,6 @@ export class ElectrumAdapter extends EventBus {
       const id = this._msgId++;
       this._pendingCalls.set(id, { resolve, reject });
       this._send({ method, params, id });
-      // 타임아웃 10초
       setTimeout(() => {
         if (this._pendingCalls.has(id)) {
           this._pendingCalls.delete(id);
@@ -122,7 +118,6 @@ export class ElectrumAdapter extends EventBus {
   // ── 메시지 파싱 ─────────────────────────────────────────────────────────────
 
   _handleMessage(msg) {
-    // RPC 응답
     if (msg.id != null && this._pendingCalls.has(msg.id)) {
       const { resolve, reject } = this._pendingCalls.get(msg.id);
       this._pendingCalls.delete(msg.id);
@@ -131,7 +126,6 @@ export class ElectrumAdapter extends EventBus {
       return;
     }
 
-    // 구독 알림
     if (msg.method === 'blockchain.headers.subscribe') {
       const header = Array.isArray(msg.params) ? msg.params[0] : msg.params;
       this._handleNewHeader(header);
@@ -144,7 +138,7 @@ export class ElectrumAdapter extends EventBus {
     this._lastKnownHeight = height;
 
     const data = {
-      hash: null, // Electrum 헤더에서 별도 파싱 필요
+      hash: null,
       height,
       txCount: null,
       pool: null,
@@ -158,6 +152,35 @@ export class ElectrumAdapter extends EventBus {
     setTimeout(() => {
       if (!this._destroyed) this.emit('block:propagated', { ...data, merkleOk: true });
     }, 1000);
+  }
+
+  // ── 주소/UTXO 조회 (Electrum 프로토콜) ──────────────────────────────────────
+
+  /**
+   * 주소 잔액 조회
+   * @param {string} scripthash - 주소에서 변환된 scripthash
+   * @returns {Promise<{confirmed: number, unconfirmed: number}>}
+   */
+  async getAddressBalance(scripthash) {
+    return this._call('blockchain.scripthash.get_balance', [scripthash]);
+  }
+
+  /**
+   * 주소 TX 히스토리 조회
+   * @param {string} scripthash
+   * @returns {Promise<Array<{tx_hash: string, height: number}>>}
+   */
+  async getAddressHistory(scripthash) {
+    return this._call('blockchain.scripthash.get_history', [scripthash]);
+  }
+
+  /**
+   * 주소 UTXO 목록 조회
+   * @param {string} scripthash
+   * @returns {Promise<Array<{tx_hash: string, tx_pos: number, height: number, value: number}>>}
+   */
+  async getAddressUtxos(scripthash) {
+    return this._call('blockchain.scripthash.listunspent', [scripthash]);
   }
 
   // ── REST 보조 폴링 (mempool.space) ──────────────────────────────────────────
