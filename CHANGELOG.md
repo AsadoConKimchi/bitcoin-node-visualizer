@@ -6,6 +6,34 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ## [Unreleased] — 2026-03-19
 
+### Fixed — 서버 감지 + 노드 연결 증명
+
+#### Continuous Server Detection
+- 마운트 시 3회 한정 health check → **5초 간격 지속적 폴링**으로 변경
+- 서버가 늦게 시작되어도 자동 감지 → `mempool` → `server` 자동 전환
+- 서버 발견 후 10초 간격 health 확인 유지 (서버 다운 감지 대비)
+- 첫 감지 실패 시 즉시 mempool 모드로 시작 (빈 화면 방지)
+
+#### Server Init — recentBlocks + txPerSec
+- 서버 WS init에 최근 블록 5개 헤더 포함 (`getblockheader` RPC)
+  - `hash`, `height`, `txCount`, `version`, `time`, `nBits`, `nonce`, `merkleRoot`
+- `ServerAdapter`에 txPerSec 실시간 계산 (1초 슬라이딩 윈도우)
+- Demo 블록(height===0) 검증 중일 때 실제 블록 도착 시 자동 교체
+
+#### Node Identity Proof (NODE INFO 패널)
+- 서버 모드: 노드 버전(`Satoshi:28.x.x`), 피어 수(`12 peers (8↑ 4↓)`), best block hash tip 표시
+- mempool 모드 + connecting: `⟳ 서버 감지 중...` 인디케이터 표시
+- best block hash는 `title` 속성으로 전체 해시 확인 가능
+
+#### Files Modified
+- `client/src/App.jsx` — 지속적 서버 감지, bestBlockHash 상태, Demo 블록 자동 교체
+- `client/src/components/HudPanels.jsx` — 노드 신원 정보 + 서버 감지 인디케이터
+- `client/src/datasource/ServerAdapter.js` — txPerSec 슬라이딩 윈도우 계산
+- `server/index.js` — init에 recentBlocks 5개 (getblockheader 체인 순회)
+- `server/rpc.js` — `getBlockHeader()` 래퍼 추가
+
+---
+
 ### Added — UX 대규모 개선 (Phase A~D)
 
 #### Phase B: Globe Visual Improvements
