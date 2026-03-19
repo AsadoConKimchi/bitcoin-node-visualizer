@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import GlobeScene from './globe/GlobeScene.jsx';
 import { NodeDataManager, MY_NODE } from './globe/nodeData.js';
 import { createDataSource } from './datasource/index.js';
@@ -125,6 +125,30 @@ export default function App() {
     internals: false,
   });
 
+  // ── 패널 상태 (신호등 닫기/최소화) ──────────────────────────────
+  const [panelState, setPanelState] = useState({
+    nodeInfo: { visible: true, minimized: false },
+    chain: { visible: true, minimized: false },
+  });
+
+  // ── HudPanels 높이 추적 (ChainStrip 동적 위치) ─────────────────
+  const hudRef = useRef(null);
+  const [hudHeight, setHudHeight] = useState(0);
+
+  const hudVisible = panelState.nodeInfo.visible && visible.p2p;
+
+  useEffect(() => {
+    if (!hudVisible || !hudRef.current) {
+      setHudHeight(56); // top-14 기본 오프셋만
+      return;
+    }
+    const observer = new ResizeObserver(entries => {
+      setHudHeight(entries[0].contentRect.height + 80);
+    });
+    observer.observe(hudRef.current);
+    return () => observer.disconnect();
+  }, [hudVisible]);
+
   // ── 네트워크 상태 ─────────────────────────────────────────────────
   const [mode, setMode] = useState('connecting');
   const [serverMode, setServerMode] = useState(null);
@@ -161,7 +185,7 @@ export default function App() {
 
   // ── 지구본 데이터 ─────────────────────────────────────────────────
   const [nodePoints, setNodePoints] = useState([MY_NODE]);
-  const [arcs, setArcs] = useState([]);
+  const [eventArcs, setEventArcs] = useState([]);
   const [rings, setRings] = useState([]);
   const nodePointsRef = useRef([MY_NODE]);
   const lastRingTimeRef = useRef(0);
@@ -176,13 +200,28 @@ export default function App() {
     return () => mgr.destroy();
   }, [serverUrl]);
 
+  // 상시 피어 연결선
+  const peerArcs = useMemo(() => {
+    return nodePoints
+      .filter(n => n.isMyPeer)
+      .map(peer => ({
+        startLat: MY_NODE.lat, startLng: MY_NODE.lng,
+        endLat: peer.lat, endLng: peer.lng,
+        color: 'rgba(247,147,26,0.25)',
+        type: 'connection',
+      }));
+  }, [nodePoints]);
+
+  // 합산 아크 (상시 연결 + 이벤트 아크)
+  const combinedArcs = useMemo(() => [...peerArcs, ...eventArcs], [peerArcs, eventArcs]);
+
   const addArcs = useCallback((newArcs) => {
     if (!newArcs.length) return;
     const tagged = newArcs.map((a) => ({ ...a, _id: ++_arcId }));
-    setArcs((prev) => [...prev, ...tagged]);
+    setEventArcs((prev) => [...prev, ...tagged]);
     setTimeout(() => {
       const ids = new Set(tagged.map((a) => a._id));
-      setArcs((prev) => prev.filter((a) => !ids.has(a._id)));
+      setEventArcs((prev) => prev.filter((a) => !ids.has(a._id)));
     }, ARC_LIFETIME_MS);
   }, []);
 
@@ -424,7 +463,8 @@ export default function App() {
             startLng: src.lng,
             endLat: MY_NODE.lat,
             endLng: MY_NODE.lng,
-            color: '#60a5fa44',
+            color: '#60a5fa',
+            type: 'tx',
           }]);
         }
       }
@@ -447,6 +487,7 @@ export default function App() {
           endLat: MY_NODE.lat,
           endLng: MY_NODE.lng,
           color: '#f7931a',
+          type: 'block',
         }))
       );
 
@@ -467,6 +508,7 @@ export default function App() {
           endLat: n.lat,
           endLng: n.lng,
           color: '#22c55e',
+          type: 'block',
         }))
       );
     }));
@@ -549,7 +591,7 @@ export default function App() {
   return (
     <div className="relative w-screen h-screen overflow-hidden">
       {/* 3D 지구본 — 전체 배경 */}
-      <GlobeScene nodePoints={nodePoints} arcs={arcs} rings={rings} />
+      <GlobeScene nodePoints={nodePoints} arcs={combinedArcs} rings={rings} />
 
       {/* 상단 토글 바 */}
       <ToggleBar visible={visible} onToggle={handleToggle} />
@@ -564,25 +606,32 @@ export default function App() {
       </div>
 
       {/* 좌상단 HUD */}
-      <HudPanels
-        visible={visible.p2p}
-        compact={false}
-        mode={mode}
-        serverMode={serverMode}
-        chain={chain}
-        blockHeight={blockHeight}
-        mempoolCount={mempoolCount}
-        feeRate={feeRate}
-        halfHourFee={halfHourFee}
-        hourFee={hourFee}
-        diffAdj={diffAdj}
-        txPerSec={txPerSec}
-        sourceType={sourceType}
-        mempoolInfo={mempoolInfo}
-        nodeInfo={nodeInfo}
-        utxoStats={utxoStats}
-        bestBlockHash={bestBlockHash}
-      />
+      {panelState.nodeInfo.visible && (
+        <HudPanels
+          ref={hudRef}
+          visible={visible.p2p}
+          compact={false}
+          mode={mode}
+          serverMode={serverMode}
+          chain={chain}
+          blockHeight={blockHeight}
+          mempoolCount={mempoolCount}
+          feeRate={feeRate}
+          halfHourFee={halfHourFee}
+          hourFee={hourFee}
+          diffAdj={diffAdj}
+          txPerSec={txPerSec}
+          sourceType={sourceType}
+          mempoolInfo={mempoolInfo}
+          nodeInfo={nodeInfo}
+          utxoStats={utxoStats}
+          bestBlockHash={bestBlockHash}
+          minimized={panelState.nodeInfo.minimized}
+          onClose={() => setPanelState(s => ({ ...s, nodeInfo: { ...s.nodeInfo, visible: false } }))}
+          onMinimize={() => setPanelState(s => ({ ...s, nodeInfo: { ...s.nodeInfo, minimized: true } }))}
+          onExpand={() => setPanelState(s => ({ ...s, nodeInfo: { ...s.nodeInfo, minimized: false } }))}
+        />
+      )}
 
       {/* 체인 분기 패널 (서버 모드에서만) */}
       {sourceType === 'server' && chaintips.length > 0 && (
@@ -607,11 +656,18 @@ export default function App() {
       />
 
       {/* 하단 체인 스트립 */}
-      <ChainStrip
-        recentBlocks={recentBlocks}
-        onBlockClick={handleBlockClick}
-        onReplayCompactBlock={handleReplayCompactBlock}
-      />
+      {panelState.chain.visible && (
+        <ChainStrip
+          recentBlocks={recentBlocks}
+          onBlockClick={handleBlockClick}
+          onReplayCompactBlock={handleReplayCompactBlock}
+          topOffset={hudHeight + 16}
+          minimized={panelState.chain.minimized}
+          onClose={() => setPanelState(s => ({ ...s, chain: { ...s.chain, visible: false } }))}
+          onMinimize={() => setPanelState(s => ({ ...s, chain: { ...s.chain, minimized: true } }))}
+          onExpand={() => setPanelState(s => ({ ...s, chain: { ...s.chain, minimized: false } }))}
+        />
+      )}
 
       {/* 블록 상세 패널 */}
       {selectedBlock && (
@@ -662,6 +718,7 @@ export default function App() {
       {/* 설정 버튼 */}
       <button
         onClick={() => setSettingsOpen(true)}
+        aria-label="설정 열기"
         className="absolute bottom-5 left-5 bg-black/75 border border-btc-orange
                   rounded-md text-btc-orange font-mono text-sm px-3.5 py-2
                   cursor-pointer z-15 hover:bg-btc-orange/10 transition-colors

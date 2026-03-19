@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 
 const STATUS_COLOR = {
   live: 'text-success',
@@ -29,7 +29,7 @@ function Row({ label, value, valueColor }) {
   );
 }
 
-export default function HudPanels({ mode, serverMode, chain, blockHeight, mempoolCount, feeRate, halfHourFee, hourFee, diffAdj, txPerSec, visible, compact, sourceType, mempoolInfo, nodeInfo, utxoStats, bestBlockHash }) {
+const HudPanels = forwardRef(function HudPanels({ mode, serverMode, chain, blockHeight, mempoolCount, feeRate, halfHourFee, hourFee, diffAdj, txPerSec, visible, compact, sourceType, mempoolInfo, nodeInfo, utxoStats, bestBlockHash, minimized, onClose, onMinimize, onExpand }, ref) {
   if (!visible) return null;
 
   const effectiveMode = serverMode === 'error' ? 'error' : mode;
@@ -144,8 +144,30 @@ export default function HudPanels({ mode, serverMode, chain, blockHeight, mempoo
 
   const isIBD = sourceType === 'server' && nodeInfo?.verificationProgress != null && nodeInfo.verificationProgress < 0.9999;
 
+  // 최소화 모드
+  if (minimized) {
+    const heightStr = blockHeight != null ? `#${blockHeight.toLocaleString()}` : '—';
+
+    return (
+      <div ref={ref} className="absolute top-14 left-4 bg-[rgba(40,40,45,0.85)] border border-white/10
+                      rounded-xl px-3.5 py-2.5 text-sm text-btc-orange
+                      backdrop-blur-[20px] min-w-[240px] z-8
+                      max-sm:left-2 max-sm:min-w-[200px]"
+           style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+        <div className="flex items-center gap-1.5">
+          <span className="traffic-light traffic-light--close" title="닫기" onClick={onClose} />
+          <span className="traffic-light traffic-light--minimize" title="최소화" onClick={onMinimize} />
+          <span className="traffic-light traffic-light--expand" title="확장" onClick={onExpand} />
+          <span className="font-bold text-xs tracking-widest ml-2">▸ NODE INFO</span>
+          <span className={`text-xs font-mono ml-auto ${dotColorClass}`}>{statusLabel}</span>
+        </div>
+        <div className="text-[10px] text-muted mt-1">{heightStr} · {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="absolute top-14 left-4 bg-[rgba(40,40,45,0.85)] border border-white/10
+    <div ref={ref} className="absolute top-14 left-4 bg-[rgba(40,40,45,0.85)] border border-white/10
                     rounded-xl px-3.5 py-2.5 text-sm text-btc-orange
                     backdrop-blur-[20px] leading-7 min-w-[240px] z-8
                     lg:top-14 md:top-14 sm:top-14
@@ -153,9 +175,9 @@ export default function HudPanels({ mode, serverMode, chain, blockHeight, mempoo
          style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
       {/* 신호등 헤더 */}
       <div className="flex items-center gap-1.5 mb-2">
-        <span className="traffic-light traffic-light--close" title="숨기기" />
-        <span className="traffic-light traffic-light--minimize" />
-        <span className="traffic-light traffic-light--expand" />
+        <span className="traffic-light traffic-light--close" title="닫기" onClick={onClose} />
+        <span className="traffic-light traffic-light--minimize" title="최소화" onClick={onMinimize} />
+        <span className="traffic-light traffic-light--expand" title="확장" onClick={onExpand} />
       </div>
 
       {/* IBD 배너 */}
@@ -232,4 +254,6 @@ export default function HudPanels({ mode, serverMode, chain, blockHeight, mempoo
       <Row label="TX/s" value={txPerSec != null ? txPerSec.toFixed(1) : null} />
     </div>
   );
-}
+});
+
+export default HudPanels;

@@ -1,14 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import BitfeedFloor from './BitfeedFloor.jsx';
-
-// ── 공유 유틸 ──────────────────────────────────────────────────────────────────
-
-function feeColor(feeRate) {
-  if (feeRate >= 50) return '#ef4444';
-  if (feeRate >= 20) return '#f59e0b';
-  if (feeRate >= 10) return '#34d399';
-  return '#60a5fa';
-}
+import { feeColor } from '../utils/colors.js';
 
 // ── MiniProgress (6단계 도트) ──────────────────────────────────────────────────
 
@@ -615,7 +607,7 @@ export default function MainPanel({
         <div className="flex items-center gap-1.5 mr-3">
           <span className="traffic-light traffic-light--close" title="닫기" onClick={onClose} />
           <span className="traffic-light traffic-light--minimize" title={minimized ? '확장' : '최소화'} onClick={() => setMinimized(!minimized)} />
-          <span className="traffic-light traffic-light--expand" />
+          <span className="traffic-light traffic-light--expand" title="확장" onClick={() => setMinimized(false)} />
         </div>
         <span className="text-btc-orange font-bold text-sm tracking-widest flex-1 text-center">
           VERIFICATION CENTER

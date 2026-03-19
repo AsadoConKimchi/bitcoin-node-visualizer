@@ -49,7 +49,7 @@ function PendingCell() {
   );
 }
 
-export default function ChainStrip({ recentBlocks, onBlockClick, onReplayCompactBlock }) {
+export default function ChainStrip({ recentBlocks, onBlockClick, onReplayCompactBlock, topOffset, minimized, onClose, onMinimize, onExpand }) {
   if (!recentBlocks?.length) return null;
 
   // 오름차순 정렬 (작은 번호 위, 큰 번호 아래)
@@ -59,17 +59,40 @@ export default function ChainStrip({ recentBlocks, onBlockClick, onReplayCompact
 
   const latestHeight = blocks[blocks.length - 1]?.height;
 
+  const topStyle = topOffset > 0 ? { top: `${topOffset}px` } : {};
+
+  // 최소화 모드
+  if (minimized) {
+    return (
+      <div className="absolute left-4 w-[200px] z-10
+                      bg-[rgba(40,40,45,0.85)] border border-white/10 rounded-xl
+                      px-3 py-2.5 backdrop-blur-[20px]
+                      max-sm:left-2 max-sm:w-[180px]"
+           style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)', ...topStyle }}>
+        <div className="flex items-center gap-1.5">
+          <span className="traffic-light traffic-light--close" title="닫기" onClick={onClose} />
+          <span className="traffic-light traffic-light--minimize" title="최소화" onClick={onMinimize} />
+          <span className="traffic-light traffic-light--expand" title="확장" onClick={onExpand} />
+          <span className="text-btc-orange font-bold text-[10px] tracking-widest ml-2">CHAIN</span>
+          <span className="text-muted text-[10px] ml-auto font-mono">
+            #{latestHeight?.toLocaleString() ?? '?'}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="absolute top-[380px] left-4 w-[200px] z-10
+    <div className="absolute left-4 w-[200px] z-10
                     bg-[rgba(40,40,45,0.85)] border border-white/10 rounded-xl
                     px-3 py-3 backdrop-blur-[20px]
-                    max-sm:left-2 max-sm:w-[180px] max-sm:top-[340px]"
-         style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+                    max-sm:left-2 max-sm:w-[180px]"
+         style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)', ...topStyle }}>
       {/* 신호등 + 타이틀 */}
       <div className="flex items-center gap-1.5 mb-2.5">
-        <span className="traffic-light traffic-light--close" />
-        <span className="traffic-light traffic-light--minimize" />
-        <span className="traffic-light traffic-light--expand" />
+        <span className="traffic-light traffic-light--close" title="닫기" onClick={onClose} />
+        <span className="traffic-light traffic-light--minimize" title="최소화" onClick={onMinimize} />
+        <span className="traffic-light traffic-light--expand" title="확장" onClick={onExpand} />
         <span className="text-btc-orange font-bold text-[10px] tracking-widest ml-2">CHAIN</span>
       </div>
 

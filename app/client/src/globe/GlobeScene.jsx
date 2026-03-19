@@ -87,11 +87,11 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings }, r
     globe.arcEndLat('endLat');
     globe.arcEndLng('endLng');
     globe.arcColor('color');
-    globe.arcAltitude(0.35);
-    globe.arcStroke(0.4);
-    globe.arcDashLength(0.6);
-    globe.arcDashGap(0.4);
-    globe.arcDashAnimateTime(1500);
+    globe.arcAltitude(d => d.type === 'connection' ? 0.12 : 0.25);
+    globe.arcStroke(d => d.type === 'connection' ? 0.15 : d.type === 'block' ? 1.5 : 0.6);
+    globe.arcDashLength(d => d.type === 'connection' ? 1.0 : 0.6);
+    globe.arcDashGap(d => d.type === 'connection' ? 0 : 0.3);
+    globe.arcDashAnimateTime(d => d.type === 'connection' ? 0 : d.type === 'block' ? 600 : 1200);
 
     // 링 (TX 이벤트)
     globe.ringsData(ringsRef.current || []);
