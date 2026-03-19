@@ -7,9 +7,7 @@ import { TxVerificationState } from './verification/TxVerificationState.js';
 import ToggleBar from './components/ToggleBar.jsx';
 import SearchBar from './components/SearchBar.jsx';
 import HudPanels from './components/HudPanels.jsx';
-import VerificationOverlay from './components/VerificationOverlay.jsx';
-import TxStreamPanel from './components/TxStreamPanel.jsx';
-import MempoolPoolPanel from './components/MempoolPoolPanel.jsx';
+import UnifiedPanel from './components/UnifiedPanel.jsx';
 import MempoolBlocksPanel from './components/MempoolBlocksPanel.jsx';
 import TxDetailPanel from './components/TxDetailPanel.jsx';
 import ChainStrip from './components/ChainStrip.jsx';
@@ -532,7 +530,7 @@ export default function App() {
       {/* 좌상단 HUD */}
       <HudPanels
         visible={visible.p2p}
-        compact={visible.txVerify}
+        compact={false}
         mode={mode}
         serverMode={serverMode}
         chain={chain}
@@ -554,10 +552,17 @@ export default function App() {
         <ChainTipsPanel chaintips={chaintips} />
       )}
 
-      {/* 블록 검증 오버레이 (우측) */}
-      <VerificationOverlay
+      {/* 통합 검증 패널 (TX검증 + 블록검증 + 멤풀) */}
+      <UnifiedPanel
+        txStream={txStream}
         blockVerifyState={blockVerifyState}
+        mempoolTxs={mempoolPool}
+        mempoolCount={mempoolCount}
+        mempoolInfo={mempoolInfo}
+        showTx={visible.txVerify}
+        showMempool={visible.mempool}
         showBlock={visible.blockVerify}
+        onTxClick={handleTxClick}
       />
 
       {/* 예상 블록 적층 시각화 (멤풀 토글 ON + 블록검증 OFF 시) */}
@@ -565,24 +570,6 @@ export default function App() {
         mempoolBlocks={mempoolBlocks}
         visible={visible.mempool && !visible.blockVerify}
       />
-
-      {/* TX 스트림 패널 (좌측 — TX검증 토글 on 시) */}
-      {visible.txVerify && (
-        <TxStreamPanel
-          txStream={txStream}
-          compact={visible.p2p}
-        />
-      )}
-
-      {/* 멤풀 풀 패널 (하단 — 멤풀 토글 on 시) */}
-      {visible.mempool && (
-        <MempoolPoolPanel
-          mempoolTxs={mempoolPool}
-          mempoolCount={mempoolCount}
-          mempoolInfo={mempoolInfo}
-          onTxClick={handleTxClick}
-        />
-      )}
 
       {/* 하단 체인 스트립 */}
       <ChainStrip
