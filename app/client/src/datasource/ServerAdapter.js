@@ -21,6 +21,8 @@ export class ServerAdapter extends EventBus {
     this._destroyed = false;
     this._firstPoll = true;
 
+    this._txTimestamps = [];
+
     this._connect();
     // 첫 REST 폴링: WebSocket init보다 약간 늦게 실행
     this._pollTimer = setTimeout(() => this._poll(), 2000);
@@ -141,6 +143,12 @@ export class ServerAdapter extends EventBus {
       case 'tx':
         // 서버 tx: { txid, vin, vout, size }
         this.emit('tx', data);
+        {
+          const now = Date.now();
+          this._txTimestamps.push(now);
+          this._txTimestamps = this._txTimestamps.filter(t => t > now - 1000);
+          this.emit('txPerSec', { value: this._txTimestamps.length });
+        }
         break;
       case 'block:received':
         this.emit('block:received', data);

@@ -106,6 +106,11 @@ async function estimateSmartFee(blocks = 6) {
   return rpcCall('estimatesmartfee', [blocks]);
 }
 
+/** 블록 헤더 반환 (getblockheader) */
+async function getBlockHeader(hash) {
+  return rpcCall('getblockheader', [hash, true]);
+}
+
 /** UTXO 세트 통계 반환 (느림 — 60초 타임아웃, 서버에서 캐시 필요) */
 async function getTxOutSetInfo() {
   const id = ++_reqId;
@@ -128,6 +133,7 @@ module.exports = {
   getBlockCount,
   getBlockHash,
   getBlock,
+  getBlockHeader,
   getRawMempool,
   getRawMempoolVerbose,
   getRawTransaction,

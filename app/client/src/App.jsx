@@ -396,6 +396,10 @@ export default function App() {
       if (data.blocks != null) setBlockHeight(data.blocks);
       if (data.recentBlocks?.length) {
         setRecentBlocks(data.recentBlocks.slice(0, MAX_RECENT_BLOCKS));
+        // Demo 블록(height===0) 표시 중이면 실제 블록으로 즉시 교체
+        if (blockVerifyRef.current?.blockData?.height === 0) {
+          startBlockVerification(data.recentBlocks[0]);
+        }
       }
     }));
 

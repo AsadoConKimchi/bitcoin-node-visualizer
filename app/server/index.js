@@ -323,12 +323,32 @@ wss.on('connection', (ws) => {
 
   // 초기 노드 정보 전송 (실패해도 무시)
   rpc.getBlockchainInfo()
-    .then((info) => {
+    .then(async (info) => {
+      let recentBlocks = [];
+      try {
+        let hash = info.bestblockhash;
+        for (let i = 0; i < 5 && hash; i++) {
+          const header = await rpc.getBlockHeader(hash);
+          recentBlocks.push({
+            hash,
+            height: header.height,
+            txCount: header.nTx,
+            version: header.version,
+            time: header.time,
+            nBits: header.bits,
+            nonce: header.nonce,
+            merkleRoot: header.merkleroot,
+          });
+          hash = header.previousblockhash;
+        }
+      } catch (_) {}
+
       broadcaster.sendTo(ws, 'init', {
         chain: info.chain,
         blocks: info.blocks,
         bestBlockHash: info.bestblockhash,
         mode: getMode(),
+        recentBlocks,
       });
     })
     .catch(() => {
