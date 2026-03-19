@@ -148,6 +148,13 @@ export class MempoolAdapter extends EventBus {
   }
 
   _handleBlock(block, minedCount = 0) {
+    // 시각화용 합성 txid 8개
+    const txidSample = Array.from({ length: 8 }, () =>
+      Array.from({ length: 32 }, () =>
+        Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
+      ).join('')
+    );
+
     const data = {
       hash: block.id,
       height: block.height,
@@ -155,6 +162,15 @@ export class MempoolAdapter extends EventBus {
       pool: block.extras?.pool?.name ?? null,
       feeRange: block.extras?.feeRange ?? null,
       minedCount,
+      // 블록 헤더 필드
+      version: block.version ?? null,
+      time: block.timestamp ?? null,
+      nBits: block.bits != null ? block.bits.toString(16) : null,
+      nonce: block.nonce ?? null,
+      weight: block.weight ?? null,
+      // 머클 트리
+      merkleRoot: block.merkle_root ?? block.extras?.merkle_root ?? null,
+      txidSample,
     };
 
     // 3단계 블록 애니메이션
