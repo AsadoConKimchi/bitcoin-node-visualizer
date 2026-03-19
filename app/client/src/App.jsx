@@ -137,6 +137,7 @@ export default function App() {
   const [diffAdj, setDiffAdj] = useState(null);
   const [nodeInfo, setNodeInfo] = useState(null);
   const [txPerSec, setTxPerSec] = useState(0);
+  const [bestBlockHash, setBestBlockHash] = useState(null);
   const [recentBlocks, setRecentBlocks] = useState([]);
   const [mempoolBlocks, setMempoolBlocks] = useState([]);
   const [mempoolInfo, setMempoolInfo] = useState(null);
@@ -394,6 +395,7 @@ export default function App() {
       setShowErrorOverlay(false);
       if (data.chain) setChain(data.chain);
       if (data.blocks != null) setBlockHeight(data.blocks);
+      if (data.bestBlockHash) setBestBlockHash(data.bestBlockHash);
       if (data.recentBlocks?.length) {
         setRecentBlocks(data.recentBlocks.slice(0, MAX_RECENT_BLOCKS));
         // Demo 블록(height===0) 표시 중이면 실제 블록으로 즉시 교체
@@ -579,6 +581,7 @@ export default function App() {
         mempoolInfo={mempoolInfo}
         nodeInfo={nodeInfo}
         utxoStats={utxoStats}
+        bestBlockHash={bestBlockHash}
       />
 
       {/* 체인 분기 패널 (서버 모드에서만) */}

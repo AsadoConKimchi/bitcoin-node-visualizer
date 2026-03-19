@@ -29,7 +29,7 @@ function Row({ label, value, valueColor }) {
   );
 }
 
-export default function HudPanels({ mode, serverMode, chain, blockHeight, mempoolCount, feeRate, halfHourFee, hourFee, diffAdj, txPerSec, visible, compact, sourceType, mempoolInfo, nodeInfo, utxoStats }) {
+export default function HudPanels({ mode, serverMode, chain, blockHeight, mempoolCount, feeRate, halfHourFee, hourFee, diffAdj, txPerSec, visible, compact, sourceType, mempoolInfo, nodeInfo, utxoStats, bestBlockHash }) {
   if (!visible) return null;
 
   const effectiveMode = serverMode === 'error' ? 'error' : mode;
@@ -183,7 +183,24 @@ export default function HudPanels({ mode, serverMode, chain, blockHeight, mempoo
                        }`}>
         {sourceBadge}
       </div>
-      <div className="text-[10px] text-muted mb-1.5">{sourceSubtitle}</div>
+      <div className="text-[10px] text-muted mb-1">{sourceSubtitle}</div>
+
+      {/* 노드 신원 정보 (서버 모드) */}
+      {isServer && nodeInfo?.subversion && (
+        <div className="text-[10px] text-white/50 mb-0.5">
+          {nodeInfo.subversion.replace(/\//g, '')}
+          {' · '}{nodeInfo.connections ?? '?'} peers
+          {nodeInfo.inbound != null && ` (${nodeInfo.outbound}↑ ${nodeInfo.inbound}↓)`}
+        </div>
+      )}
+      {isServer && bestBlockHash && (
+        <div className="text-[10px] text-white/30 font-mono truncate mb-1.5" title={bestBlockHash}>
+          tip: {bestBlockHash.slice(0, 16)}…
+        </div>
+      )}
+      {!isServer && mode === 'connecting' && (
+        <div className="text-[10px] text-white/30 mb-1.5">⟳ 서버 감지 중...</div>
+      )}
 
       {/* 네트워크 데이터 */}
       <Row label="Chain"   value={chain ?? 'mainnet'} />
