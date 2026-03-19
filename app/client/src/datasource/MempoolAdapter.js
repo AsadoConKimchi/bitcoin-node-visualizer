@@ -147,13 +147,16 @@ export class MempoolAdapter extends EventBus {
     }
   }
 
-  _handleBlock(block, minedCount = 0) {
-    // 시각화용 합성 txid 8개
-    const txidSample = Array.from({ length: 8 }, () =>
+  _generateSyntheticTxids(count = 8) {
+    return Array.from({ length: count }, () =>
       Array.from({ length: 32 }, () =>
         Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
       ).join('')
     );
+  }
+
+  _handleBlock(block, minedCount = 0) {
+    const txidSample = this._generateSyntheticTxids(8);
 
     const data = {
       hash: block.id,
@@ -301,7 +304,15 @@ export class MempoolAdapter extends EventBus {
           pool: b.extras?.pool?.name ?? null,
           feeRange: b.extras?.feeRange ?? null,
           merkleOk: true,
-          minedCount: null, // 초기 데이터는 mined 카운트 없음
+          minedCount: null,
+          // 블록 헤더 필드
+          version: b.version ?? null,
+          time: b.timestamp ?? null,
+          nBits: b.bits != null ? b.bits.toString(16) : null,
+          nonce: b.nonce ?? null,
+          weight: b.weight ?? null,
+          merkleRoot: b.merkle_root ?? b.extras?.merkle_root ?? null,
+          txidSample: this._generateSyntheticTxids(8),
         })),
       });
 
