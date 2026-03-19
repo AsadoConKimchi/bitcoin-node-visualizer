@@ -215,12 +215,12 @@ function BlockStepRow({ step }) {
         className={`flex justify-between py-1.5 gap-2 ${detail ? 'cursor-pointer hover:bg-white/5 rounded px-1 -mx-1' : ''}`}
         onClick={() => detail && setExpanded(!expanded)}
       >
-        <span className={`${color} min-w-[14px] text-sm`}>{icon}</span>
+        <span className={`${color} min-w-[14px] text-sm ${step.status === 'active' ? 'animate-spin' : ''}`}>{icon}</span>
         <span className={`flex-1 text-sm ${step.status === 'waiting' ? 'text-text-dim' : 'text-text-primary'}`}>
           {step.name}
           {detail && <span className="text-muted ml-1 text-[10px]">{expanded ? '▾' : '▸'}</span>}
         </span>
-        <span className="text-muted text-[10px]">{step.detail}</span>
+        <span className="text-muted text-[10px] font-mono">{step.detail}</span>
       </div>
       {expanded && detail && (
         <div className="text-[10px] text-muted ml-5 mr-1 mb-1 leading-relaxed bg-dark-surface/50 rounded px-2 py-1.5">
@@ -240,8 +240,8 @@ function MerkleNode({ label, done, active, x, y }) {
 
   return (
     <div className={`${bgClass} border ${borderClass} ${textClass} rounded
-                    text-[11px] px-2 py-1 text-center min-w-[56px] font-mono
-                    transition-all duration-300`}>
+                    text-[11px] px-2 py-1 text-center min-w-[64px] font-mono
+                    transition-all duration-300 ${active ? 'animate-pulse' : ''}`}>
       {label}
     </div>
   );
@@ -323,7 +323,7 @@ function MerkleTree({ merkle }) {
             x1={l.x1} y1={l.y1}
             x2={l.x2} y2={l.y2}
             stroke={l.done ? '#4ade80' : '#334155'}
-            strokeWidth={1}
+            strokeWidth={1.5}
             strokeDasharray={l.done ? 'none' : '3,3'}
             opacity={0.6}
           />
@@ -407,7 +407,7 @@ function BlockHeaderBar({ blockData, steps }) {
   return (
     <div className="mt-3 mb-2">
       <div className="text-block-purple text-[10px] font-bold tracking-widest mb-1.5">BLOCK HEADER (80 BYTES)</div>
-      <div className="flex rounded overflow-hidden border border-dark-border h-8">
+      <div className="flex rounded overflow-hidden border border-dark-border h-10">
         {HEADER_SEGMENTS.map((seg) => {
           const widthPercent = (seg.bytes / 80) * 100;
           const segColor = allDone ? 'bg-success/20 border-success/40'
@@ -425,8 +425,8 @@ function BlockHeaderBar({ blockData, steps }) {
               onMouseEnter={() => setHoveredSeg(seg.name)}
               onMouseLeave={() => setHoveredSeg(null)}
             >
-              <span className={`${isHovered ? 'text-block-purple' : 'text-text-dim'} truncate px-0.5`}>
-                {seg.bytes <= 4 ? seg.name : seg.name.slice(0, 6)}
+              <span className={`${isHovered ? 'text-block-purple' : headerParsed ? 'text-text-secondary' : 'text-text-dim'} truncate px-0.5`}>
+                {headerParsed && seg.bytes <= 4 ? values[seg.field] || seg.name : seg.bytes <= 4 ? seg.name : seg.name.slice(0, 6)}
               </span>
               <span className="text-[7px] text-muted absolute bottom-0 right-0.5">{seg.bytes}B</span>
 
@@ -453,10 +453,14 @@ function BlockVerifySection({ verifyState }) {
   }
   const { blockData, steps, merkle } = verifyState;
 
+  // 진행률 계산
+  const doneSteps = steps.filter(s => s.status === 'done').length;
+  const progress = Math.round((doneSteps / steps.length) * 100);
+
   return (
     <div className="overflow-y-auto flex-1 min-h-0">
       {/* 블록 정보 헤더 */}
-      <div className="text-text-secondary text-sm mb-2">
+      <div className="text-text-secondary text-sm mb-1">
         Block #{blockData?.height?.toLocaleString() ?? '?'}
         {blockData?.pool ? ` · ${blockData.pool}` : ''}
         {blockData?.txCount && (
@@ -467,6 +471,19 @@ function BlockVerifySection({ verifyState }) {
         <div className="text-text-dim text-[10px] mb-2 font-mono">{blockData.hash.slice(0, 24)}…</div>
       )}
 
+      {/* 프로그레스 바 */}
+      <div className="w-full h-1.5 bg-dark-surface rounded-full mb-3 overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{
+            width: `${progress}%`,
+            background: progress === 100
+              ? 'linear-gradient(90deg, #4ade80, #22c55e)'
+              : 'linear-gradient(90deg, #a78bfa, #7c3aed)',
+          }}
+        />
+      </div>
+
       {/* 블록 헤더 시각화 */}
       <BlockHeaderBar blockData={blockData} steps={steps} />
 
@@ -474,6 +491,13 @@ function BlockVerifySection({ verifyState }) {
       {steps.map((step, i) => (
         <BlockStepRow key={i} step={step} />
       ))}
+
+      {/* 머클 루트 해시 (검증 완료 시) */}
+      {merkle && doneSteps === steps.length && blockData?.merkleRoot && (
+        <div className="mt-2 text-[10px] font-mono text-success/70 bg-success/5 rounded px-2 py-1">
+          Merkle Root: {blockData.merkleRoot}
+        </div>
+      )}
 
       {/* 확장된 머클트리 */}
       <MerkleTree merkle={merkle} />

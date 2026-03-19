@@ -57,14 +57,16 @@ export class BlockVerificationState {
 
     this._state = {
       blockData,
+      startTime: Date.now(),
+      stepTimes: [],
       steps: [
-        { name: '헤더 파싱', status: 'waiting', detail: versionHex },
-        { name: 'PoW 검증', status: 'waiting', detail: nBitsStr },
-        { name: 'Timestamp 검증', status: 'waiting', detail: '대기 중' },
-        { name: 'Coinbase 검증', status: 'waiting', detail: '대기 중' },
-        { name: 'Merkle root', status: 'waiting', detail: '대기 중' },
-        { name: '전체 TX 검증', status: 'waiting', detail: `${blockData.txCount ?? '?'} TX 대기` },
-        { name: 'Weight 검증', status: 'waiting', detail: '대기 중' },
+        { name: '헤더 파싱', status: 'waiting', detail: versionHex, startTime: null },
+        { name: 'PoW 검증', status: 'waiting', detail: nBitsStr, startTime: null },
+        { name: 'Timestamp 검증', status: 'waiting', detail: '대기 중', startTime: null },
+        { name: 'Coinbase 검증', status: 'waiting', detail: '대기 중', startTime: null },
+        { name: 'Merkle root', status: 'waiting', detail: '대기 중', startTime: null },
+        { name: '전체 TX 검증', status: 'waiting', detail: `${blockData.txCount ?? '?'} TX 대기`, startTime: null },
+        { name: 'Weight 검증', status: 'waiting', detail: '대기 중', startTime: null },
       ],
       merkle: { ...this.merkle, doneCount: 0 },
       done: false,
@@ -79,12 +81,24 @@ export class BlockVerificationState {
   }
 
   _updateStep(index, status, detail) {
+    const now = Date.now();
     this._state = {
       ...this._state,
       steps: this._state.steps.map((s, i) =>
-        i === index ? { ...s, status, ...(detail != null ? { detail } : {}) } : s
+        i === index ? {
+          ...s,
+          status,
+          ...(detail != null ? { detail } : {}),
+          ...(status === 'active' && !s.startTime ? { startTime: now } : {}),
+        } : s
       ),
     };
+    // stepTimes 기록
+    if (status === 'done' || status === 'fail') {
+      const stepTimes = [...(this._state.stepTimes || [])];
+      stepTimes[index] = { start: this._state.steps[index]?.startTime, end: now };
+      this._state = { ...this._state, stepTimes };
+    }
     this.onChange?.(this._state);
   }
 
