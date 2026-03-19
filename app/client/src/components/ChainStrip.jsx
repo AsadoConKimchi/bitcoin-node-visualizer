@@ -5,56 +5,46 @@ function BlockCell({ block, isLatest, onClick, onReplay }) {
     <div
       onClick={() => onClick?.(block)}
       title="클릭하면 블록 상세 정보"
-      className={`rounded relative cursor-pointer
-                 transition-colors duration-150 shrink-0
-                 min-w-[90px] px-2.5 py-1.5
-                 max-sm:min-w-[72px] max-sm:px-2 max-sm:py-1
+      className={`rounded-lg relative cursor-pointer
+                 transition-all duration-300 px-3 py-2
                  ${isLatest
-                   ? 'border border-btc-orange shadow-[0_0_10px_rgba(247,147,26,0.3)] bg-btc-orange/5'
-                   : 'border border-[#1e3a6e] bg-[rgba(14,30,60,0.5)]'
+                   ? 'border-l-2 border-l-btc-orange border border-white/10 bg-btc-orange/5'
+                   : 'border border-white/10 bg-white/5'
                  }`}
     >
-      <div className={`font-bold text-[10px] ${isLatest ? 'text-btc-orange' : 'text-blue-400'}`}>
-        {block.height != null ? `#${block.height.toLocaleString()}` : '?'}
-      </div>
-      {block.hash && (
-        <div className="text-muted-dim text-[8px] truncate max-w-[80px]">
-          {block.hash.slice(0, 8)}…
-        </div>
-      )}
-      <div className="flex items-center gap-1">
-        {block.txCount != null && (
-          <span className="text-muted text-[8px]">{block.txCount.toLocaleString()} TX</span>
-        )}
-        {/* 최신 블록에만 재생 버튼 */}
+      <div className="flex items-center justify-between">
+        <span className={`font-bold text-sm font-mono ${isLatest ? 'text-btc-orange' : 'text-text-primary'}`}>
+          {block.height != null ? `#${block.height.toLocaleString()}` : '?'}
+        </span>
         {isLatest && onReplay && (
           <button
             onClick={(e) => { e.stopPropagation(); onReplay(); }}
-            className="text-blue-400 hover:text-blue-300 text-[10px] cursor-pointer
-                       hover:bg-blue-400/10 rounded px-0.5"
+            className="text-tx-blue hover:text-tx-blue/80 text-[10px] cursor-pointer
+                       hover:bg-tx-blue/10 rounded px-1"
             title="Compact Block Relay 재생"
           >
             ▶
           </button>
         )}
       </div>
-      {block.pool && (
-        <div className="text-muted-dim text-[8px]">{block.pool}</div>
-      )}
+      <div className="flex items-center gap-1.5 mt-0.5">
+        {block.txCount != null && (
+          <span className="text-muted text-[10px] font-mono">{block.txCount.toLocaleString()} TX</span>
+        )}
+        {block.pool && (
+          <span className="text-text-dim text-[10px]">· {block.pool}</span>
+        )}
+      </div>
     </div>
   );
 }
 
-function Arrow() {
-  return <span className="text-[#1e3a6e] text-sm mx-0.5 shrink-0">→</span>;
-}
-
-function NextBlock() {
+function PendingCell() {
   return (
-    <div className="border border-dashed border-[#1e3a6e] rounded
-                   min-w-[64px] px-2.5 py-1.5 text-center text-muted-dim shrink-0">
-      <div className="text-[#1e3a6e] text-lg">?</div>
-      <div className="text-[10px]">pending</div>
+    <div className="border border-dashed border-white/15 rounded-lg
+                   px-3 py-2 text-center">
+      <div className="text-muted-dim text-sm">?</div>
+      <div className="text-[10px] text-muted-dim">pending</div>
     </div>
   );
 }
@@ -62,6 +52,7 @@ function NextBlock() {
 export default function ChainStrip({ recentBlocks, onBlockClick, onReplayCompactBlock }) {
   if (!recentBlocks?.length) return null;
 
+  // 오름차순 정렬 (작은 번호 위, 큰 번호 아래)
   const blocks = [...recentBlocks]
     .sort((a, b) => (a.height ?? 0) - (b.height ?? 0))
     .slice(-5);
@@ -69,24 +60,32 @@ export default function ChainStrip({ recentBlocks, onBlockClick, onReplayCompact
   const latestHeight = blocks[blocks.length - 1]?.height;
 
   return (
-    <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1
-                   z-10 bg-panel-bg-light border border-[#1e3a6e] rounded-md
-                   px-3 py-2 backdrop-blur-sm font-mono text-xs
-                   max-w-[calc(100vw-80px)] overflow-x-auto
-                   max-sm:max-w-[calc(100vw-16px)] max-sm:px-2 max-sm:py-1.5 max-sm:gap-0.5">
-      {blocks.map((block, i) => (
-        <React.Fragment key={block.hash || i}>
-          {i > 0 && <Arrow />}
+    <div className="absolute top-[380px] left-4 w-[200px] z-10
+                    bg-[rgba(40,40,45,0.85)] border border-white/10 rounded-xl
+                    px-3 py-3 backdrop-blur-[20px]
+                    max-sm:left-2 max-sm:w-[180px] max-sm:top-[340px]"
+         style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+      {/* 신호등 + 타이틀 */}
+      <div className="flex items-center gap-1.5 mb-2.5">
+        <span className="traffic-light traffic-light--close" />
+        <span className="traffic-light traffic-light--minimize" />
+        <span className="traffic-light traffic-light--expand" />
+        <span className="text-btc-orange font-bold text-[10px] tracking-widest ml-2">CHAIN</span>
+      </div>
+
+      {/* 세로 블록 목록 */}
+      <div className="flex flex-col gap-1.5">
+        {blocks.map((block) => (
           <BlockCell
+            key={block.hash || block.height}
             block={block}
             isLatest={block.height === latestHeight}
             onClick={onBlockClick}
             onReplay={block.height === latestHeight ? onReplayCompactBlock : null}
           />
-        </React.Fragment>
-      ))}
-      <Arrow />
-      <NextBlock />
+        ))}
+        <PendingCell />
+      </div>
     </div>
   );
 }
