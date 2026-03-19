@@ -6,6 +6,34 @@ const STATUS_ICON = {
   waiting: { icon: '–', color: 'text-muted-dim' },
 };
 
+// 6단계 미니 프로그레스 도트
+function MiniProgress({ steps }) {
+  if (!steps || !steps.length) return null;
+  return (
+    <span className="inline-flex gap-[2px] items-center ml-1">
+      {steps.map((step, i) => {
+        const color = step.status === 'done' ? '#22c55e'
+          : step.status === 'active' ? '#f7931a'
+          : '#4b5563';
+        return (
+          <span
+            key={i}
+            style={{
+              display: 'inline-block',
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              backgroundColor: color,
+              transition: 'background-color 0.3s',
+            }}
+            title={step.name}
+          />
+        );
+      })}
+    </span>
+  );
+}
+
 // TX 검증 단계 상세 설명
 const TX_STEP_DETAILS = {
   '구문 파싱': 'TX 데이터 구조(버전, vin/vout 배열, locktime)가 프로토콜 규격에 맞는지 파싱합니다.',
@@ -120,8 +148,10 @@ export default function TxStreamPanel({ txStream, compact }) {
                 <span className={`text-xs font-mono ${isDone ? 'text-success/70' : 'text-text-primary'}`}>
                   {short}
                 </span>
-                <span className="ml-auto text-text-dim text-[9px]">
-                  {isAnimating ? '→ 멤풀' : isDone ? '완료' : '검증중'}
+                <span className="ml-auto text-text-dim text-[9px] flex items-center">
+                  {isAnimating ? '→ 멤풀' : tx.verifySnapshot?.steps
+                    ? <MiniProgress steps={tx.verifySnapshot.steps} />
+                    : '검증중'}
                 </span>
               </div>
 
