@@ -24,7 +24,7 @@ function Row({ label, value, valueColor }) {
   return (
     <div className="flex justify-between gap-4">
       <span className="text-btc-orange/40 shrink-0">{label}</span>
-      <span className={valueColor || 'text-btc-orange'}>{value ?? '—'}</span>
+      <span className={`font-mono ${valueColor || 'text-btc-orange'}`}>{value ?? '—'}</span>
     </div>
   );
 }
@@ -61,13 +61,14 @@ export default function HudPanels({ mode, serverMode, chain, blockHeight, mempoo
     const mempStr = mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—';
 
     return (
-      <div className="absolute top-14 left-4 bg-panel-bg-light border border-btc-orange/40
-                      rounded-md px-3 py-2 font-mono text-xs text-btc-orange
-                      backdrop-blur-sm z-8 min-w-[200px]
-                      max-sm:left-2 max-sm:min-w-[170px]">
+      <div className="absolute top-14 left-4 bg-[rgba(40,40,45,0.85)] border border-white/10
+                      rounded-xl px-3 py-2 text-xs text-btc-orange
+                      backdrop-blur-[20px] z-8 min-w-[200px]
+                      max-sm:left-2 max-sm:min-w-[170px]"
+           style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
         <div className="flex justify-between items-center mb-1">
           <span className="font-bold text-[10px] tracking-widest">▸ NODE</span>
-          <span className={`text-[10px] ${dotColorClass}`}>{statusLabel}</span>
+          <span className={`text-[10px] font-mono ${dotColorClass}`}>{statusLabel}</span>
         </div>
         <div className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide mb-1
                          ${isServer
@@ -144,11 +145,19 @@ export default function HudPanels({ mode, serverMode, chain, blockHeight, mempoo
   const isIBD = sourceType === 'server' && nodeInfo?.verificationProgress != null && nodeInfo.verificationProgress < 0.9999;
 
   return (
-    <div className="absolute top-14 left-4 bg-panel-bg-light border border-btc-orange/40
-                    rounded-md px-3.5 py-2.5 font-mono text-sm text-btc-orange
-                    backdrop-blur-sm leading-7 min-w-[240px] z-8
+    <div className="absolute top-14 left-4 bg-[rgba(40,40,45,0.85)] border border-white/10
+                    rounded-xl px-3.5 py-2.5 text-sm text-btc-orange
+                    backdrop-blur-[20px] leading-7 min-w-[240px] z-8
                     lg:top-14 md:top-14 sm:top-14
-                    max-sm:left-2 max-sm:min-w-[200px] max-sm:text-xs max-sm:leading-6">
+                    max-sm:left-2 max-sm:min-w-[200px] max-sm:text-xs max-sm:leading-6"
+         style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+      {/* 신호등 헤더 */}
+      <div className="flex items-center gap-1.5 mb-2">
+        <span className="traffic-light traffic-light--close" title="숨기기" />
+        <span className="traffic-light traffic-light--minimize" />
+        <span className="traffic-light traffic-light--expand" />
+      </div>
+
       {/* IBD 배너 */}
       {isIBD && (
         <div className="bg-yellow-900 border border-yellow-500 rounded px-2 py-1 mb-2
@@ -161,9 +170,9 @@ export default function HudPanels({ mode, serverMode, chain, blockHeight, mempoo
       )}
 
       {/* 연결 상태 헤더 */}
-      <div className="flex justify-between items-center mb-1 pb-1.5 border-b border-btc-orange/20">
+      <div className="flex justify-between items-center mb-1 pb-1.5 border-b border-white/10">
         <span className="font-bold text-xs tracking-widest">▸ NODE INFO</span>
-        <span className={`text-xs ${dotColorClass}`}>{statusLabel}</span>
+        <span className={`text-xs font-mono ${dotColorClass}`}>{statusLabel}</span>
       </div>
 
       {/* 데이터소스 배지 */}

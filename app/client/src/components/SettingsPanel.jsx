@@ -54,9 +54,10 @@ export default function SettingsPanel({ sourceType, serverUrl, onConnect, onClos
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
-      <div className="bg-[rgba(0,0,0,0.92)] border border-btc-orange rounded-md
-                     px-6 py-5 w-[380px] font-mono text-btc-orange
-                     max-sm:w-[calc(100vw-32px)] max-sm:px-4">
+      <div className="bg-[rgba(40,40,45,0.9)] border border-white/10 rounded-xl
+                     px-6 py-5 w-[380px] text-btc-orange backdrop-blur-[20px]
+                     max-sm:w-[calc(100vw-32px)] max-sm:px-4"
+           style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
         {/* 헤더 */}
         <div className="flex justify-between items-center mb-5">
           <span className="text-base font-bold tracking-wider">DATA SOURCE</span>

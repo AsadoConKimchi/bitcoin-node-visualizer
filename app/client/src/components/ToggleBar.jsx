@@ -18,9 +18,10 @@ const INACTIVE_STYLES = {
 export default function ToggleBar({ visible, onToggle }) {
   return (
     <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20
-                    bg-panel-bg-light border border-btc-orange/40 rounded-lg
-                    px-2 py-1.5 backdrop-blur-sm
-                    md:gap-2 md:px-3 md:py-2">
+                    bg-[rgba(40,40,45,0.85)] border border-white/10 rounded-xl
+                    px-2 py-1.5 backdrop-blur-[20px]
+                    md:gap-2 md:px-3 md:py-2"
+         style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
       {BUTTONS.map(({ key, label, icon, color }) => {
         const active = visible[key];
         return (

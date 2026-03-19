@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
-/* 커스텀 테마 — 따뜻한 다크 네이비 톤 */
+/* 커스텀 테마 — macOS Dark Mode */
 @theme {
   --color-btc-orange: #f7931a;
   --color-btc-orange-dim: rgba(247, 147, 26, 0.25);
   --color-block-purple: #a78bfa;
   --color-tx-blue: #93c5fd;
   --color-mempool-green: #34d399;
-  --color-panel-bg: rgba(12, 16, 28, 0.94);
-  --color-panel-bg-light: rgba(12, 16, 28, 0.92);
-  --color-panel-bg-solid: rgba(6, 10, 20, 0.96);
-  --color-dark-bg: #0a1628;
-  --color-dark-surface: #0f172a;
-  --color-dark-border: #1e293b;
+  --color-panel-bg: rgba(40, 40, 45, 0.85);
+  --color-panel-bg-light: rgba(40, 40, 45, 0.82);
+  --color-panel-bg-solid: rgba(30, 30, 35, 0.95);
+  --color-dark-bg: #1a1a1e;
+  --color-dark-surface: #2a2a30;
+  --color-dark-border: rgba(255,255,255,0.1);
   --color-muted: #64748b;
   --color-muted-dim: #334155;
   --color-text-primary: #e2e8f0;
@@ -21,8 +21,10 @@
   --color-success: #4ade80;
   --color-warning: #fcd34d;
   --color-error: #ef4444;
-  --color-floor-bg: rgba(6, 10, 20, 0.96);
+  --color-floor-bg: rgba(30, 30, 35, 0.96);
   --font-mono: 'Courier New', Courier, monospace;
+  --font-system: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif;
+  --shadow-panel: 0 8px 32px rgba(0,0,0,0.4);
 }
 
 /* 기본 리셋 + 글로벌 스타일 */
@@ -40,7 +42,7 @@ html, body, #root {
 }
 
 body {
-  font-family: var(--font-mono);
+  font-family: var(--font-system);
   color: var(--color-btc-orange);
 }
 
@@ -63,11 +65,26 @@ body {
   background: rgba(247, 147, 26, 0.5);
 }
 
-/* 패널 공통 스타일 */
+/* 패널 공통 스타일 — macOS frosted glass */
 .panel-base {
-  @apply bg-panel-bg-light backdrop-blur-sm rounded-md font-mono;
-  border: 1px solid var(--color-btc-orange-dim);
+  @apply bg-panel-bg-light backdrop-blur-[20px] rounded-xl;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: var(--shadow-panel);
 }
+
+/* 신호등 버튼 */
+.traffic-light {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.traffic-light:hover { opacity: 0.8; }
+.traffic-light--close { background-color: #ff5f56; }
+.traffic-light--minimize { background-color: #ffbd2e; }
+.traffic-light--expand { background-color: #27c93f; }
 
 .panel-header {
   @apply font-bold text-xs tracking-wider mb-2 pb-1.5;

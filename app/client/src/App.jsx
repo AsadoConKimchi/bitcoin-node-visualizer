@@ -650,8 +650,9 @@ export default function App() {
       {/* 연결 실패 에러 오버레이 */}
       {showErrorOverlay && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-20">
-          <div className="bg-black/95 border border-error rounded-md px-8 py-7
-                        font-mono text-btc-orange text-center max-w-[320px]">
+          <div className="bg-[rgba(40,40,45,0.9)] border border-white/10 rounded-xl px-8 py-7
+                        text-btc-orange text-center max-w-[320px] backdrop-blur-[20px]"
+               style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
             <div className="text-base font-bold mb-2.5">연결 실패</div>
             <div className="text-sm text-[#a16207] mb-5">
               서버에 연결할 수 없습니다. 설정을 확인하세요.

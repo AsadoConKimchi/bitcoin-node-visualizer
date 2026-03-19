@@ -475,45 +475,35 @@ export default function MainPanel({
 
   return (
     <div
-      className={`absolute right-0 top-0 z-10 font-mono
-                  bg-[rgba(12,16,28,0.92)] border-l border-btc-orange/25
-                  backdrop-blur-sm overflow-hidden flex flex-col
+      className={`absolute right-0 top-0 z-10
+                  bg-[rgba(40,40,45,0.85)] border-l border-white/10
+                  backdrop-blur-[20px] overflow-hidden flex flex-col
                   transition-all duration-300
                   max-sm:right-0 max-sm:left-0 max-sm:w-full max-sm:border-l-0
                   ${minimized ? 'h-[44px]' : 'h-full'}`}
       style={{
         width: typeof window !== 'undefined' && window.innerWidth < 640 ? '100%' : '75%',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
       }}
     >
-      {/* ── 헤더 바 ── */}
-      <div className="flex items-center justify-between px-4 py-2.5 shrink-0 border-b border-btc-orange/20 bg-[rgba(8,12,22,0.95)]">
-        <span className="text-btc-orange font-bold text-sm tracking-widest">
-          ▸ VERIFICATION CENTER
-        </span>
-        <div className="flex items-center gap-3">
-          {minimized && (
-            <span className="text-muted text-[10px]">
-              TX {txCount}건
-              {failedCount > 0 && ` (✗${failedCount})`}
-              {' · '}
-              멤풀 {mempoolCount?.toLocaleString() ?? '?'}
-            </span>
-          )}
-          <button
-            onClick={() => setMinimized(!minimized)}
-            className="text-muted hover:text-btc-orange text-sm cursor-pointer px-1"
-            title={minimized ? '확장' : '최소화'}
-          >
-            {minimized ? '▢' : '▁'}
-          </button>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-error text-sm cursor-pointer px-1"
-            title="닫기"
-          >
-            ✕
-          </button>
+      {/* ── 헤더 바 (macOS 윈도우 스타일) ── */}
+      <div className="flex items-center px-4 py-2.5 shrink-0 border-b border-white/10 bg-[rgba(30,30,35,0.95)]">
+        <div className="flex items-center gap-1.5 mr-3">
+          <span className="traffic-light traffic-light--close" title="닫기" onClick={onClose} />
+          <span className="traffic-light traffic-light--minimize" title={minimized ? '확장' : '최소화'} onClick={() => setMinimized(!minimized)} />
+          <span className="traffic-light traffic-light--expand" />
         </div>
+        <span className="text-btc-orange font-bold text-sm tracking-widest flex-1 text-center">
+          VERIFICATION CENTER
+        </span>
+        {minimized && (
+          <span className="text-muted text-[10px] font-mono">
+            TX {txCount}건
+            {failedCount > 0 && ` (✗${failedCount})`}
+            {' · '}
+            멤풀 {mempoolCount?.toLocaleString() ?? '?'}
+          </span>
+        )}
       </div>
 
       {/* ── 콘텐츠 ── */}
@@ -522,7 +512,7 @@ export default function MainPanel({
           {/* 상단: TX검증 + 블록검증 (가로 분할) */}
           <div className="flex min-h-0 flex-[45]">
             {/* TX 검증 */}
-            <div className="flex flex-col min-h-0 px-4 py-3 overflow-hidden flex-[50] border-r border-btc-orange/10">
+            <div className="flex flex-col min-h-0 px-4 py-3 overflow-hidden flex-[50] border-r border-white/10">
               <div className="text-tx-blue font-bold text-xs tracking-widest mb-2 shrink-0 flex justify-between">
                 <span>▸ TX VERIFICATION</span>
                 <span className="text-muted font-normal">
@@ -544,7 +534,7 @@ export default function MainPanel({
           </div>
 
           {/* 하단: Bitfeed 바닥 */}
-          <div className="flex flex-col min-h-0 border-t border-btc-orange/10 flex-[55]"
+          <div className="flex flex-col min-h-0 border-t border-white/10 flex-[55]"
                style={{ background: 'rgba(6, 10, 20, 0.96)' }}
           >
             {/* Bitfeed 헤더 */}
