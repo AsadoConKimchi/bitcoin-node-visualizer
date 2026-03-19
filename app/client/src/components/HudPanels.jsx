@@ -42,12 +42,16 @@ export default function HudPanels({ mode, serverMode, chain, blockHeight, mempoo
     statusLabel = '✗ NODE DOWN';
   }
 
-  // 데이터소스 배지 텍스트 (Issue 2 수정)
-  let sourceBadge = 'mempool.space';
-  if (sourceType === 'server') {
-    if (serverMode === 'zmq') sourceBadge = 'MY NODE (ZMQ)';
-    else if (serverMode === 'rpc') sourceBadge = 'MY NODE (RPC)';
-    else sourceBadge = 'MY NODE';
+  // 데이터소스 배지
+  const isServer = sourceType === 'server';
+  let sourceBadge, sourceSubtitle;
+  if (isServer) {
+    const modeSuffix = serverMode === 'zmq' ? ' (ZMQ/RPC)' : serverMode === 'rpc' ? ' (RPC)' : '';
+    sourceBadge = `🖥️ MY FULL NODE${modeSuffix}`;
+    sourceSubtitle = '자체 풀노드 데이터';
+  } else {
+    sourceBadge = '📡 mempool.space';
+    sourceSubtitle = '공개 API (교육용)';
   }
 
   // ── 컴팩트 모드: 핵심 정보만 1-2줄 ──
@@ -66,12 +70,13 @@ export default function HudPanels({ mode, serverMode, chain, blockHeight, mempoo
           <span className={`text-[10px] ${dotColorClass}`}>{statusLabel}</span>
         </div>
         <div className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide mb-1
-                         ${sourceType === 'server'
-                           ? 'bg-green-500/10 border border-green-500/25 text-green-500'
+                         ${isServer
+                           ? 'bg-green-500/15 border border-green-500/30 text-green-400'
                            : 'bg-slate-500/15 border border-slate-500/25 text-slate-400'
                          }`}>
           {sourceBadge}
         </div>
+        <div className="text-[9px] text-muted mb-0.5">{sourceSubtitle}</div>
         <div className="flex gap-3 text-[11px]">
           <span>{heightStr}</span>
           <span className="text-btc-orange/40">·</span>
@@ -162,13 +167,14 @@ export default function HudPanels({ mode, serverMode, chain, blockHeight, mempoo
       </div>
 
       {/* 데이터소스 배지 */}
-      <div className={`inline-block px-2 py-0.5 rounded text-xs font-bold tracking-wide mb-1.5
-                       ${sourceType === 'server'
-                         ? 'bg-green-500/10 border border-green-500/25 text-green-500'
+      <div className={`inline-block px-2 py-1 rounded text-xs font-bold tracking-wide mb-1
+                       ${isServer
+                         ? 'bg-green-500/15 border border-green-500/30 text-green-400'
                          : 'bg-slate-500/15 border border-slate-500/25 text-slate-400'
                        }`}>
         {sourceBadge}
       </div>
+      <div className="text-[10px] text-muted mb-1.5">{sourceSubtitle}</div>
 
       {/* 네트워크 데이터 */}
       <Row label="Chain"   value={chain ?? 'mainnet'} />
