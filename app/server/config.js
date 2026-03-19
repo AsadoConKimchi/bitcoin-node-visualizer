@@ -13,10 +13,10 @@ const config = {
   rpc: {
     host: process.env.BITCOIN_RPC_HOST || '127.0.0.1',
     port: parseInt(process.env.BITCOIN_RPC_PORT || '8332', 10),
-    user: process.env.BITCOIN_RPC_USER || 'umbrel',
-    pass: process.env.BITCOIN_RPC_PASS || 'umbrel',
+    user: process.env.BITCOIN_RPC_USER || '',
+    pass: process.env.BITCOIN_RPC_PASS || '',
     // RPC 폴링 간격 (ms)
-    pollIntervalMs: parseInt(process.env.RPC_POLL_INTERVAL_MS || '10000', 10),
+    pollIntervalMs: parseInt(process.env.RPC_POLL_INTERVAL_MS || '5000', 10),
   },
 
   // ZMQ
@@ -28,5 +28,10 @@ const config = {
     connectTimeoutMs: parseInt(process.env.ZMQ_CONNECT_TIMEOUT_MS || '5000', 10),
   },
 };
+
+// RPC 자격증명 미설정 경고
+if (!config.rpc.user || !config.rpc.pass) {
+  console.warn('[config] ⚠ BITCOIN_RPC_USER / BITCOIN_RPC_PASS 환경변수가 설정되지 않았습니다.');
+}
 
 module.exports = config;

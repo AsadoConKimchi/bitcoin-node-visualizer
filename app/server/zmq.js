@@ -20,7 +20,12 @@ function getMode() {
 
 let _pollTimer = null;
 let _lastBlockHeight = -1;
-let _lastMempoolSize = -1;
+let _lastMempoolTxids = new Set();
+
+// RPC 폴링 시 상세 조회 TX 수 제한
+const TX_DETAIL_LIMIT = 5;
+// 간단 emit TX 추가 제한
+const TX_SIMPLE_LIMIT = 10;
 
 function setMode(mode) {
   if (connectionMode !== mode) {
@@ -47,16 +52,38 @@ async function pollOnce() {
       _lastBlockHeight = height;
     }
 
-    // mempool 크기 변화 감지 (개별 TX는 추적 불가, 크기만)
-    const mempool = await rpc.getRawMempool();
-    const mempoolSize = mempool.length;
-    if (mempoolSize !== _lastMempoolSize) {
-      broadcaster.broadcast('mempool', {
-        count: mempoolSize,
-        delta: mempoolSize - (_lastMempoolSize === -1 ? mempoolSize : _lastMempoolSize),
-      });
-      _lastMempoolSize = mempoolSize;
+    // mempool verbose 조회 → diff로 새 TX 감지
+    const mempoolVerbose = await rpc.getRawMempoolVerbose();
+    const currentTxids = Object.keys(mempoolVerbose);
+    const currentSet = new Set(currentTxids);
+    const newTxids = currentTxids.filter(txid => !_lastMempoolTxids.has(txid));
+
+    // 상세 TX emit (getrawtransaction → processRawTx)
+    for (const txid of newTxids.slice(0, TX_DETAIL_LIMIT)) {
+      try {
+        const rawHex = await rpc.getRawTransaction(txid);
+        await validator.processRawTx(Buffer.from(rawHex, 'hex'));
+      } catch {
+        // 이미 블록에 포함되었거나 mempool에서 제거된 경우 무시
+      }
     }
+
+    // 나머지 새 TX는 verbose 데이터로 간단 emit
+    for (const txid of newTxids.slice(TX_DETAIL_LIMIT, TX_DETAIL_LIMIT + TX_SIMPLE_LIMIT)) {
+      const info = mempoolVerbose[txid];
+      if (!info) continue;
+      const fee = info.fees?.base ?? info.fee ?? 0;
+      broadcaster.broadcast('tx', {
+        txid,
+        size: info.vsize ?? 0,
+        weight: info.weight ?? 0,
+        feeRate: info.vsize ? Math.round(fee * 1e8 / info.vsize) : 0,
+      });
+    }
+
+    const delta = newTxids.length;
+    broadcaster.broadcast('mempool', { count: currentTxids.length, delta });
+    _lastMempoolTxids = currentSet;
 
     setMode('rpc');
   } catch (err) {

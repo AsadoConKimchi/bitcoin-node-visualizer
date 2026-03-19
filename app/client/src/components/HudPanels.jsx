@@ -206,6 +206,10 @@ const HudPanels = forwardRef(function HudPanels({ mode, serverMode, chain, block
         {sourceBadge}
       </div>
       <div className="text-[10px] text-muted mb-1">{sourceSubtitle}</div>
+      {/* mempool 모드: 기본 위치 표시 */}
+      {!isServer && (
+        <div className="text-[10px] text-white/40 mb-0.5">📍 Seoul (default)</div>
+      )}
 
       {/* 노드 신원 정보 (서버 모드) */}
       {isServer && nodeInfo?.subversion && (
@@ -240,6 +244,9 @@ const HudPanels = forwardRef(function HudPanels({ mode, serverMode, chain, block
       )}
       {diffStr && <Row label="Diff Adj" value={diffStr} />}
       {peersStr != null && <Row label="Peers" value={peersStr} />}
+      {isServer && peersStr != null && (
+        <div className="text-[9px] text-white/30 -mt-1 mb-0.5 pl-1">🟢 피어 · 🟠 연결선</div>
+      )}
       {securityStr && <Row label="Security" value={securityStr} />}
       {timeStr && <Row label="Time Δ" value={timeStr} valueColor={timeColor} />}
       {sourceType === 'server' && nodeInfo?.localServices?.length > 0 && (

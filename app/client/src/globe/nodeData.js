@@ -52,9 +52,9 @@ function getFallbackNodes() {
  * bitnodes.io API에서 노드 위치 데이터 가져오기
  * 응답 구조: nodes[addr] = [protocol, userAgent, connSince, services, height, hostname, country, city, lat, lng, tz, asn, org]
  */
-export async function fetchNodePoints() {
+export async function fetchNodePoints(signal) {
   try {
-    const res = await fetch(BITNODES_API);
+    const res = await fetch(BITNODES_API, { signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
@@ -75,7 +75,7 @@ export async function fetchNodePoints() {
 
     return points;
   } catch (err) {
-    console.warn('[nodeData] bitnodes.io 요청 실패, 폴백 사용:', err);
+    console.debug('[nodeData] bitnodes.io 요청 실패, 폴백 사용:', err);
     return getFallbackNodes();
   }
 }
@@ -90,6 +90,7 @@ export class NodeDataManager {
     this._timer = null;
     this._nodes = [];
     this._destroyed = false;
+    this._abortController = null;
   }
 
   async start() {
@@ -99,12 +100,17 @@ export class NodeDataManager {
 
   async _load() {
     if (this._destroyed) return;
-    const bgPoints = await fetchNodePoints();
+    if (this._abortController) this._abortController.abort();
+    this._abortController = new AbortController();
+    const { signal } = this._abortController;
+
+    const bgPoints = await fetchNodePoints(signal);
     this._nodes = bgPoints;
 
     if (this._serverUrl) {
-      const peerPoints = await this._fetchPeers();
-      if (!this._destroyed) this._onUpdate([...bgPoints, ...peerPoints, MY_NODE]);
+      // 서버 모드: bitnodes 배경 노드 제거 — 실제 피어 + 내 노드만 표시
+      const peerPoints = await this._fetchPeers(signal);
+      if (!this._destroyed) this._onUpdate([...peerPoints, MY_NODE]);
     } else {
       // mempool 모드: bitnodes 데이터에서 가상 피어 8~12개 선택
       const peerCount = 8 + Math.floor(Math.random() * 5);
@@ -119,9 +125,9 @@ export class NodeDataManager {
     }
   }
 
-  async _fetchPeers() {
+  async _fetchPeers(signal) {
     try {
-      const res = await fetch(`${this._serverUrl}/api/peers`);
+      const res = await fetch(`${this._serverUrl}/api/peers`, { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       return (data.peers || []).map((p) => ({
@@ -158,5 +164,6 @@ export class NodeDataManager {
   destroy() {
     this._destroyed = true;
     if (this._timer) clearInterval(this._timer);
+    if (this._abortController) this._abortController.abort();
   }
 }

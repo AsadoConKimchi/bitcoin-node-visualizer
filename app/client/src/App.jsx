@@ -458,14 +458,33 @@ export default function App() {
         const peers = nodePointsRef.current.filter((n) => n.isMyPeer);
         if (peers.length) {
           const src = peers[Math.floor(Math.random() * peers.length)];
-          addArcs([{
+          const arcs = [{
             startLat: src.lat,
             startLng: src.lng,
             endLat: MY_NODE.lat,
             endLng: MY_NODE.lng,
             color: '#60a5fa',
             type: 'tx',
-          }]);
+          }];
+
+          // mempool 모드: 가끔 파란 노드 간 TX 전파 아크 추가
+          if (sourceType !== 'server' && Math.random() < 0.3) {
+            const bgNodes = nodePointsRef.current.filter((n) => !n.isMyNode && !n.isMyPeer);
+            if (bgNodes.length >= 2) {
+              const a = bgNodes[Math.floor(Math.random() * bgNodes.length)];
+              const b = bgNodes[Math.floor(Math.random() * bgNodes.length)];
+              if (a !== b) {
+                arcs.push({
+                  startLat: a.lat, startLng: a.lng,
+                  endLat: b.lat, endLng: b.lng,
+                  color: '#93c5fd',
+                  type: 'tx',
+                });
+              }
+            }
+          }
+
+          addArcs(arcs);
         }
       }
 
@@ -490,6 +509,27 @@ export default function App() {
           type: 'block',
         }))
       );
+
+      // mempool 모드: 파란 노드 간 네트워크 전파 시뮬레이션 아크
+      if (sourceType !== 'server') {
+        const bgNodes = nodePointsRef.current.filter((n) => !n.isMyNode && !n.isMyPeer);
+        if (bgNodes.length >= 2) {
+          const propagationArcs = [];
+          for (let i = 0; i < 3; i++) {
+            const src = bgNodes[Math.floor(Math.random() * bgNodes.length)];
+            const dst = bgNodes[Math.floor(Math.random() * bgNodes.length)];
+            if (src !== dst) {
+              propagationArcs.push({
+                startLat: src.lat, startLng: src.lng,
+                endLat: dst.lat, endLng: dst.lng,
+                color: '#a78bfa',
+                type: 'block',
+              });
+            }
+          }
+          if (propagationArcs.length) addArcs(propagationArcs);
+        }
+      }
 
       startBlockVerification(data);
       setVisible((prev) => ({ ...prev, verifyCenter: true }));
