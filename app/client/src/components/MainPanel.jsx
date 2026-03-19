@@ -103,11 +103,19 @@ function TxStreamSection({ txStream, onTxClick }) {
         const isExpanded = expandedTxid === tx.txid;
         const short = tx.txid ? tx.txid.slice(0, 10) + '…' : '?';
 
+        // TX 메타 정보
+        const snap = tx.verifySnapshot;
+        const txFeeRate = snap?.feeRate ?? tx.data?.feeRate;
+        const txSize = snap?.size ?? tx.data?.size;
+        const txWeight = snap?.weight ?? tx.data?.weight;
+        const txVin = snap?.vin ?? tx.data?.vin;
+        const txVout = snap?.vout ?? tx.data?.vout;
+
         return (
           <div key={tx.txid}>
             <div
               onClick={() => handleClick(tx.txid)}
-              className={`flex items-center gap-2 px-2 py-1 rounded cursor-pointer
+              className={`px-2 py-1.5 rounded cursor-pointer
                          transition-all duration-500
                          ${isFailed ? 'bg-error/10' : isExpanded ? 'bg-tx-blue/10' : 'hover:bg-tx-blue/5'}
                          ${isAnimating ? 'opacity-0 translate-y-5' : ''}`}
@@ -117,20 +125,39 @@ function TxStreamSection({ txStream, onTxClick }) {
                 boxShadow: '0 0 12px rgba(34,197,94,0.3)',
               } : undefined}
             >
-              <span className={`text-sm min-w-[14px] ${isFailed ? 'text-error' : isDone ? 'text-success' : 'text-warning'}`}>
-                {isFailed ? '✗' : isDone ? '✓' : '⟳'}
-              </span>
-              <span className={`text-sm font-mono ${isFailed ? 'text-error/70' : isDone ? 'text-success/70' : 'text-text-primary'}`}>
-                {short}
-              </span>
-              {isFailed && tx.failReason && (
-                <span className="text-error text-[10px] ml-1">{tx.failReason}</span>
-              )}
-              <span className="ml-auto text-text-dim text-[10px] flex items-center">
-                {isFailed ? '반려' : isAnimating ? '→ 멤풀' : tx.verifySnapshot?.steps
-                  ? <MiniProgress steps={tx.verifySnapshot.steps} />
-                  : '검증중'}
-              </span>
+              {/* Line 1: icon + txid + mini dots */}
+              <div className="flex items-center gap-2">
+                <span className={`text-sm min-w-[14px] ${isFailed ? 'text-error' : isDone ? 'text-success' : 'text-warning'}`}>
+                  {isFailed ? '✗' : isDone ? '✓' : '⟳'}
+                </span>
+                <span className={`text-sm font-mono ${isFailed ? 'text-error/70' : isDone ? 'text-success/70' : 'text-text-primary'}`}>
+                  {short}
+                </span>
+                {isFailed && tx.failReason && (
+                  <span className="text-error text-[10px] ml-1">{tx.failReason}</span>
+                )}
+                <span className="ml-auto text-text-dim text-[10px] flex items-center">
+                  {isFailed ? '반려' : isAnimating ? '→ 멤풀' : snap?.steps
+                    ? <MiniProgress steps={snap.steps} />
+                    : '검증중'}
+                </span>
+              </div>
+              {/* Line 2: feeRate · size/weight · vin→vout */}
+              <div className="flex items-center gap-1.5 ml-6 mt-0.5 text-[10px] font-mono">
+                {txFeeRate != null && (
+                  <span style={{ color: feeColor(txFeeRate) }}>{txFeeRate} sat/vB</span>
+                )}
+                {(txSize != null || txWeight != null) && (
+                  <span className="text-text-dim">
+                    {txSize != null && `${txSize}B`}
+                    {txSize != null && txWeight != null && ' · '}
+                    {txWeight != null && `${txWeight}WU`}
+                  </span>
+                )}
+                {txVin != null && txVout != null && (
+                  <span className="text-muted">{txVin}in → {txVout}out</span>
+                )}
+              </div>
             </div>
 
             {/* 인라인 검증 상세 */}

@@ -42,19 +42,26 @@ export class TxVerificationState {
     const short = txid ? txid.slice(0, 8) + '…' + txid.slice(-4) : 'unknown';
     const inOut = `${data.vin ?? '?'}in · ${data.vout ?? '?'}out`;
 
+    // fee rate 계산
+    const feeRate = data.feeRate ?? (data.fee && data.weight ? Math.round(data.fee / (data.weight / 4)) : null);
+
     this._state = {
       txid,
       short,
       size: data.size ?? null,
       weight: data.weight ?? null,
       totalOut: data.totalOut ?? null,
+      feeRate,
+      vin: data.vin ?? null,
+      vout: data.vout ?? null,
+      startTime: Date.now(),
       steps: [
-        { name: '구문 파싱', status: 'waiting', detail: inOut },
-        { name: 'IsStandard 검사', status: 'waiting', detail: '대기 중' },
-        { name: 'UTXO 조회', status: 'waiting', detail: `${data.vin ?? '?'} inputs` },
-        { name: '이중 지불 검사', status: 'waiting', detail: '대기 중' },
-        { name: '서명 검증', status: 'waiting', detail: '대기 중' },
-        { name: '금액 합산', status: 'waiting', detail: '대기 중' },
+        { name: '구문 파싱', status: 'waiting', detail: inOut, startTime: null },
+        { name: 'IsStandard 검사', status: 'waiting', detail: '대기 중', startTime: null },
+        { name: 'UTXO 조회', status: 'waiting', detail: `${data.vin ?? '?'} inputs`, startTime: null },
+        { name: '이중 지불 검사', status: 'waiting', detail: '대기 중', startTime: null },
+        { name: '서명 검증', status: 'waiting', detail: '대기 중', startTime: null },
+        { name: '금액 합산', status: 'waiting', detail: '대기 중', startTime: null },
       ],
       done: false,
       failed: false,
@@ -73,7 +80,12 @@ export class TxVerificationState {
     this._state = {
       ...this._state,
       steps: this._state.steps.map((s, i) =>
-        i === index ? { ...s, status, ...(detail != null ? { detail } : {}) } : s
+        i === index ? {
+          ...s,
+          status,
+          ...(detail != null ? { detail } : {}),
+          ...(status === 'active' && !s.startTime ? { startTime: Date.now() } : {}),
+        } : s
       ),
     };
     this.onChange?.(this._state);
