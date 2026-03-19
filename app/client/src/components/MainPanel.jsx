@@ -83,12 +83,19 @@ function InlineStepRow({ step }) {
 
 // ── TX 스트림 섹션 ──────────────────────────────────────────────────────────────
 
-function TxStreamSection({ txStream, onTxClick }) {
+function TxStreamSection({ txStream, onTxClick, onPinTx }) {
   const [expandedTxid, setExpandedTxid] = useState(null);
 
   const handleClick = useCallback((txid) => {
     setExpandedTxid((prev) => prev === txid ? null : txid);
-  }, []);
+    // 핀 콜백: 해당 TX 데이터 전달
+    if (onPinTx) {
+      const tx = txStream.find(t => t.txid === txid);
+      if (tx) {
+        onPinTx({ txid, verifySnapshot: tx.verifySnapshot, data: tx.data, status: tx.status });
+      }
+    }
+  }, [onPinTx, txStream]);
 
   if (txStream.length === 0) {
     return <div className="text-muted-dim text-sm text-center py-4">TX 대기 중…</div>;
@@ -505,6 +512,57 @@ function BlockVerifySection({ verifyState }) {
   );
 }
 
+// ── 고정 TX 검증 상세 ────────────────────────────────────────────────────────────
+
+function PinnedTxDetail({ pinnedTx, onClose }) {
+  if (!pinnedTx) return null;
+  const { txid, verifySnapshot: snap, status } = pinnedTx;
+  const isFailed = status === 'failed';
+  const isDone = status === 'done' || status === 'animating';
+  const txFeeRate = snap?.feeRate;
+  const txSize = snap?.size;
+  const txWeight = snap?.weight;
+  const txVin = snap?.vin;
+  const txVout = snap?.vout;
+
+  return (
+    <div className="border-t border-tx-blue/20 px-4 py-3 overflow-y-auto">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-tx-blue font-bold text-[10px] tracking-widest">
+          ▸ PINNED TX {isDone && !isFailed && <span className="text-success">완료 ✓</span>}
+          {isFailed && <span className="text-error">실패 ✗</span>}
+        </div>
+        <button
+          onClick={onClose}
+          className="text-muted hover:text-text-primary text-sm leading-none px-1"
+          title="닫기"
+        >✕</button>
+      </div>
+      <div className="text-text-dim text-[10px] font-mono mb-1.5">{txid}</div>
+      {/* 메타 정보 */}
+      <div className="flex items-center gap-1.5 text-[10px] font-mono mb-2">
+        {txFeeRate != null && (
+          <span style={{ color: feeColor(txFeeRate) }}>{txFeeRate} sat/vB</span>
+        )}
+        {(txSize != null || txWeight != null) && (
+          <span className="text-text-dim">
+            {txSize != null && `${txSize}B`}
+            {txSize != null && txWeight != null && ' · '}
+            {txWeight != null && `${txWeight}WU`}
+          </span>
+        )}
+        {txVin != null && txVout != null && (
+          <span className="text-muted">{txVin}in → {txVout}out</span>
+        )}
+      </div>
+      {/* 검증 단계 */}
+      {snap?.steps?.map((step, i) => (
+        <InlineStepRow key={i} step={step} />
+      ))}
+    </div>
+  );
+}
+
 // ── 메인 패널 ───────────────────────────────────────────────────────────────────
 
 export default function MainPanel({
@@ -517,6 +575,21 @@ export default function MainPanel({
   bitfeedRef,
 }) {
   const [minimized, setMinimized] = useState(false);
+  const [pinnedTx, setPinnedTx] = useState(null);
+
+  // 핀 토글: 같은 TX 재클릭 시 해제
+  const handlePinTx = useCallback((txInfo) => {
+    setPinnedTx((prev) => prev?.txid === txInfo.txid ? null : txInfo);
+  }, []);
+
+  // 스트림에서 pinned TX 업데이트 동기화
+  useEffect(() => {
+    if (!pinnedTx) return;
+    const found = txStream.find(t => t.txid === pinnedTx.txid);
+    if (found?.verifySnapshot) {
+      setPinnedTx(prev => ({ ...prev, verifySnapshot: found.verifySnapshot, status: found.status }));
+    }
+  }, [txStream, pinnedTx?.txid]);
 
   if (!visible) return null;
 
@@ -572,7 +645,7 @@ export default function MainPanel({
                   {failedCount > 0 && <span className="text-error ml-1">✗{failedCount}</span>}
                 </span>
               </div>
-              <TxStreamSection txStream={txStream} onTxClick={onTxClick} />
+              <TxStreamSection txStream={txStream} onTxClick={onTxClick} onPinTx={handlePinTx} />
             </div>
 
             {/* 블록 검증 */}
@@ -581,6 +654,8 @@ export default function MainPanel({
                 ▸ BLOCK VERIFICATION
               </div>
               <BlockVerifySection verifyState={blockVerifyState} />
+              {/* 고정 TX 검증 상세 */}
+              <PinnedTxDetail pinnedTx={pinnedTx} onClose={() => setPinnedTx(null)} />
             </div>
           </div>
 
