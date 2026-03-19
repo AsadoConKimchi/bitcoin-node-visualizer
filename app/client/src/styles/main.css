@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
-/* 커스텀 테마 */
+/* 커스텀 테마 — 따뜻한 다크 네이비 톤 */
 @theme {
   --color-btc-orange: #f7931a;
-  --color-btc-orange-dim: rgba(247, 147, 26, 0.4);
+  --color-btc-orange-dim: rgba(247, 147, 26, 0.25);
   --color-block-purple: #a78bfa;
   --color-tx-blue: #93c5fd;
-  --color-mempool-green: #22c55e;
-  --color-panel-bg: rgba(5, 8, 16, 0.92);
-  --color-panel-bg-light: rgba(5, 8, 16, 0.88);
-  --color-panel-bg-solid: rgba(5, 8, 16, 0.96);
+  --color-mempool-green: #34d399;
+  --color-panel-bg: rgba(12, 16, 28, 0.94);
+  --color-panel-bg-light: rgba(12, 16, 28, 0.92);
+  --color-panel-bg-solid: rgba(6, 10, 20, 0.96);
   --color-dark-bg: #0a1628;
   --color-dark-surface: #0f172a;
   --color-dark-border: #1e293b;
@@ -21,6 +21,7 @@
   --color-success: #4ade80;
   --color-warning: #fcd34d;
   --color-error: #ef4444;
+  --color-floor-bg: rgba(6, 10, 20, 0.96);
   --font-mono: 'Courier New', Courier, monospace;
 }
 
@@ -70,7 +71,7 @@ body {
 
 .panel-header {
   @apply font-bold text-xs tracking-wider mb-2 pb-1.5;
-  border-bottom: 1px solid rgba(247, 147, 26, 0.2);
+  border-bottom: 1px solid rgba(247, 147, 26, 0.15);
 }
 
 /* 온보딩 스포트라이트 */
