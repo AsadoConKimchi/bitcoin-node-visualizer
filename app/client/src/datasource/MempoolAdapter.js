@@ -29,6 +29,9 @@ export class MempoolAdapter extends EventBus {
     this._frameScheduled = false;
     this._txTimestamps = []; // 초당 TX 카운트용
 
+    // 수수료 캐시 (TX 합성 데이터용)
+    this._currentFees = { fastestFee: 15, halfHourFee: 8, hourFee: 3 };
+
     this.connect();
     this._startRestPolling();
   }
@@ -127,11 +130,12 @@ export class MempoolAdapter extends EventBus {
 
     // 수수료
     if (msg.fees) {
-      this.emit('fees', {
+      this._currentFees = {
         fastestFee: msg.fees.fastestFee,
         halfHourFee: msg.fees.halfHourFee,
         hourFee: msg.fees.hourFee,
-      });
+      };
+      this.emit('fees', { ...this._currentFees });
     }
 
     // difficulty adjustment
@@ -193,7 +197,7 @@ export class MempoolAdapter extends EventBus {
     const stagger = Math.min(16 / batch.length, 4);
     batch.forEach((txid, i) => {
       setTimeout(() => {
-        if (!this._destroyed) this.emit('tx', { txid });
+        if (!this._destroyed) this.emit('tx', this._synthesizeTxData(txid));
       }, i * stagger);
     });
 
@@ -207,6 +211,44 @@ export class MempoolAdapter extends EventBus {
       this._frameScheduled = true;
       requestAnimationFrame(() => this._flushTxs());
     }
+  }
+
+  // ── TX 데이터 합성 (weight/feeRate) ─────────────────────────────────────────
+
+  _synthesizeTxData(txid) {
+    const { fastestFee, halfHourFee, hourFee } = this._currentFees;
+    const r = Math.random();
+
+    // 수수료율 확률 분포: 10% fast, 30% halfHour, 40% hour, 20% low
+    let feeRate;
+    if (r < 0.10) {
+      feeRate = fastestFee + Math.floor(Math.random() * fastestFee * 0.5);
+    } else if (r < 0.40) {
+      feeRate = halfHourFee + Math.floor(Math.random() * (fastestFee - halfHourFee));
+    } else if (r < 0.80) {
+      feeRate = hourFee + Math.floor(Math.random() * (halfHourFee - hourFee));
+    } else {
+      feeRate = Math.max(1, hourFee - Math.floor(Math.random() * 3));
+    }
+
+    // weight 분포: 50% 400-800, 30% 800-2000, 20% 2000-8000 WU
+    const wr = Math.random();
+    let weight;
+    if (wr < 0.50) {
+      weight = 400 + Math.floor(Math.random() * 400);
+    } else if (wr < 0.80) {
+      weight = 800 + Math.floor(Math.random() * 1200);
+    } else {
+      weight = 2000 + Math.floor(Math.random() * 6000);
+    }
+
+    const vsize = Math.ceil(weight / 4);
+    const fee = feeRate * vsize;
+    // vin/vout 추정: weight 기반
+    const vin = weight < 600 ? 1 : weight < 1500 ? Math.ceil(Math.random() * 3) : Math.ceil(Math.random() * 5) + 1;
+    const vout = Math.max(1, Math.ceil(Math.random() * 3));
+
+    return { txid, weight, vsize, fee, feeRate, vin, vout };
   }
 
   // ── REST 폴링 ───────────────────────────────────────────────────────────────
