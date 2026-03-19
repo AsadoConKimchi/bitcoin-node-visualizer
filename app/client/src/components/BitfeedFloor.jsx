@@ -106,12 +106,14 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
 
     const blocks = blocksRef.current;
     blocks.push(block);
+    // 같은 프레임 후속 블록이 이 컬럼을 피하도록 즉시 업데이트
+    updateColumnHeight(col.startCol, col.spanCols, size);
 
     // 최대 제한 (컬럼 높이는 tick()에서 자동 재계산)
     if (blocks.length > MAX_BLOCKS) {
       blocks.shift();
     }
-  }, [calcSize, findBestColumn]);
+  }, [calcSize, findBestColumn, updateColumnHeight]);
 
   // 반려 TX 추가
   const addRejected = useCallback((txData) => {
@@ -248,6 +250,9 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
             // 블록이 떠있음 → 재낙하
             b.settled = false;
             b.floorY = expectedFloorY;
+          } else if (b.y > expectedFloorY + 2) {
+            // 블록이 겹침/아래로 밀림 → 올바른 위치로 스냅
+            b.y = expectedFloorY;
           }
           continue;
         }
