@@ -7,7 +7,7 @@ import { TxVerificationState } from './verification/TxVerificationState.js';
 import ToggleBar from './components/ToggleBar.jsx';
 import SearchBar from './components/SearchBar.jsx';
 import HudPanels from './components/HudPanels.jsx';
-import UnifiedPanel from './components/UnifiedPanel.jsx';
+import MainPanel from './components/MainPanel.jsx';
 import MempoolBlocksPanel from './components/MempoolBlocksPanel.jsx';
 import TxDetailPanel from './components/TxDetailPanel.jsx';
 import ChainStrip from './components/ChainStrip.jsx';
@@ -28,10 +28,10 @@ const RING_THROTTLE_MS = 300;
 const TX_BUFFER_MAX = 60;
 // TX 스트림 최대 표시 수
 const TX_STREAM_MAX = 20;
-// 멤풀 풀 최대 표시 TX 수
-const MEMPOOL_POOL_MAX = 50;
 // TX 아크 쓰로틀 (ms)
 const TX_ARC_THROTTLE_MS = 500;
+// TX 검증 실패 확률 (교육용)
+const TX_FAIL_CHANCE = 0.03;
 
 const LS_SOURCE_TYPE = 'bnv_sourceType';
 const LS_SERVER_URL = 'bnv_serverUrl';
@@ -59,6 +59,9 @@ export default function App() {
   const [showErrorOverlay, setShowErrorOverlay] = useState(false);
   const errorTimerRef = useRef(null);
 
+  // ── BitfeedFloor ref ──────────────────────────────────────────────
+  const bitfeedRef = useRef(null);
+
   // ── 마운트 시 자동 감지 (최대 3회 재시도) ──────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -81,10 +84,8 @@ export default function App() {
       } catch {
         if (cancelled) return;
         if (attempt < 3) {
-          // 1초 후 재시도
           retryTimer = setTimeout(() => tryHealth(attempt + 1), 1000);
         } else {
-          // 최종 실패 → mempool 폴백
           const saved = localStorage.getItem(LS_SOURCE_TYPE) || 'mempool';
           const savedUrl = localStorage.getItem(LS_SERVER_URL) || '';
           setSourceType(saved === 'mynode' ? 'mempool' : saved);
@@ -139,7 +140,6 @@ export default function App() {
   const handleReplayCompactBlock = useCallback(() => {
     const blocks = recentBlocksRef.current;
     if (blocks.length > 0) {
-      // 타임스탬프를 바꿔서 useEffect가 재실행되게 함
       setForceCompactBlock({ block: blocks[0], ts: Date.now() });
     }
   }, []);
@@ -200,7 +200,6 @@ export default function App() {
 
   // ── TX 스트림 상태 ──────────────────────────────────────────────
   const [txStream, setTxStream] = useState([]);
-  const [mempoolPool, setMempoolPool] = useState([]);
   const txStreamVerifyRefs = useRef(new Map());
 
   const addToTxStream = useCallback((txData) => {
@@ -214,34 +213,44 @@ export default function App() {
         setTxStream((current) =>
           current.map((t) =>
             t.txid === txid
-              ? { ...t, verifySnapshot: { ...state }, status: state.done ? 'done' : 'verifying' }
+              ? {
+                  ...t,
+                  verifySnapshot: { ...state },
+                  status: state.failed ? 'failed' : state.done ? 'done' : 'verifying',
+                  failReason: state.failReason || null,
+                }
               : t
           )
         );
 
-        if (state.done) {
+        // 검증 실패 시 → BitfeedFloor에 반려 TX 추가
+        if (state.failed) {
+          setTimeout(() => {
+            bitfeedRef.current?.addRejected(txData);
+            // 2초 후 스트림에서 제거
+            setTimeout(() => {
+              setTxStream((current) => current.filter((t) => t.txid !== txid));
+              txStreamVerifyRefs.current.get(txid)?.destroy();
+              txStreamVerifyRefs.current.delete(txid);
+            }, 2000);
+          }, 500);
+        }
+
+        // 검증 완료 시 → BitfeedFloor에 통과 TX 추가
+        if (state.done && !state.failed) {
           setTimeout(() => {
             setTxStream((current) =>
               current.map((t) => t.txid === txid ? { ...t, status: 'animating' } : t)
             );
             setTimeout(() => {
-              setMempoolPool((pool) => {
-                const next = [{
-                  txid,
-                  data: txData,
-                  weight: txData.weight || 560,
-                  feeRate: txData.feeRate || (txData.fee && txData.weight ? Math.round(txData.fee / (txData.weight / 4)) : null),
-                  addedAt: Date.now(),
-                }, ...pool].slice(0, MEMPOOL_POOL_MAX);
-                return next;
-              });
+              bitfeedRef.current?.addBlock(txData);
               setTxStream((current) => current.filter((t) => t.txid !== txid));
               txStreamVerifyRefs.current.get(txid)?.destroy();
               txStreamVerifyRefs.current.delete(txid);
             }, 500);
           }, 500);
         }
-      });
+      }, { failChance: TX_FAIL_CHANCE });
 
       txStreamVerifyRefs.current.set(txid, tvs);
       tvs.start();
@@ -251,6 +260,7 @@ export default function App() {
         data: txData,
         verifySnapshot: tvs.getState(),
         status: 'verifying',
+        failReason: null,
         enterTime: Date.now(),
       };
 
@@ -269,9 +279,7 @@ export default function App() {
     setVisible((prev) => {
       const next = { ...prev, [key]: !prev[key] };
 
-      // 블록검증 ↔ 멤풀(우측) 상호배타: 블록검증 ON → 예상블록 패널 숨김
       if (key === 'blockVerify' && next.blockVerify) {
-        // 블록검증 켜질 때 → 검증 시작
         const blocks = recentBlocksRef.current;
         if (blocks.length > 0) {
           setTimeout(() => startBlockVerification(blocks[0]), 50);
@@ -443,8 +451,12 @@ export default function App() {
       );
     }));
 
-    unsubs.push(ds.subscribe('block:mined', ({ count }) => {
+    unsubs.push(ds.subscribe('block:mined', ({ count, txids }) => {
       console.log(`[App] ${count} txs confirmed`);
+      // BitfeedFloor sweep 애니메이션
+      if (txids?.length) {
+        bitfeedRef.current?.sweepBlocks(txids);
+      }
     }));
 
     unsubs.push(ds.subscribe('mempool', ({ count }) => setMempoolCount(count)));
@@ -497,7 +509,6 @@ export default function App() {
     setSecurityInfo(null);
     txBufferRef.current = [];
     setTxStream([]);
-    setMempoolPool([]);
     txStreamVerifyRefs.current.forEach((tvs) => tvs.destroy());
     txStreamVerifyRefs.current.clear();
   }, []);
@@ -510,9 +521,12 @@ export default function App() {
     setSelectedTx(tx);
   }, []);
 
+  // MainPanel 표시 여부 (어떤 섹션이라도 켜져 있으면)
+  const mainPanelVisible = visible.txVerify || visible.mempool || visible.blockVerify;
+
   return (
     <div className="relative w-screen h-screen overflow-hidden">
-      {/* 3D 지구본 */}
+      {/* 3D 지구본 — 전체 배경 */}
       <GlobeScene nodePoints={nodePoints} arcs={arcs} rings={rings} />
 
       {/* 상단 토글 바 */}
@@ -552,23 +566,22 @@ export default function App() {
         <ChainTipsPanel chaintips={chaintips} />
       )}
 
-      {/* 통합 검증 패널 (TX검증 + 블록검증 + 멤풀) */}
-      <UnifiedPanel
+      {/* 메인 패널 (TX검증 + 블록검증 + Bitfeed 멤풀 바닥) — 화면 75% */}
+      <MainPanel
         txStream={txStream}
         blockVerifyState={blockVerifyState}
-        mempoolTxs={mempoolPool}
         mempoolCount={mempoolCount}
-        mempoolInfo={mempoolInfo}
         showTx={visible.txVerify}
         showMempool={visible.mempool}
         showBlock={visible.blockVerify}
         onTxClick={handleTxClick}
+        bitfeedRef={bitfeedRef}
       />
 
-      {/* 예상 블록 적층 시각화 (멤풀 토글 ON + 블록검증 OFF 시) */}
+      {/* 예상 블록 적층 시각화 (멤풀 토글 ON + 블록검증 OFF + MainPanel 안 보일 때) */}
       <MempoolBlocksPanel
         mempoolBlocks={mempoolBlocks}
-        visible={visible.mempool && !visible.blockVerify}
+        visible={visible.mempool && !visible.blockVerify && !mainPanelVisible}
       />
 
       {/* 하단 체인 스트립 */}
@@ -627,10 +640,10 @@ export default function App() {
       {/* 설정 버튼 */}
       <button
         onClick={() => setSettingsOpen(true)}
-        className="absolute bottom-5 right-5 bg-black/75 border border-btc-orange
+        className="absolute bottom-5 left-5 bg-black/75 border border-btc-orange
                   rounded-md text-btc-orange font-mono text-sm px-3.5 py-2
                   cursor-pointer z-15 hover:bg-btc-orange/10 transition-colors
-                  max-sm:bottom-3 max-sm:right-3 max-sm:text-xs max-sm:px-2.5 max-sm:py-1.5"
+                  max-sm:bottom-3 max-sm:left-3 max-sm:text-xs max-sm:px-2.5 max-sm:py-1.5"
       >
         ⚙ Settings
       </button>
