@@ -64,7 +64,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
 
     return {
       x: bestStart * colWidth + (colWidth * spanCols - blockW) / 2,
-      floorY: dimsRef.current.h - bestHeight - 2,
+      floorY: dimsRef.current.h - bestHeight - blockW - 2,
       startCol: bestStart,
       spanCols,
     };
@@ -108,16 +108,9 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
     const blocks = blocksRef.current;
     blocks.push(block);
 
-    // 최대 제한
+    // 최대 제한 (컬럼 높이는 tick()에서 자동 재계산)
     if (blocks.length > MAX_BLOCKS) {
-      const removed = blocks.shift();
-      if (removed.settled) {
-        // 제거된 블록의 컬럼 높이 감소
-        const cols = columnsRef.current;
-        for (let j = removed.startCol; j < removed.startCol + removed.spanCols; j++) {
-          if (j < COLUMN_COUNT) cols[j] = Math.max(0, cols[j] - removed.h - 1);
-        }
-      }
+      blocks.shift();
     }
   }, [calcSize, findBestColumn]);
 
@@ -156,17 +149,13 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
     if (!txids?.length) return;
     const idSet = new Set(txids);
     const blocks = blocksRef.current;
-    const cols = columnsRef.current;
 
     for (const b of blocks) {
       if (idSet.has(b.txid) && b.settled) {
         b.vy = -15;
         b.settled = false;
         b.sweeping = true;
-        // 컬럼 높이 감소
-        for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
-          if (j < COLUMN_COUNT) cols[j] = Math.max(0, cols[j] - b.h - 1);
-        }
+        // 컬럼 높이는 tick()에서 자동 재계산
       }
     }
 
@@ -228,10 +217,41 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
 
       const { w, h } = dimsRef.current;
       const blocks = blocksRef.current;
+      const cols = columnsRef.current;
+
+      // 매 프레임 컬럼 높이 재계산 (settled + 비sweep 블록만)
+      cols.fill(0);
+      for (const b of blocks) {
+        if (b.settled && !b.sweeping) {
+          for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
+            if (j < COLUMN_COUNT) cols[j] += b.h + 1;
+          }
+        }
+      }
 
       // 물리 업데이트
       for (let i = blocks.length - 1; i >= 0; i--) {
         const b = blocks[i];
+
+        // sweep 후 떠있는 settled 블록 → 재낙하
+        if (b.settled && !b.sweeping) {
+          let maxH = 0;
+          for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
+            if (j < COLUMN_COUNT) {
+              // 자신의 높이를 제외한 컬럼 높이
+              const selfContrib = b.h + 1;
+              const othersH = cols[j] - selfContrib;
+              if (othersH > maxH) maxH = othersH;
+            }
+          }
+          const expectedFloorY = h - maxH - b.h - 2;
+          if (b.y < expectedFloorY - 2) {
+            // 블록이 떠있음 → 재낙하
+            b.settled = false;
+            b.floorY = expectedFloorY;
+          }
+          continue;
+        }
 
         if (b.settled) continue;
 
@@ -261,6 +281,15 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
           continue;
         }
 
+        // 낙하 중인 블록: floorY 동적 재계산
+        if (!b.rejected) {
+          let maxH = 0;
+          for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
+            if (j < COLUMN_COUNT && cols[j] > maxH) maxH = cols[j];
+          }
+          b.floorY = h - maxH - b.h - 2;
+        }
+
         // 중력
         b.vy = Math.min(b.vy + GRAVITY, TERMINAL_VEL);
         b.y += b.vy;
@@ -276,7 +305,6 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
           } else {
             // 착지 (settled)
             b.settled = true;
-            updateColumnHeight(b.startCol, b.spanCols, b.h);
           }
         }
       }
@@ -341,7 +369,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
       if (animRef.current) cancelAnimationFrame(animRef.current);
       resizeObs.disconnect();
     };
-  }, [createShards, updateColumnHeight]);
+  }, [createShards]);
 
   return (
     <div className={`relative w-full h-full ${className || ''}`}>
