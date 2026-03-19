@@ -62,43 +62,59 @@ export default function App() {
   // ── BitfeedFloor ref ──────────────────────────────────────────────
   const bitfeedRef = useRef(null);
 
-  // ── 마운트 시 자동 감지 (최대 3회 재시도) ──────────────────────────
+  // ── 마운트 시 자동 감지 — 지속적 폴링 ──────────────────────────
   useEffect(() => {
     let cancelled = false;
-    let retryTimer = null;
+    let pollTimer = null;
+    let initialDone = false;
 
-    async function tryHealth(attempt) {
-      if (cancelled) return;
+    async function checkHealth() {
+      if (cancelled) return false;
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 2000);
+        const timeout = setTimeout(() => controller.abort(), 3000);
         const res = await fetch('/health', { signal: controller.signal });
         clearTimeout(timeout);
-        if (!res.ok) throw new Error('not ok');
+        if (!res.ok) return false;
         const json = await res.json();
-        if (!json?.ok) throw new Error('not ok');
-        if (!cancelled) {
-          setSourceType('server');
-          setServerUrl('');
-        }
+        return json?.ok === true;
       } catch {
-        if (cancelled) return;
-        if (attempt < 3) {
-          retryTimer = setTimeout(() => tryHealth(attempt + 1), 1000);
-        } else {
+        return false;
+      }
+    }
+
+    async function detect() {
+      const ok = await checkHealth();
+      if (cancelled) return;
+
+      if (ok) {
+        setSourceType((prev) => {
+          if (prev !== 'server') return 'server';
+          return prev;
+        });
+        setServerUrl('');
+        // 서버 발견 후에도 10초 간격으로 health 확인 (서버 다운 감지)
+        pollTimer = setTimeout(detect, 10000);
+      } else {
+        if (!initialDone) {
+          // 첫 감지 실패 → mempool로 시작 (사용자가 빈 화면 안 보게)
+          initialDone = true;
           const saved = localStorage.getItem(LS_SOURCE_TYPE) || 'mempool';
           const savedUrl = localStorage.getItem(LS_SERVER_URL) || '';
           setSourceType(saved === 'mynode' ? 'mempool' : saved);
           setServerUrl(savedUrl);
         }
+        // 서버 미발견 → 5초 후 재시도
+        pollTimer = setTimeout(detect, 5000);
       }
     }
 
-    tryHealth(1);
+    // 즉시 시작
+    detect();
 
     return () => {
       cancelled = true;
-      if (retryTimer) clearTimeout(retryTimer);
+      if (pollTimer) clearTimeout(pollTimer);
     };
   }, []);
 
