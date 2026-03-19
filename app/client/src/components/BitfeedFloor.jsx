@@ -64,7 +64,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
 
     return {
       x: bestStart * colWidth + (colWidth * spanCols - blockW) / 2,
-      floorY: dimsRef.current.h - bestHeight - 2,
+      floorY: dimsRef.current.h - bestHeight - blockW - 2,
       startCol: bestStart,
       spanCols,
     };
@@ -244,7 +244,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
               if (othersH > maxH) maxH = othersH;
             }
           }
-          const expectedFloorY = h - maxH - 2;
+          const expectedFloorY = h - maxH - b.h - 2;
           if (b.y < expectedFloorY - 2) {
             // 블록이 떠있음 → 재낙하
             b.settled = false;
@@ -287,7 +287,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
           for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
             if (j < COLUMN_COUNT && cols[j] > maxH) maxH = cols[j];
           }
-          b.floorY = h - maxH - 2;
+          b.floorY = h - maxH - b.h - 2;
         }
 
         // 중력
