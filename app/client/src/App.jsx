@@ -105,9 +105,7 @@ export default function App() {
   // ── 토글 패널 가시성 ──────────────────────────────────────────────
   const [visible, setVisible] = useState({
     p2p: true,
-    txVerify: false,
-    mempool: false,
-    blockVerify: false,
+    verifyCenter: false,
     internals: false,
   });
 
@@ -279,7 +277,7 @@ export default function App() {
     setVisible((prev) => {
       const next = { ...prev, [key]: !prev[key] };
 
-      if (key === 'blockVerify' && next.blockVerify) {
+      if (key === 'verifyCenter' && next.verifyCenter) {
         const blocks = recentBlocksRef.current;
         if (blocks.length > 0) {
           setTimeout(() => startBlockVerification(blocks[0]), 50);
@@ -431,7 +429,7 @@ export default function App() {
       );
 
       startBlockVerification(data);
-      setVisible((prev) => ({ ...prev, blockVerify: true }));
+      setVisible((prev) => ({ ...prev, verifyCenter: true }));
     }));
 
     unsubs.push(ds.subscribe('block:validated', (data) => {
@@ -521,8 +519,10 @@ export default function App() {
     setSelectedTx(tx);
   }, []);
 
-  // MainPanel 표시 여부 (어떤 섹션이라도 켜져 있으면)
-  const mainPanelVisible = visible.txVerify || visible.mempool || visible.blockVerify;
+  // MainPanel 닫기 콜백
+  const handleCloseMainPanel = useCallback(() => {
+    setVisible((prev) => ({ ...prev, verifyCenter: false }));
+  }, []);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden">
@@ -571,17 +571,16 @@ export default function App() {
         txStream={txStream}
         blockVerifyState={blockVerifyState}
         mempoolCount={mempoolCount}
-        showTx={visible.txVerify}
-        showMempool={visible.mempool}
-        showBlock={visible.blockVerify}
+        visible={visible.verifyCenter}
         onTxClick={handleTxClick}
+        onClose={handleCloseMainPanel}
         bitfeedRef={bitfeedRef}
       />
 
       {/* 예상 블록 적층 시각화 (멤풀 토글 ON + 블록검증 OFF + MainPanel 안 보일 때) */}
       <MempoolBlocksPanel
         mempoolBlocks={mempoolBlocks}
-        visible={visible.mempool && !visible.blockVerify && !mainPanelVisible}
+        visible={!visible.verifyCenter && mempoolBlocks.length > 0}
       />
 
       {/* 하단 체인 스트립 */}

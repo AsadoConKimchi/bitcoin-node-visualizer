@@ -460,18 +460,15 @@ export default function MainPanel({
   txStream,
   blockVerifyState,
   mempoolCount,
-  showTx,
-  showMempool,
-  showBlock,
+  visible,
   onTxClick,
+  onClose,
   bitfeedRef,
 }) {
   const [minimized, setMinimized] = useState(false);
 
-  const anyVisible = showTx || showMempool || showBlock;
-  if (!anyVisible) return null;
+  if (!visible) return null;
 
-  const topVisible = showTx || showBlock;
   const txCount = txStream.length;
   const verifyingCount = txStream.filter((t) => t.status === 'verifying').length;
   const failedCount = txStream.filter((t) => t.status === 'failed').length;
@@ -496,10 +493,10 @@ export default function MainPanel({
         <div className="flex items-center gap-3">
           {minimized && (
             <span className="text-muted text-[10px]">
-              {showTx && `TX ${txCount}건`}
-              {showTx && failedCount > 0 && ` (✗${failedCount})`}
-              {showTx && showMempool && ' · '}
-              {showMempool && `멤풀 ${mempoolCount?.toLocaleString() ?? '?'}`}
+              TX {txCount}건
+              {failedCount > 0 && ` (✗${failedCount})`}
+              {' · '}
+              멤풀 {mempoolCount?.toLocaleString() ?? '?'}
             </span>
           )}
           <button
@@ -509,6 +506,13 @@ export default function MainPanel({
           >
             {minimized ? '▢' : '▁'}
           </button>
+          <button
+            onClick={onClose}
+            className="text-muted hover:text-error text-sm cursor-pointer px-1"
+            title="닫기"
+          >
+            ✕
+          </button>
         </div>
       </div>
 
@@ -516,65 +520,54 @@ export default function MainPanel({
       {!minimized && (
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* 상단: TX검증 + 블록검증 (가로 분할) */}
-          {topVisible && (
-            <div className={`flex min-h-0 ${showMempool ? 'flex-[45]' : 'flex-1'}`}>
-              {/* TX 검증 */}
-              {showTx && (
-                <div className={`flex flex-col min-h-0 px-4 py-3 overflow-hidden
-                               ${showBlock ? 'flex-[50] border-r border-btc-orange/10' : 'flex-1'}`}>
-                  <div className="text-tx-blue font-bold text-xs tracking-widest mb-2 shrink-0 flex justify-between">
-                    <span>▸ TX VERIFICATION</span>
-                    <span className="text-muted font-normal">
-                      {txCount}건
-                      {verifyingCount > 0 && ` (⟳${verifyingCount})`}
-                      {failedCount > 0 && <span className="text-error ml-1">✗{failedCount}</span>}
-                    </span>
-                  </div>
-                  <TxStreamSection txStream={txStream} onTxClick={onTxClick} />
-                </div>
-              )}
-
-              {/* 블록 검증 */}
-              {showBlock && (
-                <div className={`flex flex-col min-h-0 px-4 py-3 overflow-hidden
-                               ${showTx ? 'flex-[50]' : 'flex-1'}`}>
-                  <div className="text-block-purple font-bold text-xs tracking-widest mb-2 shrink-0">
-                    ▸ BLOCK VERIFICATION
-                  </div>
-                  <BlockVerifySection verifyState={blockVerifyState} />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 하단: Bitfeed 바닥 */}
-          {showMempool && (
-            <div className={`flex flex-col min-h-0 border-t border-btc-orange/10
-                           ${topVisible ? 'flex-[55]' : 'flex-1'}`}
-                 style={{ background: 'rgba(6, 10, 20, 0.96)' }}
-            >
-              {/* Bitfeed 헤더 */}
-              <div className="flex justify-between items-center px-4 py-2 shrink-0">
-                <span className="text-mempool-green font-bold text-xs tracking-widest">▸ MEMPOOL FLOOR</span>
-                <span className="text-muted text-[10px]">
-                  {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}
+          <div className="flex min-h-0 flex-[45]">
+            {/* TX 검증 */}
+            <div className="flex flex-col min-h-0 px-4 py-3 overflow-hidden flex-[50] border-r border-btc-orange/10">
+              <div className="text-tx-blue font-bold text-xs tracking-widest mb-2 shrink-0 flex justify-between">
+                <span>▸ TX VERIFICATION</span>
+                <span className="text-muted font-normal">
+                  {txCount}건
+                  {verifyingCount > 0 && ` (⟳${verifyingCount})`}
+                  {failedCount > 0 && <span className="text-error ml-1">✗{failedCount}</span>}
                 </span>
               </div>
+              <TxStreamSection txStream={txStream} onTxClick={onTxClick} />
+            </div>
 
-              {/* Canvas 영역 */}
-              <div className="flex-1 min-h-0 px-2 pb-2 relative">
-                <BitfeedFloor ref={bitfeedRef} />
+            {/* 블록 검증 */}
+            <div className="flex flex-col min-h-0 px-4 py-3 overflow-hidden flex-[50]">
+              <div className="text-block-purple font-bold text-xs tracking-widest mb-2 shrink-0">
+                ▸ BLOCK VERIFICATION
+              </div>
+              <BlockVerifySection verifyState={blockVerifyState} />
+            </div>
+          </div>
 
-                {/* 범례 */}
-                <div className="absolute bottom-3 right-3 flex gap-3 text-[9px] bg-[rgba(6,10,20,0.8)] rounded px-2 py-1">
-                  <span className="text-[#ef4444]">● 50+ sat/vB</span>
-                  <span className="text-[#f59e0b]">● 20+</span>
-                  <span className="text-[#34d399]">● 10+</span>
-                  <span className="text-[#60a5fa]">● {'<'}10</span>
-                </div>
+          {/* 하단: Bitfeed 바닥 */}
+          <div className="flex flex-col min-h-0 border-t border-btc-orange/10 flex-[55]"
+               style={{ background: 'rgba(6, 10, 20, 0.96)' }}
+          >
+            {/* Bitfeed 헤더 */}
+            <div className="flex justify-between items-center px-4 py-2 shrink-0">
+              <span className="text-mempool-green font-bold text-xs tracking-widest">▸ MEMPOOL FLOOR</span>
+              <span className="text-muted text-[10px]">
+                {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}
+              </span>
+            </div>
+
+            {/* Canvas 영역 */}
+            <div className="flex-1 min-h-0 px-2 pb-2 relative">
+              <BitfeedFloor ref={bitfeedRef} />
+
+              {/* 범례 */}
+              <div className="absolute bottom-3 right-3 flex gap-3 text-[9px] bg-[rgba(6,10,20,0.8)] rounded px-2 py-1">
+                <span className="text-[#ef4444]">● 50+ sat/vB</span>
+                <span className="text-[#f59e0b]">● 20+</span>
+                <span className="text-[#34d399]">● 10+</span>
+                <span className="text-[#60a5fa]">● {'<'}10</span>
               </div>
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>

@@ -2,30 +2,22 @@ import React from 'react';
 
 const BUTTONS = [
   { key: 'p2p', label: 'P2P', icon: '◉', color: 'btc-orange' },
-  { key: 'txVerify', label: 'TX검증', icon: '⟳', color: 'tx-blue' },
-  { key: 'mempool', label: '멤풀', icon: '◈', color: 'mempool-green' },
-  { key: 'blockVerify', label: '블록검증', icon: '▣', color: 'block-purple' },
+  { key: 'verifyCenter', label: '검증센터', icon: '▣', color: 'btc-orange' },
   { key: 'internals', label: 'Internals', icon: '⚙', color: 'btc-orange' },
 ];
 
 // 각 토글별 활성 스타일
 const ACTIVE_STYLES = {
   'btc-orange': 'bg-btc-orange text-black border-btc-orange',
-  'tx-blue': 'bg-tx-blue text-black border-tx-blue',
-  'mempool-green': 'bg-mempool-green text-black border-mempool-green',
-  'block-purple': 'bg-block-purple text-black border-block-purple',
 };
 
 const INACTIVE_STYLES = {
   'btc-orange': 'bg-transparent text-btc-orange border-btc-orange/60 hover:bg-btc-orange/10',
-  'tx-blue': 'bg-transparent text-tx-blue border-tx-blue/60 hover:bg-tx-blue/10',
-  'mempool-green': 'bg-transparent text-mempool-green border-mempool-green/60 hover:bg-mempool-green/10',
-  'block-purple': 'bg-transparent text-block-purple border-block-purple/60 hover:bg-block-purple/10',
 };
 
 export default function ToggleBar({ visible, onToggle }) {
   return (
-    <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10
+    <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20
                     bg-panel-bg-light border border-btc-orange/40 rounded-lg
                     px-2 py-1.5 backdrop-blur-sm
                     md:gap-2 md:px-3 md:py-2">

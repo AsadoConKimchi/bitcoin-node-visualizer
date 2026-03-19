@@ -38,9 +38,9 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
 
   // 블록 크기 계산 (weight 기반)
   const calcSize = useCallback((weight) => {
-    const area = (weight || 560) / 20;
+    const area = (weight || 560) / 8;
     const side = Math.sqrt(area);
-    return Math.max(6, Math.min(50, Math.round(side)));
+    return Math.max(16, Math.min(60, Math.round(side)));
   }, []);
 
   // 가장 빈 컬럼 찾기
@@ -317,6 +317,15 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
         ctx.strokeStyle = b.color;
         ctx.lineWidth = 0.5;
         ctx.strokeRect(b.x, b.y, b.w, b.h);
+
+        // settled 블록에 TXID 텍스트 (크기 >= 20px일 때만)
+        if (b.settled && b.txid && b.w >= 20) {
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.font = '8px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(b.txid.slice(0, 6), b.x + b.w / 2, b.y + b.h / 2);
+        }
 
         ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
