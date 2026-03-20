@@ -6,7 +6,7 @@ RUN apk add --no-cache python3 make g++ cmake
 
 WORKDIR /app
 
-COPY package.json .
+COPY package*.json ./
 RUN npm install
 
 COPY . .
@@ -18,7 +18,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # 네이티브 바인딩 런타임 의존성
-RUN apk add --no-cache libstdc++
+RUN apk add --no-cache libstdc++ wget
 
 # non-root 사용자 (Umbrel 보안 요구사항)
 RUN addgroup -S appgrp && adduser -S appusr -G appgrp
