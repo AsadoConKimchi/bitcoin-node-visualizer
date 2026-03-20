@@ -4,6 +4,40 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ---
 
+## [1.0.4] — 2026-03-20
+
+### Changed — UI 리디자인: macOS Dark Mode + Bitfeed 질감
+
+순수 시각적 변경. 기능 로직 변경 없음. 19개 파일 수정.
+
+#### 테마 전환
+- 색온도: 따뜻한 회색(`rgba(40,40,45)`) → 쿨 슬레이트(`rgba(28,32,38)`)
+- 폰트: `Courier New` → `SF Mono, JetBrains Mono, Fira Code`
+- 멤풀 그린: `#34d399` → `#2dd4bf` (틸 방향, Bitfeed 스타일)
+- 섀도: 단일 → macOS 이중 레이어 (`--shadow-panel-layered`, `--shadow-modal`)
+- 트랜지션: `300ms ease-in-out` → `250ms cubic-bezier(0.4, 0, 0.2, 1)`
+- 스크롤바: 오렌지 → `rgba(255,255,255,0.12)`
+- body 기본 색상: `btc-orange` → `text-primary` (오렌지 과다 노출 해소)
+
+#### 컴포넌트 변경
+- **ToggleBar**: macOS Segmented Control 패턴 — `bg-white/12` 활성, 개별 border 제거
+- **HudPanels**: Row 라벨 `text-text-secondary`, 간격 증가
+- **UnifiedPanel**: `border-btc-orange/40` → `border-white/10`, `rounded-xl`, 내부 구분선 중립화
+- **ChainStrip**: BlockCell 패딩 증가, PendingCell `border-white/8`
+- **모달 패널** (Block/TX/Address/Settings): 오버레이 `bg-black/40 backdrop-blur-[2px]`, `--shadow-modal`, `border-white/10`
+- **NodeInternalsPanel**: 세그먼트 컨트롤 탭바, 외곽 border 중립화
+- **SearchBar**: border/텍스트 중립화, font-mono 제거
+- **나머지** (BlockVerify, TxStream, ChainTips, CompactBlock, MempoolBlocks, MempoolPool): 동일 패턴 적용
+- 전체: `tracking-widest` → `tracking-wide`, 하드코딩 `bg-[rgba()]` → theme var 통합
+
+### Added — 앱 아이콘
+
+- `favicon.svg` — Bitcoin ₿ + 지구본 와이어프레임 + P2P 노드 점
+- `favicon-32.png`, `icon-192.png`, `icon-512.png` — PNG 변환
+- `index.html`에 favicon/apple-touch-icon/theme-color 메타태그 추가
+
+---
+
 ## [1.0.3] — 2026-03-20
 
 ### Fixed — Umbrel 시각화 버그 3건 근본 수정
