@@ -7,7 +7,10 @@ import { TxVerificationState } from './verification/TxVerificationState.js';
 import ToggleBar from './components/ToggleBar.jsx';
 import SearchBar from './components/SearchBar.jsx';
 import HudPanels from './components/HudPanels.jsx';
-import MainPanel from './components/MainPanel.jsx';
+import TxStreamPanel from './components/TxStreamPanel.jsx';
+import BlockVerifyPanel from './components/BlockVerifyPanel.jsx';
+import BitfeedFloor from './components/BitfeedFloor.jsx';
+import WindowDock from './components/WindowDock.jsx';
 import MempoolBlocksPanel from './components/MempoolBlocksPanel.jsx';
 import TxDetailPanel from './components/TxDetailPanel.jsx';
 import ChainStrip from './components/ChainStrip.jsx';
@@ -22,13 +25,9 @@ import OnboardingTour from './components/OnboardingTour.jsx';
 const MAX_RECENT_BLOCKS = 10;
 const ARC_LIFETIME_MS = 3000;
 const RING_LIFETIME_MS = 2000;
-// TX 링 생성 최소 간격 (ms)
 const RING_THROTTLE_MS = 300;
-// 실제 txid 버퍼 최대 크기
 const TX_BUFFER_MAX = 60;
-// TX 스트림 최대 표시 수
 const TX_STREAM_MAX = 20;
-// TX 아크 쓰로틀 (ms)
 const TX_ARC_THROTTLE_MS = 500;
 const LS_SOURCE_TYPE = 'bnv_sourceType';
 const LS_SERVER_URL = 'bnv_serverUrl';
@@ -38,7 +37,6 @@ const REST_BASE = 'https://mempool.space/api';
 let _arcId = 0;
 let _ringId = 0;
 
-// 랜덤 노드 N개 선택
 function pickRandom(arr, n) {
   if (!arr?.length) return [];
   const result = [];
@@ -48,18 +46,22 @@ function pickRandom(arr, n) {
   return result.filter(Boolean);
 }
 
+// 윈도우 z-index 베이스
+const Z_BASE = 10;
+const Z_FOCUSED = 15;
+
 export default function App() {
-  // ── 데이터 소스 설정 ──────────────────────────────────────────────
+  // ── 데이터 소스 설정 ──
   const [sourceType, setSourceType] = useState(null);
   const [serverUrl, setServerUrl] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showErrorOverlay, setShowErrorOverlay] = useState(false);
   const errorTimerRef = useRef(null);
 
-  // ── BitfeedFloor ref ──────────────────────────────────────────────
+  // ── BitfeedFloor ref ──
   const bitfeedRef = useRef(null);
 
-  // ── 마운트 시 자동 감지 — 지속적 폴링 ──────────────────────────
+  // ── 마운트 시 자동 감지 ──
   useEffect(() => {
     let cancelled = false;
     let pollTimer = null;
@@ -90,23 +92,19 @@ export default function App() {
           return prev;
         });
         setServerUrl('');
-        // 서버 발견 후에도 10초 간격으로 health 확인 (서버 다운 감지)
         pollTimer = setTimeout(detect, 10000);
       } else {
         if (!initialDone) {
-          // 첫 감지 실패 → mempool로 시작 (사용자가 빈 화면 안 보게)
           initialDone = true;
           const saved = localStorage.getItem(LS_SOURCE_TYPE) || 'mempool';
           const savedUrl = localStorage.getItem(LS_SERVER_URL) || '';
           setSourceType(saved === 'mynode' ? 'mempool' : saved);
           setServerUrl(savedUrl);
         }
-        // 서버 미발견 → 5초 후 재시도
         pollTimer = setTimeout(detect, 5000);
       }
     }
 
-    // 즉시 시작
     detect();
 
     return () => {
@@ -115,28 +113,45 @@ export default function App() {
     };
   }, []);
 
-  // ── 토글 패널 가시성 ──────────────────────────────────────────────
+  // ── 토글 패널 가시성 ──
   const [visible, setVisible] = useState({
     p2p: true,
     verifyCenter: false,
     internals: false,
   });
 
-  // ── 패널 상태 (신호등 닫기/최소화) ──────────────────────────────
-  const [panelState, setPanelState] = useState({
+  // ── 윈도우 상태 (MacWindow 시스템) ──
+  const [windowStates, setWindowStates] = useState({
     nodeInfo: { visible: true, minimized: false },
     chain: { visible: true, minimized: false },
+    txStream: { visible: false, minimized: false },
+    blockVerify: { visible: false, minimized: false },
   });
 
-  // ── HudPanels 높이 추적 (ChainStrip 동적 위치) ─────────────────
+  const [focusedWindow, setFocusedWindow] = useState(null);
+
+  // 윈도우 상태 변경 헬퍼
+  const setWinState = useCallback((key, updates) => {
+    setWindowStates(prev => ({ ...prev, [key]: { ...prev[key], ...updates } }));
+  }, []);
+
+  const focusWindow = useCallback((key) => {
+    setFocusedWindow(key);
+  }, []);
+
+  const getZIndex = useCallback((key) => {
+    return focusedWindow === key ? Z_FOCUSED : Z_BASE;
+  }, [focusedWindow]);
+
+  // ── HudPanels 높이 추적 ──
   const hudRef = useRef(null);
   const [hudHeight, setHudHeight] = useState(0);
 
-  const hudVisible = panelState.nodeInfo.visible && visible.p2p;
+  const hudVisible = windowStates.nodeInfo.visible && visible.p2p;
 
   useEffect(() => {
     if (!hudVisible || !hudRef.current) {
-      setHudHeight(56); // top-14 기본 오프셋만
+      setHudHeight(56);
       return;
     }
     const observer = new ResizeObserver(entries => {
@@ -146,7 +161,7 @@ export default function App() {
     return () => observer.disconnect();
   }, [hudVisible]);
 
-  // ── 네트워크 상태 ─────────────────────────────────────────────────
+  // ── 네트워크 상태 ──
   const [mode, setMode] = useState('connecting');
   const [serverMode, setServerMode] = useState(null);
   const [chain, setChain] = useState(null);
@@ -170,7 +185,7 @@ export default function App() {
   const recentBlocksRef = useRef([]);
   recentBlocksRef.current = recentBlocks;
 
-  // ── CompactBlock 수동 트리거 ──────────────────────────────────────
+  // ── CompactBlock 수동 트리거 ──
   const [forceCompactBlock, setForceCompactBlock] = useState(null);
 
   const handleReplayCompactBlock = useCallback(() => {
@@ -180,7 +195,7 @@ export default function App() {
     }
   }, []);
 
-  // ── 지구본 데이터 ─────────────────────────────────────────────────
+  // ── 지구본 데이터 ──
   const [nodePoints, setNodePoints] = useState([MY_NODE]);
   const [eventArcs, setEventArcs] = useState([]);
   const [rings, setRings] = useState([]);
@@ -197,7 +212,6 @@ export default function App() {
     return () => mgr.destroy();
   }, [serverUrl, sourceType]);
 
-  // 상시 피어 연결선
   const peerArcs = useMemo(() => {
     return nodePoints
       .filter(n => n.isMyPeer)
@@ -209,7 +223,6 @@ export default function App() {
       }));
   }, [nodePoints]);
 
-  // 합산 아크 (상시 연결 + 이벤트 아크)
   const combinedArcs = useMemo(() => [...peerArcs, ...eventArcs], [peerArcs, eventArcs]);
 
   const addArcs = useCallback((newArcs) => {
@@ -235,7 +248,7 @@ export default function App() {
     }, RING_LIFETIME_MS);
   }, []);
 
-  // ── 블록 검증 상태 ──────────────────────────────────────────────
+  // ── 블록 검증 상태 ──
   const [blockVerifyState, setBlockVerifyState] = useState(null);
   const blockVerifyRef = useRef(null);
   const txBufferRef = useRef([]);
@@ -249,7 +262,7 @@ export default function App() {
     bvs.start();
   }, []);
 
-  // ── TX 스트림 상태 ──────────────────────────────────────────────
+  // ── TX 스트림 상태 ──
   const [txStream, setTxStream] = useState([]);
   const txStreamVerifyRefs = useRef(new Map());
 
@@ -274,11 +287,9 @@ export default function App() {
           )
         );
 
-        // 검증 실패 시 → BitfeedFloor에 반려 TX 추가
         if (state.failed) {
           setTimeout(() => {
             bitfeedRef.current?.addRejected(txData);
-            // 2초 후 스트림에서 제거
             setTimeout(() => {
               setTxStream((current) => current.filter((t) => t.txid !== txid));
               txStreamVerifyRefs.current.get(txid)?.destroy();
@@ -287,7 +298,6 @@ export default function App() {
           }, 500);
         }
 
-        // 검증 완료 시 → BitfeedFloor에 통과 TX 추가
         if (state.done && !state.failed) {
           setTimeout(() => {
             setTxStream((current) =>
@@ -320,27 +330,36 @@ export default function App() {
     });
   }, []);
 
-  // ── TX/블록/주소 상세 패널 ──────────────────────────────────────
+  // ── TX/블록/주소 상세 패널 ──
   const [selectedTx, setSelectedTx] = useState(null);
   const [selectedBlock, setSelectedBlock] = useState(null);
   const [selectedAddress, setSelectedAddress] = useState(null);
 
-  // 블록검증 토글 → 즉시 최신 블록으로 검증 시작 + 상호배타 로직
+  // verifyCenter 토글 → 검증 패널 ON/OFF + 블록 검증 시작
   const handleToggle = useCallback((key) => {
     setVisible((prev) => {
       const next = { ...prev, [key]: !prev[key] };
 
-      if (key === 'verifyCenter' && next.verifyCenter) {
-        const blocks = recentBlocksRef.current;
-        if (blocks.length > 0) {
-          setTimeout(() => startBlockVerification(blocks[0]), 50);
-        } else {
-          setTimeout(() => startBlockVerification({
-            height: 0,
-            hash: 'aaaa1111bbbb2222cccc3333dddd4444eeee5555ffff666677778888' + '99990000',
-            txCount: 2847,
-            pool: 'Demo',
-          }), 50);
+      if (key === 'verifyCenter') {
+        // TX + Block 검증 패널 동시 제어
+        setWindowStates(ws => ({
+          ...ws,
+          txStream: { ...ws.txStream, visible: next.verifyCenter },
+          blockVerify: { ...ws.blockVerify, visible: next.verifyCenter },
+        }));
+
+        if (next.verifyCenter) {
+          const blocks = recentBlocksRef.current;
+          if (blocks.length > 0) {
+            setTimeout(() => startBlockVerification(blocks[0]), 50);
+          } else {
+            setTimeout(() => startBlockVerification({
+              height: 0,
+              hash: 'aaaa1111bbbb2222cccc3333dddd4444eeee5555ffff666677778888' + '99990000',
+              txCount: 2847,
+              pool: 'Demo',
+            }), 50);
+          }
         }
       }
 
@@ -348,7 +367,7 @@ export default function App() {
     });
   }, [startBlockVerification]);
 
-  // ── 검색 핸들러 ───────────────────────────────────────────────────
+  // ── 검색 핸들러 ──
   const handleSearchBlock = useCallback((query) => {
     if (query.height != null) {
       fetch(`${REST_BASE}/block-height/${query.height}`)
@@ -378,7 +397,7 @@ export default function App() {
     setSelectedAddress(address);
   }, []);
 
-  // ── 데이터 소스 구독 ──────────────────────────────────────────────
+  // ── 데이터 소스 구독 ──
   useEffect(() => {
     if (sourceType === null) return;
 
@@ -434,7 +453,6 @@ export default function App() {
       if (data.bestBlockHash) setBestBlockHash(data.bestBlockHash);
       if (data.recentBlocks?.length) {
         setRecentBlocks(data.recentBlocks.slice(0, MAX_RECENT_BLOCKS));
-        // Demo 블록(height===0) 표시 중이면 실제 블록으로 즉시 교체
         if (blockVerifyRef.current?.blockData?.height === 0) {
           startBlockVerification(data.recentBlocks[0]);
         }
@@ -456,15 +474,11 @@ export default function App() {
         if (peers.length) {
           const src = peers[Math.floor(Math.random() * peers.length)];
           const arcs = [{
-            startLat: src.lat,
-            startLng: src.lng,
-            endLat: MY_NODE.lat,
-            endLng: MY_NODE.lng,
-            color: '#60a5fa',
-            type: 'tx',
+            startLat: src.lat, startLng: src.lng,
+            endLat: MY_NODE.lat, endLng: MY_NODE.lng,
+            color: '#60a5fa', type: 'tx',
           }];
 
-          // mempool 모드: 가끔 파란 노드 간 TX 전파 아크 추가
           if (sourceType !== 'server' && Math.random() < 0.3) {
             const bgNodes = nodePointsRef.current.filter((n) => !n.isMyNode && !n.isMyPeer);
             if (bgNodes.length >= 2) {
@@ -474,8 +488,7 @@ export default function App() {
                 arcs.push({
                   startLat: a.lat, startLng: a.lng,
                   endLat: b.lat, endLng: b.lng,
-                  color: '#93c5fd',
-                  type: 'tx',
+                  color: '#93c5fd', type: 'tx',
                 });
               }
             }
@@ -492,7 +505,6 @@ export default function App() {
 
     unsubs.push(ds.subscribe('txPerSec', ({ value }) => setTxPerSec(value)));
 
-    // TX 실제 검증 결과 수신 → TxVerificationState에 주입
     unsubs.push(ds.subscribe('tx:verified', (data) => {
       if (data?.txid) {
         const tvs = txStreamVerifyRefs.current.get(data.txid);
@@ -506,16 +518,12 @@ export default function App() {
       const peers = nodePointsRef.current.filter((n) => n.isMyPeer);
       addArcs(
         pickRandom(peers.length ? peers : nodePointsRef.current.filter((n) => !n.isMyNode), 4).map((n) => ({
-          startLat: n.lat,
-          startLng: n.lng,
-          endLat: MY_NODE.lat,
-          endLng: MY_NODE.lng,
-          color: '#f7931a',
-          type: 'block',
+          startLat: n.lat, startLng: n.lng,
+          endLat: MY_NODE.lat, endLng: MY_NODE.lng,
+          color: '#f7931a', type: 'block',
         }))
       );
 
-      // mempool 모드: 파란 노드 간 네트워크 전파 시뮬레이션 아크
       if (sourceType !== 'server') {
         const bgNodes = nodePointsRef.current.filter((n) => !n.isMyNode && !n.isMyPeer);
         if (bgNodes.length >= 2) {
@@ -527,8 +535,7 @@ export default function App() {
               propagationArcs.push({
                 startLat: src.lat, startLng: src.lng,
                 endLat: dst.lat, endLng: dst.lng,
-                color: '#a78bfa',
-                type: 'block',
+                color: '#a78bfa', type: 'block',
               });
             }
           }
@@ -538,6 +545,11 @@ export default function App() {
 
       startBlockVerification(data);
       setVisible((prev) => ({ ...prev, verifyCenter: true }));
+      setWindowStates(ws => ({
+        ...ws,
+        txStream: { ...ws.txStream, visible: true },
+        blockVerify: { ...ws.blockVerify, visible: true },
+      }));
     }));
 
     unsubs.push(ds.subscribe('block:validated', (data) => {
@@ -548,19 +560,15 @@ export default function App() {
       const peers = nodePointsRef.current.filter((n) => n.isMyPeer);
       addArcs(
         pickRandom(peers.length ? peers : nodePointsRef.current.filter((n) => !n.isMyNode), 10).map((n) => ({
-          startLat: MY_NODE.lat,
-          startLng: MY_NODE.lng,
-          endLat: n.lat,
-          endLng: n.lng,
-          color: '#22c55e',
-          type: 'block',
+          startLat: MY_NODE.lat, startLng: MY_NODE.lng,
+          endLat: n.lat, endLng: n.lng,
+          color: '#22c55e', type: 'block',
         }))
       );
     }));
 
     unsubs.push(ds.subscribe('block:mined', ({ count, txids }) => {
       console.log(`[App] ${count} txs confirmed`);
-      // BitfeedFloor sweep 애니메이션
       if (txids?.length) {
         bitfeedRef.current?.sweepBlocks(txids);
       }
@@ -591,7 +599,7 @@ export default function App() {
     };
   }, [sourceType, serverUrl, addArcs, addRing, startBlockVerification, addToTxStream]);
 
-  // ── 설정 저장 ─────────────────────────────────────────────────────
+  // ── 설정 저장 ──
   const handleConnect = useCallback((newType, newServerUrl) => {
     localStorage.setItem(LS_SOURCE_TYPE, newType);
     localStorage.setItem(LS_SERVER_URL, newServerUrl || '');
@@ -628,10 +636,43 @@ export default function App() {
     setSelectedTx(tx);
   }, []);
 
-  // MainPanel 닫기 콜백
-  const handleCloseMainPanel = useCallback(() => {
-    setVisible((prev) => ({ ...prev, verifyCenter: false }));
-  }, []);
+  // ── WindowDock 최소화 아이템 ──
+  const dockItems = useMemo(() => {
+    const items = [];
+    if (windowStates.nodeInfo.visible && windowStates.nodeInfo.minimized) {
+      items.push({
+        key: 'nodeInfo',
+        title: 'NODE INFO',
+        titleColor: 'text-text-primary',
+        onRestore: () => setWinState('nodeInfo', { minimized: false }),
+      });
+    }
+    if (windowStates.chain.visible && windowStates.chain.minimized) {
+      items.push({
+        key: 'chain',
+        title: 'CHAIN',
+        titleColor: 'text-text-primary',
+        onRestore: () => setWinState('chain', { minimized: false }),
+      });
+    }
+    if (windowStates.txStream.visible && windowStates.txStream.minimized) {
+      items.push({
+        key: 'txStream',
+        title: 'TX VERIFY',
+        titleColor: 'text-tx-blue',
+        onRestore: () => setWinState('txStream', { minimized: false }),
+      });
+    }
+    if (windowStates.blockVerify.visible && windowStates.blockVerify.minimized) {
+      items.push({
+        key: 'blockVerify',
+        title: 'BLOCK VERIFY',
+        titleColor: 'text-block-purple',
+        onRestore: () => setWinState('blockVerify', { minimized: false }),
+      });
+    }
+    return items;
+  }, [windowStates, setWinState]);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden">
@@ -650,12 +691,11 @@ export default function App() {
         />
       </div>
 
-      {/* 좌상단 HUD */}
-      {panelState.nodeInfo.visible && (
+      {/* 좌상단 HUD — MacWindow */}
+      {windowStates.nodeInfo.visible && (
         <HudPanels
           ref={hudRef}
           visible={visible.p2p}
-          compact={false}
           mode={mode}
           serverMode={serverMode}
           chain={chain}
@@ -671,46 +711,82 @@ export default function App() {
           nodeInfo={nodeInfo}
           utxoStats={utxoStats}
           bestBlockHash={bestBlockHash}
-          minimized={panelState.nodeInfo.minimized}
-          onClose={() => setPanelState(s => ({ ...s, nodeInfo: { ...s.nodeInfo, visible: false } }))}
-          onMinimize={() => setPanelState(s => ({ ...s, nodeInfo: { ...s.nodeInfo, minimized: true } }))}
-          onExpand={() => setPanelState(s => ({ ...s, nodeInfo: { ...s.nodeInfo, minimized: false } }))}
+          minimized={windowStates.nodeInfo.minimized}
+          onClose={() => setWinState('nodeInfo', { visible: false })}
+          onMinimize={() => setWinState('nodeInfo', { minimized: !windowStates.nodeInfo.minimized })}
+          zIndex={getZIndex('nodeInfo')}
+          onFocus={() => focusWindow('nodeInfo')}
         />
       )}
 
-      {/* 체인 분기 패널 (서버 모드에서만) */}
+      {/* 체인 분기 패널 (서버 모드) */}
       {sourceType === 'server' && chaintips.length > 0 && (
         <ChainTipsPanel chaintips={chaintips} />
       )}
 
-      {/* 메인 패널 (TX검증 + 블록검증 + Bitfeed 멤풀 바닥) — 화면 75% */}
-      <MainPanel
+      {/* TX 검증 패널 — 독립 MacWindow */}
+      <TxStreamPanel
         txStream={txStream}
-        blockVerifyState={blockVerifyState}
-        mempoolCount={mempoolCount}
-        visible={visible.verifyCenter}
         onTxClick={handleTxClick}
-        onClose={handleCloseMainPanel}
-        bitfeedRef={bitfeedRef}
+        visible={windowStates.txStream.visible}
+        minimized={windowStates.txStream.minimized}
+        onClose={() => {
+          setWinState('txStream', { visible: false });
+          setVisible(prev => ({ ...prev, verifyCenter: false }));
+        }}
+        onMinimize={() => setWinState('txStream', { minimized: !windowStates.txStream.minimized })}
+        zIndex={getZIndex('txStream')}
+        onFocus={() => focusWindow('txStream')}
       />
 
-      {/* 예상 블록 적층 시각화 (멤풀 토글 ON + 블록검증 OFF + MainPanel 안 보일 때) */}
+      {/* 블록 검증 패널 — 독립 MacWindow */}
+      <BlockVerifyPanel
+        verifyState={blockVerifyState}
+        visible={windowStates.blockVerify.visible}
+        minimized={windowStates.blockVerify.minimized}
+        onClose={() => {
+          setWinState('blockVerify', { visible: false });
+          setVisible(prev => ({ ...prev, verifyCenter: false }));
+        }}
+        onMinimize={() => setWinState('blockVerify', { minimized: !windowStates.blockVerify.minimized })}
+        zIndex={getZIndex('blockVerify')}
+        onFocus={() => focusWindow('blockVerify')}
+      />
+
+      {/* BitfeedFloor — 전체 너비 하단 바 */}
+      <div className="absolute bottom-0 left-0 right-0 h-[200px] z-8"
+           style={{ background: 'rgba(6, 10, 20, 0.96)' }}>
+        {/* 헤더 */}
+        <div className="flex justify-between items-center px-4 py-2 shrink-0">
+          <span className="text-mempool-green font-bold text-xs tracking-wide">▸ MEMPOOL FLOOR</span>
+          <span className="text-muted text-[11px]">
+            {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}
+          </span>
+        </div>
+        {/* Canvas */}
+        <div className="absolute top-8 left-0 right-0 bottom-0 px-2 pb-2">
+          <BitfeedFloor ref={bitfeedRef} onTxClick={handleTxClick} />
+        </div>
+      </div>
+
+      {/* 예상 블록 적층 (검증 OFF일 때) */}
       <MempoolBlocksPanel
         mempoolBlocks={mempoolBlocks}
         visible={!visible.verifyCenter && mempoolBlocks.length > 0}
       />
 
-      {/* 하단 체인 스트립 */}
-      {panelState.chain.visible && (
+      {/* 체인 스트립 — MacWindow */}
+      {windowStates.chain.visible && (
         <ChainStrip
           recentBlocks={recentBlocks}
           onBlockClick={handleBlockClick}
           onReplayCompactBlock={handleReplayCompactBlock}
-          topOffset={hudHeight + 16}
-          minimized={panelState.chain.minimized}
-          onClose={() => setPanelState(s => ({ ...s, chain: { ...s.chain, visible: false } }))}
-          onMinimize={() => setPanelState(s => ({ ...s, chain: { ...s.chain, minimized: true } }))}
-          onExpand={() => setPanelState(s => ({ ...s, chain: { ...s.chain, minimized: false } }))}
+          hudHeight={hudHeight}
+          minimized={windowStates.chain.minimized}
+          onClose={() => setWinState('chain', { visible: false })}
+          onMinimize={() => setWinState('chain', { minimized: !windowStates.chain.minimized })}
+          zIndex={getZIndex('chain')}
+          onFocus={() => focusWindow('chain')}
         />
       )}
 
@@ -762,15 +838,18 @@ export default function App() {
         forceReplay={forceCompactBlock}
       />
 
+      {/* WindowDock — 최소화된 윈도우 복원 */}
+      <WindowDock items={dockItems} />
+
       {/* 설정 버튼 */}
       <button
         onClick={() => setSettingsOpen(true)}
         aria-label="설정 열기"
-        className="absolute bottom-5 left-5 bg-panel-bg border border-white/10
+        className="absolute bottom-[212px] left-5 bg-panel-bg border border-white/10
                   rounded-lg text-text-secondary text-sm px-3.5 py-2
                   cursor-pointer z-15 hover:bg-white/10 hover:text-text-primary transition-colors
                   backdrop-blur-[20px]
-                  max-sm:bottom-3 max-sm:left-3 max-sm:text-xs max-sm:px-2.5 max-sm:py-1.5"
+                  max-sm:bottom-[208px] max-sm:left-3 max-sm:text-xs max-sm:px-2.5 max-sm:py-1.5"
       >
         ⚙ Settings
       </button>

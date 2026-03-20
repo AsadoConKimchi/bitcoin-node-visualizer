@@ -67,12 +67,16 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* 패널 공통 스타일 — macOS frosted glass */
+/* 패널 공통 스타일 — macOS frosted glass (강화) */
 .panel-base {
-  @apply bg-panel-bg backdrop-blur-[20px] rounded-xl;
+  @apply bg-panel-bg rounded-xl;
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
   border: 1px solid rgba(255,255,255,0.08);
   border-top-color: rgba(255,255,255,0.15);
-  box-shadow: var(--shadow-panel-layered);
+  box-shadow:
+    var(--shadow-panel-layered),
+    inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
 /* 신호등 버튼 */
@@ -92,6 +96,19 @@ body {
 .panel-header {
   @apply font-bold text-xs tracking-wider mb-2 pb-1.5;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* MacWindow 드래그 커서 */
+.mac-window-drag {
+  cursor: grab;
+}
+.mac-window-drag:active {
+  cursor: grabbing;
+}
+
+/* 스프링 전환 커브 */
+.panel-spring {
+  transition: all 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* 온보딩 스포트라이트 */

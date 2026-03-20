@@ -1,13 +1,6 @@
-import React, { useRef, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react';
-import { feeColor } from '../utils/colors.js';
-
-// 수수료율 기반 글로우 색상 (투명도 포함)
-function feeGlow(feeRate) {
-  if (feeRate >= 50) return 'rgba(239,68,68,0.4)';
-  if (feeRate >= 20) return 'rgba(245,158,11,0.4)';
-  if (feeRate >= 10) return 'rgba(52,211,153,0.3)';
-  return 'rgba(96,165,250,0.3)';
-}
+import React, { useRef, useEffect, useImperativeHandle, forwardRef, useCallback, useState } from 'react';
+import { feeColor, feeGlow, FEE_LEGEND } from '../utils/colors.js';
+import TxTooltip from './TxTooltip.jsx';
 
 const MAX_BLOCKS = 200;
 const GRAVITY = 2;
@@ -24,10 +17,15 @@ const COLUMN_COUNT = 40;
  */
 const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, ref) {
   const canvasRef = useRef(null);
-  const blocksRef = useRef([]);      // { x, y, w, h, vy, color, glow, txid, settled, rejected, shards, opacity, enterTime }
+  const blocksRef = useRef([]);
   const dimsRef = useRef({ w: 600, h: 200 });
-  const columnsRef = useRef(new Float32Array(COLUMN_COUNT)); // 각 컬럼의 바닥 높이 (쌓인 양)
+  const columnsRef = useRef(new Float32Array(COLUMN_COUNT));
   const animRef = useRef(null);
+
+  // 호버 상태
+  const [hoveredTx, setHoveredTx] = useState(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const hoveredTxRef = useRef(null);
 
   // 블록 크기 계산 (weight 기반)
   const calcSize = useCallback((weight) => {
@@ -95,14 +93,19 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
       startCol: col.startCol,
       spanCols: col.spanCols,
       feeRate,
+      // 호버용 추가 데이터
+      fee: txData.fee,
+      txSize: txData.size,
+      weight,
+      inputCount: txData.vin,
+      outputCount: txData.vout,
+      totalValue: txData.totalOut || txData.totalValue,
     };
 
     const blocks = blocksRef.current;
     blocks.push(block);
-    // 같은 프레임 후속 블록이 이 컬럼을 피하도록 즉시 업데이트
     updateColumnHeight(col.startCol, col.spanCols, size);
 
-    // 최대 제한 (컬럼 높이는 tick()에서 자동 재계산)
     if (blocks.length > MAX_BLOCKS) {
       blocks.shift();
     }
@@ -149,24 +152,21 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
         b.vy = -15;
         b.settled = false;
         b.sweeping = true;
-        // 컬럼 높이는 tick()에서 자동 재계산
       }
     }
 
-    // sweep 된 블록 500ms 후 제거
     setTimeout(() => {
       blocksRef.current = blocksRef.current.filter((b) => !b.sweeping || b.opacity > 0.05);
     }, 600);
   }, []);
 
-  // ref 노출
   useImperativeHandle(ref, () => ({
     addBlock,
     addRejected,
     sweepBlocks,
   }), [addBlock, addRejected, sweepBlocks]);
 
-  // 파편 생성 (반려 TX 바닥 도달 시)
+  // 파편 생성
   const createShards = useCallback((block) => {
     const shards = [];
     const count = 4 + Math.floor(Math.random() * 4);
@@ -181,6 +181,41 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
       });
     }
     return shards;
+  }, []);
+
+  // 캔버스 호버 — hit-test
+  const handleMouseMove = useCallback((e) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setMousePos({ x: e.clientX, y: e.clientY });
+
+    for (let i = blocksRef.current.length - 1; i >= 0; i--) {
+      const b = blocksRef.current[i];
+      if (b.shards || b.sweeping) continue;
+      if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+        hoveredTxRef.current = b.txid;
+        setHoveredTx({
+          txid: b.txid,
+          feeRate: b.feeRate,
+          fee: b.fee,
+          size: b.txSize,
+          weight: b.weight,
+          inputCount: b.inputCount,
+          outputCount: b.outputCount,
+          totalValue: b.totalValue,
+        });
+        return;
+      }
+    }
+    hoveredTxRef.current = null;
+    setHoveredTx(null);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    hoveredTxRef.current = null;
+    setHoveredTx(null);
   }, []);
 
   // Canvas 클릭 → TX 상세
@@ -207,7 +242,6 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
     const ctx = canvas.getContext('2d');
     let running = true;
 
-    // ResizeObserver로 크기 추적
     const resizeObs = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
       if (width > 0 && height > 0) {
@@ -228,8 +262,9 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
       const { w, h } = dimsRef.current;
       const blocks = blocksRef.current;
       const cols = columnsRef.current;
+      const hovTxid = hoveredTxRef.current;
 
-      // 매 프레임 컬럼 높이 재계산 (settled + 비sweep 블록만)
+      // 매 프레임 컬럼 높이 재계산
       cols.fill(0);
       for (const b of blocks) {
         if (b.settled && !b.sweeping) {
@@ -243,9 +278,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
       for (let i = blocks.length - 1; i >= 0; i--) {
         const b = blocks[i];
 
-        // settled 블록은 영원히 고정. sweepBlocks()만이 해제 가능.
         if (b.settled && !b.sweeping) continue;
-
         if (b.settled) continue;
 
         // sweep 중인 블록
@@ -274,7 +307,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
           continue;
         }
 
-        // 낙하 중인 블록: floorY 동적 재계산
+        // 낙하 중: floorY 동적 재계산
         if (!b.rejected) {
           let maxH = 0;
           for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
@@ -283,20 +316,16 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
           b.floorY = h - maxH - b.h - 2;
         }
 
-        // 중력
         b.vy = Math.min(b.vy + GRAVITY, TERMINAL_VEL);
         b.y += b.vy;
 
-        // 바닥 착지
         if (b.y >= b.floorY) {
           b.y = b.floorY;
           b.vy = 0;
 
           if (b.rejected) {
-            // 반려: 파편화
             b.shards = createShards(b);
           } else {
-            // 착지 (settled)
             b.settled = true;
           }
         }
@@ -321,27 +350,42 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
           continue;
         }
 
+        const isHovered = b.txid === hovTxid;
         ctx.globalAlpha = b.opacity;
 
-        // 글로우 (신규 & 비settled)
+        // 글로우 (낙하 중 + 호버)
         if (!b.settled && !b.sweeping) {
           ctx.shadowColor = b.glow;
           ctx.shadowBlur = 8;
+        } else if (isHovered) {
+          ctx.shadowColor = b.glow;
+          ctx.shadowBlur = 12;
         }
 
-        ctx.fillStyle = b.settled
-          ? b.color + '88'  // settled은 약간 투명
-          : b.color;
-        ctx.fillRect(b.x, b.y, b.w, b.h);
+        // 색상: settled는 0xCC 투명도 (더 선명), 호버 시 풀 밝기
+        if (isHovered) {
+          ctx.fillStyle = b.color;
+        } else if (b.settled) {
+          ctx.fillStyle = b.color + 'CC';
+        } else {
+          ctx.fillStyle = b.color;
+        }
 
-        // 테두리
-        ctx.strokeStyle = b.color;
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(b.x, b.y, b.w, b.h);
+        // 블록 간 1px 간격으로 구분 (테두리 제거)
+        ctx.fillRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
 
-        // settled 블록에 TXID 텍스트 (크기 >= 20px일 때만)
+        // 큰 블록에 미세한 inner gradient
+        if (b.settled && b.w >= 20) {
+          const grad = ctx.createLinearGradient(b.x, b.y, b.x, b.y + b.h);
+          grad.addColorStop(0, 'rgba(255,255,255,0.06)');
+          grad.addColorStop(1, 'rgba(0,0,0,0.08)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+        }
+
+        // settled 블록에 TXID 텍스트
         if (b.settled && b.txid && b.w >= 16) {
-          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.fillStyle = isHovered ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)';
           ctx.font = '8px monospace';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -370,8 +414,20 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
         ref={canvasRef}
         className="absolute inset-0 w-full h-full"
         onClick={handleCanvasClick}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
         style={{ cursor: 'pointer' }}
       />
+
+      {/* 수수료 범례 */}
+      <div className="absolute bottom-3 right-3 flex gap-2 text-[11px] bg-[rgba(6,10,20,0.8)] rounded px-2 py-1">
+        {FEE_LEGEND.map((item) => (
+          <span key={item.label} style={{ color: item.color }}>● {item.label}</span>
+        ))}
+      </div>
+
+      {/* 호버 툴팁 */}
+      <TxTooltip tx={hoveredTx} x={mousePos.x} y={mousePos.y} />
     </div>
   );
 });
