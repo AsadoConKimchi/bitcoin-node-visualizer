@@ -30,9 +30,6 @@ const TX_BUFFER_MAX = 60;
 const TX_STREAM_MAX = 20;
 // TX 아크 쓰로틀 (ms)
 const TX_ARC_THROTTLE_MS = 500;
-// TX 검증 실패 확률 (교육용)
-const TX_FAIL_CHANCE = 0.03;
-
 const LS_SOURCE_TYPE = 'bnv_sourceType';
 const LS_SERVER_URL = 'bnv_serverUrl';
 
@@ -304,7 +301,7 @@ export default function App() {
             }, 500);
           }, 500);
         }
-      }, { failChance: TX_FAIL_CHANCE });
+      });
 
       txStreamVerifyRefs.current.set(txid, tvs);
       tvs.start();
@@ -494,6 +491,14 @@ export default function App() {
     }));
 
     unsubs.push(ds.subscribe('txPerSec', ({ value }) => setTxPerSec(value)));
+
+    // TX 실제 검증 결과 수신 → TxVerificationState에 주입
+    unsubs.push(ds.subscribe('tx:verified', (data) => {
+      if (data?.txid) {
+        const tvs = txStreamVerifyRefs.current.get(data.txid);
+        if (tvs) tvs.injectVerification(data);
+      }
+    }));
 
     unsubs.push(ds.subscribe('block:received', (data) => {
       if (data.height != null) setBlockHeight(data.height);

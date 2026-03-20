@@ -1,48 +1,31 @@
 /**
  * TxVerificationState — TX 검증 6단계 상태 머신
- * Phase 3 확장: IsStandard Check, Double Spend Check 추가
- * Phase 4 확장: failChance 옵션 (교육용 랜덤 실패 시뮬레이션)
- * 실제 TX 데이터(vin, vout, size, weight, totalOut) 활용
+ * 서버에서 실제 검증 결과(tx:verified)를 수신하여 표시
+ * mempool.space 모드에서는 서버 데이터 없이 기본 성공 표시
  */
 
 // 표준 스크립트 유형 목록
 const STANDARD_TYPES = ['P2PKH', 'P2SH', 'P2WPKH', 'P2WSH', 'P2TR', 'OP_RETURN'];
 
-// 실패 사유 목록 (교육용)
-const FAIL_REASONS = [
-  '이중 지불 감지',
-  '서명 검증 실패',
-  '비표준 스크립트',
-  'UTXO 미존재',
-];
-
-// 실패 가능 단계 (2=UTXO, 3=이중지불, 4=서명)
-const FAIL_STEPS = [2, 3, 4];
-
 export class TxVerificationState {
   /**
-   * @param {object|string} txData - { txid, vin, vout, size, weight, totalOut } 또는 txid 문자열
+   * @param {object|string} txData - { txid, vin, vout, size, weight, totalOut, scriptTypes, hasWitness } 또는 txid 문자열
    * @param {function} onChange - (state) => void
-   * @param {object} [options] - { failChance: 0.03 }
    */
-  constructor(txData, onChange, options = {}) {
-    // 문자열로 전달된 경우 래핑
+  constructor(txData, onChange) {
     const data = typeof txData === 'string' ? { txid: txData } : txData;
     this.txData = data;
     this.onChange = onChange;
     this._timers = [];
     this._destroyed = false;
-
-    const failChance = options.failChance ?? 0;
-    this._willFail = Math.random() < failChance;
-    this._failStep = this._willFail ? FAIL_STEPS[Math.floor(Math.random() * FAIL_STEPS.length)] : -1;
-    this._failReason = this._willFail ? FAIL_REASONS[Math.floor(Math.random() * FAIL_REASONS.length)] : null;
+    this._verificationResult = null;
+    this._currentStep = -1;
+    this._failedReal = false;
 
     const txid = data.txid || '';
     const short = txid ? txid.slice(0, 8) + '…' + txid.slice(-4) : 'unknown';
     const inOut = `${data.vin ?? '?'}in · ${data.vout ?? '?'}out`;
 
-    // fee rate 계산
     const feeRate = data.feeRate ?? (data.fee && data.weight ? Math.round(data.fee / (data.weight / 4)) : null);
 
     this._state = {
@@ -91,91 +74,147 @@ export class TxVerificationState {
     this.onChange?.(this._state);
   }
 
-  _failAt(index) {
+  _failAtReal(index, reason) {
+    // 실제 검증 실패 처리
+    this._failedReal = true;
     this._state = {
       ...this._state,
       steps: this._state.steps.map((s, i) =>
-        i === index ? { ...s, status: 'fail', detail: this._failReason } : s
+        i === index ? { ...s, status: 'fail', detail: reason } : s
       ),
       done: true,
       failed: true,
-      failReason: this._failReason,
+      failReason: reason,
     };
+    // 이후 타이머 무효화
+    this._timers.forEach(clearTimeout);
+    this._timers = [];
     this.onChange?.(this._state);
+  }
+
+  /**
+   * 서버에서 받은 실제 검증 결과 주입
+   * @param {object} result - { txid, steps: [{ok, detail}], failed, failStep, failReason }
+   */
+  injectVerification(result) {
+    if (this._destroyed || this._failedReal) return;
+    this._verificationResult = result;
+
+    // 이미 지나간 단계의 detail을 실제 데이터로 업데이트
+    if (result.steps) {
+      const updatedSteps = this._state.steps.map((s, i) => {
+        const realStep = result.steps[i];
+        if (!realStep) return s;
+        if (s.status === 'done' || s.status === 'active') {
+          return { ...s, detail: realStep.detail };
+        }
+        return s;
+      });
+      this._state = { ...this._state, steps: updatedSteps };
+      this.onChange?.(this._state);
+    }
+
+    // 실패 단계가 아직 처리 안 됐으면 즉시 실패 처리하지 않고
+    // start()의 타이머가 _verificationResult를 확인하여 처리
   }
 
   start() {
     if (this._destroyed) return;
     const d = this.txData;
     const inOut = `${d.vin ?? '?'}in · ${d.vout ?? '?'}out`;
+    const vr = () => this._verificationResult; // 클로저로 최신값 참조
 
-    // Step 0: 구문 파싱 (실제 vin/vout)
+    // Step 0: 구문 파싱
     this._schedule(0, () => this._updateStep(0, 'active'));
-    this._schedule(300, () => this._updateStep(0, 'done', inOut + ' ✓'));
+    this._schedule(300, () => {
+      if (this._failedReal) return;
+      const real = vr()?.steps?.[0];
+      this._updateStep(0, 'done', real?.detail ?? (inOut + ' ✓'));
+    });
 
     // Step 1: IsStandard 검사
     this._schedule(500, () => {
-      const scriptType = STANDARD_TYPES[Math.floor(Math.random() * (STANDARD_TYPES.length - 1))];
-      this._updateStep(1, 'active', `스크립트: ${scriptType}?`);
+      if (this._failedReal) return;
+      const real = vr()?.steps?.[1];
+      // 서버 데이터에서 실제 스크립트 유형 표시, 없으면 TX 데이터에서
+      const scriptType = d.scriptTypes?.length
+        ? d.scriptTypes.join(', ')
+        : STANDARD_TYPES[Math.floor(Math.random() * (STANDARD_TYPES.length - 1))];
+      this._updateStep(1, 'active', real?.detail ?? `스크립트: ${scriptType}?`);
     });
     this._schedule(800, () => {
-      this._updateStep(1, 'done', '표준 스크립트 ✓');
+      if (this._failedReal) return;
+      const real = vr()?.steps?.[1];
+      if (real && !real.ok) {
+        this._failAtReal(1, real.detail || '비표준 스크립트');
+        return;
+      }
+      this._updateStep(1, 'done', real?.detail ?? '표준 스크립트 ✓');
     });
 
     // Step 2: UTXO 조회
     this._schedule(1000, () => {
-      if (this._failStep === 2) {
-        this._updateStep(2, 'active', `${d.vin ?? '?'} inputs 조회 중…`);
-      } else {
-        this._updateStep(2, 'active', `${d.vin ?? '?'} inputs 조회 중…`);
-      }
+      if (this._failedReal) return;
+      const real = vr()?.steps?.[2];
+      this._updateStep(2, 'active', real?.detail ?? `${d.vin ?? '?'} inputs 조회 중…`);
     });
     this._schedule(1500, () => {
-      if (this._failStep === 2) {
-        this._failAt(2);
+      if (this._failedReal) return;
+      const real = vr()?.steps?.[2];
+      if (real && !real.ok) {
+        this._failAtReal(2, real.detail || 'UTXO 미존재');
         return;
       }
-      this._updateStep(2, 'done', `${d.vin ?? '?'} UTXO 확인`);
+      this._updateStep(2, 'done', real?.detail ?? `${d.vin ?? '?'} UTXO 확인`);
     });
 
     // Step 3: 이중 지불 검사
     this._schedule(1700, () => {
-      if (this._willFail && this._failStep <= 2) return;
-      this._updateStep(3, 'active', '멤풀 중복 확인 중…');
+      if (this._failedReal) return;
+      const real = vr()?.steps?.[3];
+      this._updateStep(3, 'active', real?.detail ?? '멤풀 중복 확인 중…');
     });
     this._schedule(2000, () => {
-      if (this._willFail && this._failStep <= 2) return;
-      if (this._failStep === 3) {
-        this._failAt(3);
+      if (this._failedReal) return;
+      const real = vr()?.steps?.[3];
+      if (real && !real.ok) {
+        this._failAtReal(3, real.detail || '이중 지불 감지');
         return;
       }
-      this._updateStep(3, 'done', '이중 지불 없음 ✓');
+      this._updateStep(3, 'done', real?.detail ?? '이중 지불 없음 ✓');
     });
 
     // Step 4: 서명 검증
     this._schedule(2200, () => {
-      if (this._willFail && this._failStep <= 3) return;
-      this._updateStep(4, 'active', 'secp256k1…');
+      if (this._failedReal) return;
+      const real = vr()?.steps?.[4];
+      this._updateStep(4, 'active', real?.detail ?? 'secp256k1…');
     });
     this._schedule(2900, () => {
-      if (this._willFail && this._failStep <= 3) return;
-      if (this._failStep === 4) {
-        this._failAt(4);
+      if (this._failedReal) return;
+      const real = vr()?.steps?.[4];
+      if (real && !real.ok) {
+        this._failAtReal(4, real.detail || '서명 검증 실패');
         return;
       }
-      this._updateStep(4, 'done', `${d.vin ?? '?'}개 서명 유효`);
+      this._updateStep(4, 'done', real?.detail ?? `${d.vin ?? '?'}개 서명 유효`);
     });
 
-    // Step 5: 금액 합산 (실제 totalOut)
+    // Step 5: 금액 합산
     this._schedule(3100, () => {
-      if (this._willFail) return;
-      this._updateStep(5, 'active', '합산 중…');
+      if (this._failedReal) return;
+      const real = vr()?.steps?.[5];
+      this._updateStep(5, 'active', real?.detail ?? '합산 중…');
     });
     this._schedule(3500, () => {
-      if (this._willFail) return;
-      const outStr = d.totalOut != null
-        ? `${(d.totalOut / 1e8).toFixed(4)} BTC`
-        : '잔액 OK';
+      if (this._failedReal) return;
+      const real = vr()?.steps?.[5];
+      if (real && !real.ok) {
+        this._failAtReal(5, real.detail || '입력 금액 부족');
+        return;
+      }
+      const outStr = real?.detail
+        ?? (d.totalOut != null ? `${(d.totalOut / 1e8).toFixed(4)} BTC` : '잔액 OK');
       this._updateStep(5, 'done', outStr);
       this._state = { ...this._state, done: true };
       this.onChange?.(this._state);

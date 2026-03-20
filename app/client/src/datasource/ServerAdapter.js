@@ -6,6 +6,18 @@
 
 import { EventBus } from './EventBus.js';
 
+// 타이밍 상수
+const INITIAL_RECONNECT_MS = 1000;
+const MAX_RECONNECT_MS = 30000;
+const CONNECT_TIMEOUT_MS = 10000;
+const FIRST_POLL_DELAY_MS = 2000;
+const POLL_INTERVAL_MS = 30000;
+const UTXO_POLL_INTERVAL_MS = 300_000;
+const UTXO_FIRST_DELAY_MS = 5000;
+const MED_POLL_INTERVAL_MS = 60_000;
+const MED_FIRST_DELAY_MS = 3000;
+const TX_RATE_WINDOW_MS = 1000;
+
 export class ServerAdapter extends EventBus {
   /**
    * @param {string} serverUrl  예: 'http://100.x.x.x:3000'
@@ -14,8 +26,8 @@ export class ServerAdapter extends EventBus {
     super();
     this._url = (serverUrl || '').replace(/\/$/, '');
     this._ws = null;
-    this._reconnectDelay = 1000;   // 초기 재연결 대기 (1초)
-    this._maxDelay = 30000;         // 최대 재연결 대기 (30초)
+    this._reconnectDelay = INITIAL_RECONNECT_MS;
+    this._maxDelay = MAX_RECONNECT_MS;
     this._connectTimer = null;
     this._pollTimer = null;
     this._destroyed = false;
@@ -25,7 +37,7 @@ export class ServerAdapter extends EventBus {
 
     this._connect();
     // 첫 REST 폴링: WebSocket init보다 약간 늦게 실행
-    this._pollTimer = setTimeout(() => this._poll(), 2000);
+    this._pollTimer = setTimeout(() => this._poll(), FIRST_POLL_DELAY_MS);
     // 저빈도 폴링 (UTXO 5분, 스토리지/보안 60초)
     this._slowPollTimer = null;
     this._medPollTimer = null;
@@ -42,12 +54,14 @@ export class ServerAdapter extends EventBus {
           const data = await res.json();
           if (!data.error) this.emit('utxoStats', data);
         }
-      } catch (_) {}
+      } catch (err) {
+        console.debug('[ServerAdapter] UTXO 폴링 실패:', err);
+      }
       if (!this._destroyed) {
-        this._slowPollTimer = setTimeout(pollUtxo, 300_000);
+        this._slowPollTimer = setTimeout(pollUtxo, UTXO_POLL_INTERVAL_MS);
       }
     };
-    this._slowPollTimer = setTimeout(pollUtxo, 5000);
+    this._slowPollTimer = setTimeout(pollUtxo, UTXO_FIRST_DELAY_MS);
 
     // 스토리지 + 보안 — 60초 간격
     const pollMed = async () => {
@@ -65,12 +79,14 @@ export class ServerAdapter extends EventBus {
           const data = await securityRes.value.json();
           if (!data.error) this.emit('securityInfo', data);
         }
-      } catch (_) {}
+      } catch (err) {
+        console.debug('[ServerAdapter] 중간 폴링 실패:', err);
+      }
       if (!this._destroyed) {
-        this._medPollTimer = setTimeout(pollMed, 60_000);
+        this._medPollTimer = setTimeout(pollMed, MED_POLL_INTERVAL_MS);
       }
     };
-    this._medPollTimer = setTimeout(pollMed, 3000);
+    this._medPollTimer = setTimeout(pollMed, MED_FIRST_DELAY_MS);
   }
 
   // WebSocket URL 변환 (http → ws, https → wss)
@@ -89,27 +105,26 @@ export class ServerAdapter extends EventBus {
   _connect() {
     if (this._destroyed) return;
 
-    // 10초 연결 타임아웃
     let timeoutId = setTimeout(() => {
       if (this._ws && this._ws.readyState === WebSocket.CONNECTING) {
         this._ws.close();
       }
-    }, 10000);
+    }, CONNECT_TIMEOUT_MS);
 
     const ws = new WebSocket(this._wsUrl());
     this._ws = ws;
 
     ws.onopen = () => {
       clearTimeout(timeoutId);
-      this._reconnectDelay = 1000; // 성공 시 딜레이 리셋
+      this._reconnectDelay = INITIAL_RECONNECT_MS;
     };
 
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
         this._handleMessage(msg);
-      } catch (_) {
-        // 파싱 실패 무시
+      } catch (err) {
+        console.debug('[ServerAdapter] WS 메시지 파싱 실패:', err);
       }
     };
 
@@ -146,7 +161,7 @@ export class ServerAdapter extends EventBus {
         {
           const now = Date.now();
           this._txTimestamps.push(now);
-          this._txTimestamps = this._txTimestamps.filter(t => t > now - 1000);
+          this._txTimestamps = this._txTimestamps.filter(t => t > now - TX_RATE_WINDOW_MS);
           this.emit('txPerSec', { value: this._txTimestamps.length });
         }
         break;
@@ -159,6 +174,9 @@ export class ServerAdapter extends EventBus {
         break;
       case 'block:propagated':
         this.emit('block:propagated', data);
+        break;
+      case 'tx:verified':
+        this.emit('tx:verified', data);
         break;
       case 'mempool':
         this.emit('mempool', data);
@@ -260,12 +278,12 @@ export class ServerAdapter extends EventBus {
           });
         }
       }
-    } catch (_) {
-      // REST 폴링 실패 무시 (WebSocket으로 계속 수신)
+    } catch (err) {
+      console.debug('[ServerAdapter] REST 폴링 실패:', err);
     }
 
     if (!this._destroyed) {
-      this._pollTimer = setTimeout(() => this._poll(), 30000);
+      this._pollTimer = setTimeout(() => this._poll(), POLL_INTERVAL_MS);
     }
   }
 

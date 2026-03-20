@@ -1,13 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { feeColor } from '../utils/colors.js';
 
 // ── 공유 컴포넌트 ────────────────────────────────────────────────────────────
-
-function feeColor(feeRate) {
-  if (feeRate >= 50) return '#ef4444';
-  if (feeRate >= 20) return '#f59e0b';
-  if (feeRate >= 10) return '#22c55e';
-  return '#60a5fa';
-}
 
 // 6단계 미니 프로그레스 도트
 function MiniProgress({ steps }) {

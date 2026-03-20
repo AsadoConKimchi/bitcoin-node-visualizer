@@ -57,7 +57,7 @@ export default function SearchBar({ onSearchBlock, onSearchTx, onSearchAddress }
       <div className={`flex items-center gap-1.5 bg-panel-bg-light
                       border rounded-md px-2.5 py-1.5 transition-all duration-200
                       ${focused ? 'border-btc-orange w-[280px] md:w-[320px]' : 'border-btc-orange/30 w-[180px] md:w-[220px]'}`}>
-        <span className="text-btc-orange/50 text-sm shrink-0">⌕</span>
+        <span className="text-btc-orange/50 text-sm shrink-0" aria-hidden="true">⌕</span>
         <input
           type="text"
           value={query}
@@ -72,6 +72,7 @@ export default function SearchBar({ onSearchBlock, onSearchTx, onSearchAddress }
         {query && (
           <button
             onClick={() => { setQuery(''); setError(''); }}
+            aria-label="검색어 지우기"
             className="text-muted text-xs cursor-pointer bg-transparent border-none hover:text-btc-orange"
           >
             ✕

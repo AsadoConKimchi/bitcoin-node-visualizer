@@ -1,12 +1,5 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react';
-
-// 수수료율 기반 색상
-function feeColor(feeRate) {
-  if (feeRate >= 50) return '#ef4444';
-  if (feeRate >= 20) return '#f59e0b';
-  if (feeRate >= 10) return '#34d399';
-  return '#60a5fa';
-}
+import { feeColor } from '../utils/colors.js';
 
 // 수수료율 기반 글로우 색상 (투명도 포함)
 function feeGlow(feeRate) {

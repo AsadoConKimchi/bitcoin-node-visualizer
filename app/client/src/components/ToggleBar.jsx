@@ -28,6 +28,8 @@ export default function ToggleBar({ visible, onToggle }) {
           <button
             key={key}
             onClick={() => onToggle(key)}
+            aria-label={`${label} 토글`}
+            aria-pressed={active}
             className={`font-mono text-xs px-2.5 py-1.5 rounded cursor-pointer
                        border transition-all duration-150 tracking-wide
                        md:px-3.5 md:py-1.5 md:text-sm
