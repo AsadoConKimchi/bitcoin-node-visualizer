@@ -4,7 +4,87 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ---
 
-## [Unreleased] — 2026-03-20
+## [1.0.3] — 2026-03-20
+
+### Fixed — Umbrel 시각화 버그 3건 근본 수정
+
+#### Bug 1: 피어/연결선 안 보임
+- **근본 원인**: 서버 자동감지 시 `setServerUrl('')` → `if (this._serverUrl)` falsy → 항상 mempool 모드로 실행
+- `NodeDataManager`에 `isServerMode` 명시 플래그 추가 (3번째 인자)
+- 서버 모드에서 bitnodes 외부 API 호출 스킵 — 실제 피어 + 내 노드만 표시
+- `GlobeScene`: 서버 모드 시 `pointsData` → `htmlElementsData` (CSS glow DOM 요소)로 전환하여 가까운 피어 3D 구체 겹침 방지
+- `/api/peers` 응답에 `geoResolved`/`total` 카운트 추가 (Tor/I2P 피어 GeoIP 미해결 가시화)
+
+#### Bug 2: Mempool Floor TX 공중부양
+- **근본 원인**: settled 재낙하 로직에서 같은 컬럼 여러 블록이 `cols[j] - selfContrib`으로 동일 expectedFloorY 계산 → 잘못된 재낙하
+- 재낙하 로직 전체 제거: settled 블록은 영구 고정, `sweepBlocks()`만이 해제 가능
+
+#### Bug 3: Merkle Tree 비어있음
+- **근본 원인**: WS init에서 `getBlockHeader()`로 블록 가져옴 → TX 목록 미포함 → `txidSample` 누락
+- `getBlock(hash, 1)` (verbosity 1: txid 목록 포함, TX 본문 미포함)로 변경
+- `txidSample` 생성: ≤8개면 전체, 아니면 앞4+뒤4
+
+### Added — 자립형 TX/블록 상세 + Floor TX 클릭
+
+#### 서버 API 엔드포인트
+- `GET /api/tx/:txid` — `getrawtransaction` verbose
+- `GET /api/block/:hash` — `getblock` verbosity=1
+
+#### 듀얼모드 상세 패널
+- `TxDetailPanel`: `sourceType` prop으로 서버/mempool 모드 분기
+  - 서버 모드: `/api/tx/:txid` → RPC 응답을 mempool.space 형식으로 정규화 (BTC→sat 변환, scriptPubKey 매핑)
+  - mempool 모드: 기존 `mempool.space/api/tx` 유지
+- `BlockDetailPanel`: 동일 듀얼모드 구현
+  - 서버 모드: txid 목록이 블록 응답에 포함되므로 별도 fetch 불필요
+- 서버 모드에서 "mempool.space에서 보기 ↗" 외부 링크 숨김
+
+#### Mempool Floor TX 클릭
+- `BitfeedFloor`: `onTxClick` prop + canvas click 핸들러 (역순 히트테스트)
+- `MainPanel` → `BitfeedFloor`로 `onTxClick` 전달
+- 클릭 시 `TxDetailPanel` 열림 (feeRate 데이터 포함)
+
+#### Files Modified
+- `server/index.js` — init 블록 txidSample, `/api/tx/:txid`, `/api/block/:hash`
+- `globe/nodeData.js` — `isServerMode` 플래그, bitnodes 스킵
+- `globe/GlobeScene.jsx` — `isServerMode` prop, htmlElementsData CSS glow
+- `App.jsx` — NodeDataManager에 isServerMode, 상세패널에 sourceType
+- `components/BitfeedFloor.jsx` — 재낙하 로직 제거, 클릭 핸들러
+- `components/TxDetailPanel.jsx` — 듀얼모드 API, RPC 정규화, 링크 조건부
+- `components/BlockDetailPanel.jsx` — 듀얼모드 API, RPC 정규화, 링크 조건부
+- `components/MainPanel.jsx` — onTxClick을 BitfeedFloor에 전달
+
+---
+
+## [1.0.2] — 2026-03-20
+
+### Fixed — P2P 시각화 버그 4건
+
+- 피어 초록 점: `isMyPeer` 구분, `pointRadius`/`pointColor` 분기
+- 연결선 아크: `connection`(0.15 stroke, 정적) vs `block`(1.5, 600ms) vs `tx`(0.6, 1200ms) 분화
+- mempool 모드: 가상 피어 8~12개 bitnodes에서 랜덤 추출
+- `MY_NODE` 기본 서울 좌표 (37.5665, 126.978)
+
+---
+
+## [1.0.1] — 2026-03-20
+
+### Fixed — Umbrel 설치 실패
+
+- Docker 빌드 수정
+
+---
+
+## [1.0.0] — 2026-03-20
+
+### Added — Umbrel 앱스토어 패키징
+
+- `Dockerfile` 멀티스테이지 빌드
+- `umbrel-app.yml` + `docker-compose.yml` + `exports.sh`
+- GitHub Actions: 태그 push → GHCR Docker 이미지 자동 빌드/배포
+
+---
+
+## [Pre-release] — 2026-03-20
 
 ### Changed — TX 실제 검증 파이프라인
 
@@ -39,16 +119,9 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 - Bitcoin Core < 22 → `vin[].prevout` null check 대응
 - TX가 검증 전 블록 포함 → catch에서 처리
 
-#### Files Modified
-- `server/rpc.js` — `getMempoolEntry()`, `getRawTransactionVerbose()` 추가
-- `server/validator.js` — RPC 세마포어, `verifyTx()` 6단계 파이프라인, `processRawTx()` Phase 2 호출
-- `client/src/datasource/ServerAdapter.js` — `tx:verified` 이벤트 패스스루
-- `client/src/verification/TxVerificationState.js` — 가짜 실패 제거, `injectVerification()` 추가
-- `client/src/App.jsx` — `TX_FAIL_CHANCE` 제거, `tx:verified` 구독 추가
-
 ---
 
-## [Unreleased] — 2026-03-19
+## [Pre-release] — 2026-03-19
 
 ### Fixed — 서버 감지 + 노드 연결 증명
 
@@ -137,7 +210,7 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ---
 
-## [Unreleased] — 2026-03-18
+## [Pre-release] — 2026-03-18
 
 ### Added — Full Node Feature Coverage (Phase 1-4)
 
