@@ -7,6 +7,8 @@ const cors = require('cors');
 const { WebSocketServer } = require('ws');
 const geoip = require('geoip-lite');
 
+const rateLimit = require('express-rate-limit');
+
 const config = require('./config');
 const rpc = require('./rpc');
 const broadcaster = require('./broadcaster');
@@ -16,6 +18,22 @@ const app = express();
 
 // CORS — Tailscale 내부망이므로 전체 허용
 app.use(cors());
+
+// 보안 헤더
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  next();
+});
+
+// REST API 요청 제한 (60req/min)
+app.use('/api/', rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
 
 // ── 정적 파일 서빙 (프로덕션: Vite 빌드 결과물) ─────────────────────────────
 const CLIENT_DIST = path.join(__dirname, '../client/dist');
@@ -132,7 +150,8 @@ app.get('/api/info', async (req, res) => {
       sizeOnDisk: chainInfo.size_on_disk || null,
     });
   } catch (err) {
-    res.status(503).json({ error: err.message, mode: getMode() });
+    console.error('[api/info]', err.message);
+    res.status(503).json({ error: 'Service unavailable', mode: getMode() });
   }
 });
 
@@ -142,7 +161,8 @@ app.get('/api/mempool', async (req, res) => {
     const ids = await rpc.getRawMempool();
     res.json({ count: ids.length, mode: getMode() });
   } catch (err) {
-    res.status(503).json({ error: err.message });
+    console.error(`[api]`, err.message);
+    res.status(503).json({ error: 'Service unavailable' });
   }
 });
 
@@ -167,7 +187,8 @@ app.get('/api/peers', async (req, res) => {
       .filter((p) => p.lat != null);
     res.json({ peers: points, count: peers.length });
   } catch (err) {
-    res.status(503).json({ error: err.message });
+    console.error(`[api]`, err.message);
+    res.status(503).json({ error: 'Service unavailable' });
   }
 });
 
@@ -177,7 +198,8 @@ app.get('/api/mempool/info', async (req, res) => {
     const info = await rpc.getMempoolInfo();
     res.json(info);
   } catch (err) {
-    res.status(503).json({ error: err.message });
+    console.error(`[api]`, err.message);
+    res.status(503).json({ error: 'Service unavailable' });
   }
 });
 
@@ -187,7 +209,8 @@ app.get('/api/chaintips', async (req, res) => {
     const tips = await rpc.getChainTips();
     res.json(tips);
   } catch (err) {
-    res.status(503).json({ error: err.message });
+    console.error(`[api]`, err.message);
+    res.status(503).json({ error: 'Service unavailable' });
   }
 });
 
@@ -214,7 +237,8 @@ app.get('/api/utxo-stats', async (req, res) => {
     _utxoCacheTime = now;
     res.json(_utxoCache);
   } catch (err) {
-    res.status(503).json({ error: err.message });
+    console.error(`[api]`, err.message);
+    res.status(503).json({ error: 'Service unavailable' });
   }
 });
 
@@ -230,7 +254,8 @@ app.get('/api/storage', async (req, res) => {
       headers: chainInfo.headers,
     });
   } catch (err) {
-    res.status(503).json({ error: err.message });
+    console.error(`[api]`, err.message);
+    res.status(503).json({ error: 'Service unavailable' });
   }
 });
 
@@ -270,7 +295,8 @@ app.get('/api/security', async (req, res) => {
       warnings: networkInfo.warnings || '',
     });
   } catch (err) {
-    res.status(503).json({ error: err.message });
+    console.error(`[api]`, err.message);
+    res.status(503).json({ error: 'Service unavailable' });
   }
 });
 
@@ -290,7 +316,8 @@ app.get('/api/fees', async (req, res) => {
       hour:    { blocks: 6, feerate: toSat(hour?.feerate) },
     });
   } catch (err) {
-    res.status(503).json({ error: err.message });
+    console.error(`[api]`, err.message);
+    res.status(503).json({ error: 'Service unavailable' });
   }
 });
 
@@ -301,17 +328,30 @@ app.get('*', (req, res) => {
 
 // ── HTTP + WebSocket 서버 ────────────────────────────────────────────────────
 const server = http.createServer(app);
-const wss = new WebSocketServer({ noServer: true });
+const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
+
+// WS_ALLOWED_ORIGINS: 쉼표 구분 허용 origin 목록 (미설정 시 모든 origin 허용)
+const allowedOrigins = process.env.WS_ALLOWED_ORIGINS
+  ? process.env.WS_ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : null;
 
 // /ws 경로만 WebSocket 업그레이드 허용
 server.on('upgrade', (req, socket, head) => {
-  if (req.url === '/ws') {
-    wss.handleUpgrade(req, socket, head, (ws) => {
-      wss.emit('connection', ws, req);
-    });
-  } else {
+  if (req.url !== '/ws') {
     socket.destroy();
+    return;
   }
+  // origin 검증 (opt-in)
+  if (allowedOrigins) {
+    const origin = req.headers.origin || '';
+    if (!allowedOrigins.includes(origin)) {
+      socket.destroy();
+      return;
+    }
+  }
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    wss.emit('connection', ws, req);
+  });
 });
 
 wss.on('connection', (ws) => {

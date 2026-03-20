@@ -96,6 +96,16 @@ async function getMempoolInfo() {
   return rpcCall('getmempoolinfo');
 }
 
+/** 멤풀 엔트리 조회 (수수료, depends, bip125-replaceable) */
+async function getMempoolEntry(txid) {
+  return rpcCall('getmempoolentry', [txid]);
+}
+
+/** verbose 모드 TX 조회 (Bitcoin Core 22+ vin[].prevout 포함) */
+async function getRawTransactionVerbose(txid) {
+  return rpcCall('getrawtransaction', [txid, true]);
+}
+
 /** 체인 분기 기록 반환 (stale/orphan blocks 포함) */
 async function getChainTips() {
   return rpcCall('getchaintips');
@@ -137,10 +147,12 @@ module.exports = {
   getRawMempool,
   getRawMempoolVerbose,
   getRawTransaction,
+  getRawTransactionVerbose,
   getNetworkInfo,
   getPeerInfo,
   getBlockchainInfo,
   getMempoolInfo,
+  getMempoolEntry,
   getChainTips,
   estimateSmartFee,
   getTxOutSetInfo,

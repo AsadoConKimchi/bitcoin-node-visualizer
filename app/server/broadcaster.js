@@ -1,15 +1,11 @@
 'use strict';
 
-const { EventEmitter } = require('events');
-
 /**
  * Broadcaster: 서버 내부 이벤트를 WebSocket 클라이언트에 브로드캐스트
- * - EventEmitter로 내부 이벤트 수신
  * - 연결된 모든 WebSocket 클라이언트에 JSON 메시지 전송
  */
-class Broadcaster extends EventEmitter {
+class Broadcaster {
   constructor() {
-    super();
     // Set<WebSocket>
     this._clients = new Set();
   }
