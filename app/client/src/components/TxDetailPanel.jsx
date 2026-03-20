@@ -17,21 +17,24 @@ function scriptTypeLabel(type) {
   return labels[type] || type || '?';
 }
 
-// RPC 응답 → 정규화
+// RPC 응답 → 정규화 (verbosity=2: vin[].prevout 포함)
 function normalizeRpcTx(rpc) {
+  // verbosity=2 응답에서 fee 필드 직접 사용 (BTC float → sats)
+  const fee = rpc.fee != null ? Math.round(rpc.fee * 1e8) : null;
+
   return {
     txid: rpc.txid,
     size: rpc.size,
     weight: rpc.weight,
-    fee: rpc.fee != null ? Math.round(rpc.fee * 1e8) : null,
+    fee,
     vin: (rpc.vin || []).map(v => ({
       ...v,
       sequence: v.sequence,
-      prevout: v.vout != null ? {
-        value: v.prevout?.value != null ? Math.round(v.prevout.value * 1e8) : null,
-        scriptpubkey_address: v.prevout?.scriptPubKey?.address ?? null,
-        scriptpubkey_type: v.prevout?.scriptPubKey?.type ?? null,
-      } : null,
+      prevout: v.prevout ? {
+        value: v.prevout.value != null ? Math.round(v.prevout.value * 1e8) : null,
+        scriptpubkey_address: v.prevout.scriptPubKey?.address ?? null,
+        scriptpubkey_type: v.prevout.scriptPubKey?.type ?? null,
+      } : v.coinbase ? null : null,
     })),
     vout: (rpc.vout || []).map(v => ({
       value: v.value != null ? Math.round(v.value * 1e8) : null,

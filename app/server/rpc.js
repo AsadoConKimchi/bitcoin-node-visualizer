@@ -101,9 +101,9 @@ async function getMempoolEntry(txid) {
   return rpcCall('getmempoolentry', [txid]);
 }
 
-/** verbose 모드 TX 조회 (Bitcoin Core 22+ vin[].prevout 포함) */
+/** verbose 모드 TX 조회 (verbosity=2: vin[].prevout 포함) */
 async function getRawTransactionVerbose(txid) {
-  return rpcCall('getrawtransaction', [txid, true]);
+  return rpcCall('getrawtransaction', [txid, 2]);
 }
 
 /** 체인 분기 기록 반환 (stale/orphan blocks 포함) */

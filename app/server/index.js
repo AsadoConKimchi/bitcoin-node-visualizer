@@ -16,6 +16,24 @@ const { startZmq, getMode } = require('./zmq');
 
 const app = express();
 
+// 외부 IP 기반 노드 위치 캐시 (서버 시작 시 1회 조회)
+let _externalIpLocation = null;
+(async () => {
+  try {
+    const res = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(5000) });
+    if (res.ok) {
+      const { ip } = await res.json();
+      const geo = geoip.lookup(ip);
+      if (geo?.ll) {
+        _externalIpLocation = { lat: geo.ll[0], lng: geo.ll[1] };
+        console.log(`[server] 외부 IP GeoIP 성공: ${ip} → [${geo.ll[0]}, ${geo.ll[1]}]`);
+      }
+    }
+  } catch (_) {
+    console.warn('[server] 외부 IP 감지 실패 — 노드 위치 기본값 사용');
+  }
+})();
+
 // CORS — Tailscale 내부망이므로 전체 허용
 app.use(cors());
 
@@ -61,30 +79,21 @@ app.get('/api/info', async (req, res) => {
       rpc.getPeerInfo(),
     ]);
 
-    // 노드 위치: localaddresses → GeoIP, 없으면 피어 median
+    // 노드 위치: localaddresses(clearnet만) → GeoIP, 없으면 외부 IP 캐시
     let nodeLocation = null;
     const localAddrs = networkInfo.localaddresses || [];
     for (const la of localAddrs) {
+      // .onion/.i2p 주소는 GeoIP 불가 — 건너뛰기
+      if (la.address.endsWith('.onion') || la.address.endsWith('.i2p')) continue;
       const geo = geoip.lookup(la.address);
       if (geo?.ll) {
         nodeLocation = { lat: geo.ll[0], lng: geo.ll[1] };
         break;
       }
     }
-    if (!nodeLocation && peerInfo.length > 0) {
-      // fallback: 피어 위치 median
-      const lats = [], lngs = [];
-      for (const p of peerInfo) {
-        const ip = p.addr.split(':')[0].replace(/^\[/, '').replace(/\]$/, '');
-        const geo = geoip.lookup(ip);
-        if (geo?.ll) { lats.push(geo.ll[0]); lngs.push(geo.ll[1]); }
-      }
-      if (lats.length > 0) {
-        lats.sort((a, b) => a - b);
-        lngs.sort((a, b) => a - b);
-        const mid = Math.floor(lats.length / 2);
-        nodeLocation = { lat: lats[mid], lng: lngs[mid] };
-      }
+    // fallback: 외부 IP 감지 캐시
+    if (!nodeLocation && _externalIpLocation) {
+      nodeLocation = _externalIpLocation;
     }
     // DA 진행률 계산
     const daBlocks = chainInfo.blocks % 2016;

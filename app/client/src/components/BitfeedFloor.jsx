@@ -5,7 +5,7 @@ import TxTooltip from './TxTooltip.jsx';
 const MAX_BLOCKS = 200;
 const GRAVITY = 2;
 const TERMINAL_VEL = 8;
-const COLUMN_COUNT = 40;
+const COL_PIXEL_WIDTH = 12; // 블록 ~12px 간격으로 밀집
 
 /**
  * BitfeedFloor — Canvas2D 멤풀 바닥 애니메이션
@@ -19,7 +19,8 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
   const canvasRef = useRef(null);
   const blocksRef = useRef([]);
   const dimsRef = useRef({ w: 600, h: 200 });
-  const columnsRef = useRef(new Float32Array(COLUMN_COUNT));
+  const columnCountRef = useRef(Math.floor(600 / COL_PIXEL_WIDTH));
+  const columnsRef = useRef(new Float32Array(columnCountRef.current));
   const animRef = useRef(null);
 
   // 호버 상태
@@ -33,15 +34,16 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
     return Math.max(8, Math.min(45, Math.round(side)));
   }, []);
 
-  // 가장 빈 컬럼 찾기
+  // 가장 빈 컬럼 찾기 (좌측 정렬, 밀집 배치)
   const findBestColumn = useCallback((blockW) => {
     const cols = columnsRef.current;
-    const colWidth = dimsRef.current.w / COLUMN_COUNT;
+    const colCount = columnCountRef.current;
+    const colWidth = dimsRef.current.w / colCount;
     const spanCols = Math.max(1, Math.ceil(blockW / colWidth));
     let bestStart = 0;
     let bestHeight = Infinity;
 
-    for (let i = 0; i <= COLUMN_COUNT - spanCols; i++) {
+    for (let i = 0; i <= colCount - spanCols; i++) {
       let maxH = 0;
       for (let j = i; j < i + spanCols; j++) {
         if (cols[j] > maxH) maxH = cols[j];
@@ -53,8 +55,8 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
     }
 
     return {
-      x: bestStart * colWidth + (colWidth * spanCols - blockW) / 2,
-      floorY: dimsRef.current.h - bestHeight - blockW - 2,
+      x: bestStart * colWidth, // 좌측 정렬 (중앙 정렬 제거)
+      floorY: dimsRef.current.h - bestHeight - blockW - 1,
       startCol: bestStart,
       spanCols,
     };
@@ -63,8 +65,9 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
   // 컬럼 높이 업데이트
   const updateColumnHeight = useCallback((startCol, spanCols, blockH) => {
     const cols = columnsRef.current;
+    const colCount = columnCountRef.current;
     for (let j = startCol; j < startCol + spanCols; j++) {
-      if (j < COLUMN_COUNT) cols[j] += blockH + 1;
+      if (j < colCount) cols[j] += blockH + 1;
     }
   }, []);
 
@@ -115,8 +118,9 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
   const addRejected = useCallback((txData) => {
     const weight = txData.weight || 560;
     const size = calcSize(weight);
-    const colWidth = dimsRef.current.w / COLUMN_COUNT;
-    const col = Math.floor(Math.random() * (COLUMN_COUNT - 2));
+    const colCount = columnCountRef.current;
+    const colWidth = dimsRef.current.w / colCount;
+    const col = Math.floor(Math.random() * (colCount - 2));
 
     const block = {
       x: col * colWidth,
@@ -252,6 +256,10 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
         canvas.style.height = height + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         dimsRef.current = { w: width, h: height };
+        // 동적 컬럼 수 업데이트
+        const newColCount = Math.max(20, Math.floor(width / COL_PIXEL_WIDTH));
+        columnCountRef.current = newColCount;
+        columnsRef.current = new Float32Array(newColCount);
       }
     });
     resizeObs.observe(canvas.parentElement);
@@ -262,6 +270,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
       const { w, h } = dimsRef.current;
       const blocks = blocksRef.current;
       const cols = columnsRef.current;
+      const colCount = columnCountRef.current;
       const hovTxid = hoveredTxRef.current;
 
       // 매 프레임 컬럼 높이 재계산
@@ -269,7 +278,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
       for (const b of blocks) {
         if (b.settled && !b.sweeping) {
           for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
-            if (j < COLUMN_COUNT) cols[j] += b.h + 1;
+            if (j < colCount) cols[j] += b.h + 1;
           }
         }
       }
@@ -311,9 +320,9 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
         if (!b.rejected) {
           let maxH = 0;
           for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
-            if (j < COLUMN_COUNT && cols[j] > maxH) maxH = cols[j];
+            if (j < colCount && cols[j] > maxH) maxH = cols[j];
           }
-          b.floorY = h - maxH - b.h - 2;
+          b.floorY = h - maxH - b.h - 1;
         }
 
         b.vy = Math.min(b.vy + GRAVITY, TERMINAL_VEL);
@@ -333,6 +342,21 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
 
       // 렌더링
       ctx.clearRect(0, 0, w, h);
+
+      // 점선 구분선 (미확인 TX 영역 하단 경계)
+      const maxColH = Math.max(...cols);
+      if (maxColH > 0) {
+        const lineY = h - maxColH - 4;
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, lineY);
+        ctx.lineTo(w, lineY);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       for (const b of blocks) {
         // 파편 렌더

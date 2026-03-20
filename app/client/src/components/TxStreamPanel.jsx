@@ -165,7 +165,7 @@ export default function TxStreamPanel({
                       : '검증중'}
                   </span>
                 </div>
-                {/* Line 2: feeRate · size/weight · vin→vout */}
+                {/* Line 2: feeRate · size/weight · vin→vout · 상세보기 */}
                 <div className="flex items-center gap-1.5 ml-6 mt-0.5 text-[11px] font-mono">
                   {txFeeRate != null && (
                     <span style={{ color: feeColor(txFeeRate) }}>{txFeeRate} sat/vB</span>
@@ -179,6 +179,18 @@ export default function TxStreamPanel({
                   )}
                   {txVin != null && txVout != null && (
                     <span className="text-muted">{txVin}in → {txVout}out</span>
+                  )}
+                  {onTxClick && (
+                    <span
+                      className="ml-auto text-muted hover:text-tx-blue cursor-pointer transition-colors"
+                      title="TX 상세보기"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTxClick({ txid: tx.txid, data: tx.data || {} });
+                      }}
+                    >
+                      🔍
+                    </span>
                   )}
                 </div>
               </div>

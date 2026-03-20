@@ -8,7 +8,7 @@ services:
       PROXY_AUTH_ADD: "false"
 
   app:
-    image: ghcr.io/asadoconkimchi/bitcoin-node-visualizer:v1.1.0
+    image: ghcr.io/asadoconkimchi/bitcoin-node-visualizer:v1.1.1
     restart: on-failure
     stop_grace_period: 1m
     environment:

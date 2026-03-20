@@ -118,6 +118,7 @@ export class NodeDataManager {
           if (info.nodeLocation?.lat != null && info.nodeLocation?.lng != null) {
             MY_NODE = { lat: info.nodeLocation.lat, lng: info.nodeLocation.lng, isMyNode: true };
           }
+          // nodeLocation이 null이면 기본값(서울) 유지
         }
       } catch (_) { /* 위치 조회 실패 시 기본값 유지 */ }
 
