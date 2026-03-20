@@ -12,15 +12,15 @@ const TABS = [
 
 function TabBar({ active, onSelect }) {
   return (
-    <div className="flex gap-0.5 mb-2.5 flex-wrap">
+    <div className="flex gap-0.5 mb-2.5 flex-wrap bg-white/5 rounded-lg p-0.5">
       {TABS.map(({ key, label }) => (
         <button
           key={key}
           onClick={() => onSelect(key)}
-          className={`font-mono text-[10px] px-2 py-1 rounded cursor-pointer border transition-colors
+          className={`text-[10px] px-2 py-1 rounded-md cursor-pointer transition-colors
                      ${active === key
-                       ? 'bg-btc-orange text-black border-btc-orange'
-                       : 'bg-transparent text-btc-orange/50 border-btc-orange/25 hover:border-btc-orange/50'
+                       ? 'bg-white/12 text-white font-medium shadow-sm'
+                       : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
                      }`}
         >
           {label}
@@ -32,7 +32,7 @@ function TabBar({ active, onSelect }) {
 
 function SectionTitle({ children }) {
   return (
-    <div className="text-btc-orange/50 text-[10px] tracking-widest mt-2.5 mb-1">
+    <div className="text-text-secondary text-[10px] tracking-wide mt-2.5 mb-1">
       {children}
     </div>
   );
@@ -583,12 +583,13 @@ export default function NodeInternalsPanel({ sourceType, nodeInfo, storageInfo, 
 
   return (
     <div className="absolute bottom-16 right-4 w-[360px] max-h-[calc(100vh-140px)]
-                    overflow-y-auto bg-panel-bg border border-btc-orange
-                    rounded-md px-3.5 py-2.5 font-mono text-sm text-text-primary
-                    backdrop-blur-sm z-12
+                    overflow-y-auto bg-panel-bg border border-white/10
+                    rounded-xl px-3.5 py-2.5 font-mono text-sm text-text-primary
+                    backdrop-blur-[20px] z-12
                     max-sm:right-0 max-sm:left-0 max-sm:bottom-0 max-sm:w-full
-                    max-sm:max-h-[50vh] max-sm:rounded-b-none max-sm:rounded-t-xl">
-      <div className="text-btc-orange font-bold text-xs tracking-widest mb-2">
+                    max-sm:max-h-[50vh] max-sm:rounded-b-none max-sm:rounded-t-xl"
+         style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
+      <div className="text-text-primary font-bold text-xs tracking-wide mb-2">
         ▸ NODE INTERNALS
       </div>
 

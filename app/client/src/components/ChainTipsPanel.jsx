@@ -52,10 +52,11 @@ export default function ChainTipsPanel({ chaintips }) {
   const forks = sorted.filter((t) => t.status !== 'active');
 
   return (
-    <div className="absolute top-14 right-4 bg-panel-bg-light border border-btc-orange/40
-                    rounded-md px-3.5 py-2.5 font-mono text-sm text-btc-orange
-                    backdrop-blur-sm leading-7 min-w-[260px] max-w-[320px] z-8
-                    max-sm:right-2 max-sm:min-w-[220px]">
+    <div className="absolute top-14 right-4 bg-panel-bg border border-white/10
+                    rounded-xl px-3.5 py-2.5 font-mono text-sm text-text-primary
+                    backdrop-blur-[20px] leading-7 min-w-[260px] max-w-[320px] z-8
+                    max-sm:right-2 max-sm:min-w-[220px]"
+         style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
       {/* Reorg 배너 */}
       {reorgEvent && (
         <div className="bg-red-900 border border-error rounded px-2 py-1.5 mb-2
@@ -69,19 +70,19 @@ export default function ChainTipsPanel({ chaintips }) {
       )}
 
       {/* 헤더 */}
-      <div className="flex justify-between items-center mb-1.5 pb-1.5 border-b border-btc-orange/20">
-        <span className="font-bold text-xs tracking-widest">▸ CHAIN TIPS</span>
-        <span className="text-btc-orange/30 text-xs">{chaintips.length} tips</span>
+      <div className="flex justify-between items-center mb-1.5 pb-1.5 border-b border-white/6">
+        <span className="font-bold text-xs tracking-wide">▸ CHAIN TIPS</span>
+        <span className="text-text-dim text-xs">{chaintips.length} tips</span>
       </div>
 
       {/* Active 팁 */}
       {activeTip && (
-        <div className="mb-1.5 pb-1.5 border-b border-btc-orange/10">
+        <div className="mb-1.5 pb-1.5 border-b border-white/6">
           <div className="flex justify-between gap-2">
             <span className="text-success text-xs">● ACTIVE</span>
-            <span className="text-btc-orange">#{activeTip.height.toLocaleString()}</span>
+            <span className="text-text-primary">#{activeTip.height.toLocaleString()}</span>
           </div>
-          <div className="text-btc-orange/30 text-xs">
+          <div className="text-text-dim text-xs">
             {activeTip.hash?.slice(0, 16)}…
           </div>
         </div>
@@ -89,7 +90,7 @@ export default function ChainTipsPanel({ chaintips }) {
 
       {/* 분기 기록 */}
       {forks.length === 0 ? (
-        <div className="text-btc-orange/25 text-xs">분기 없음</div>
+        <div className="text-text-dim text-xs">분기 없음</div>
       ) : (
         forks.map((tip) => {
           const isReverted = reorgEvent && tip.hash === reorgEvent.prevHash;
@@ -102,11 +103,11 @@ export default function ChainTipsPanel({ chaintips }) {
                 <span className={`text-xs ${isReverted ? 'text-error' : (STATUS_COLOR[tip.status] || 'text-orange-500')}`}>
                   {isReverted ? 'REVERTED' : (STATUS_LABEL[tip.status] || tip.status.toUpperCase())}
                 </span>
-                <span className={isReverted ? 'text-muted' : 'text-btc-orange'}>
+                <span className={isReverted ? 'text-muted' : 'text-text-primary'}>
                   #{tip.height.toLocaleString()}
                 </span>
               </div>
-              <div className="flex justify-between text-btc-orange/30 text-xs">
+              <div className="flex justify-between text-text-dim text-xs">
                 <span>{tip.hash?.slice(0, 12)}…</span>
                 {tip.branchlen > 0 && <span>{tip.branchlen} blk</span>}
               </div>

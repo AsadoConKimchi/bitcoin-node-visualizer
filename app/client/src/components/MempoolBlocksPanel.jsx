@@ -21,13 +21,13 @@ export default function MempoolBlocksPanel({ mempoolBlocks, visible }) {
   const maxSize = Math.max(...blocks.map(b => b.blockSize || b.blockVSize || 1));
 
   return (
-    <div className="absolute top-16 right-4 w-[260px] bg-[rgba(40,40,45,0.85)] border border-white/10
+    <div className="absolute top-16 right-4 w-[260px] bg-panel-bg border border-white/8
                     rounded-xl px-3.5 py-3 font-mono text-sm text-text-primary
                     backdrop-blur-[20px] z-10 panel-transition
                     max-sm:right-2 max-sm:w-[220px]"
-         style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+         style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
       {/* 헤더 */}
-      <div className="text-mempool-green font-bold text-xs tracking-widest mb-2 flex justify-between">
+      <div className="text-mempool-green font-bold text-xs tracking-wide mb-2 flex justify-between">
         <span>▸ 예상 블록</span>
         <span className="text-muted font-normal text-[10px]">{blocks.length}개</span>
       </div>

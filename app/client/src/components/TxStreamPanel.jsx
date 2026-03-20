@@ -101,15 +101,15 @@ export default function TxStreamPanel({ txStream, compact }) {
     <div
       ref={panelRef}
       className={`absolute ${topClass} left-4 w-[240px]
-                 overflow-hidden bg-panel-bg-light border border-tx-blue
-                 rounded-md font-mono text-sm text-text-primary
-                 backdrop-blur-sm z-10 flex flex-col
+                 overflow-hidden bg-panel-bg border border-white/10
+                 rounded-xl font-mono text-sm text-text-primary
+                 backdrop-blur-[20px] z-10 flex flex-col
                  max-sm:left-2 max-sm:w-[190px] max-sm:text-xs`}
       style={{ height: heightCalc, maxHeight: heightCalc }}
     >
       {/* 헤더 (고정) */}
-      <div className="px-3 py-2.5 shrink-0 border-b border-tx-blue/20">
-        <div className="text-tx-blue font-bold text-xs tracking-widest flex justify-between">
+      <div className="px-3 py-2.5 shrink-0 border-b border-white/6">
+        <div className="text-tx-blue font-bold text-xs tracking-wide flex justify-between">
           <span>▸ TX STREAM</span>
           <span className="text-muted font-normal">{txStream.length}건</span>
         </div>
@@ -158,7 +158,7 @@ export default function TxStreamPanel({ txStream, compact }) {
               {/* 클릭 시 인라인 검증 상세 */}
               {isExpanded && tx.verifySnapshot && (
                 <div className="ml-2 mr-0.5 my-1 px-2 py-1.5 bg-dark-surface/60 border border-tx-blue/20 rounded">
-                  <div className="text-tx-blue font-bold text-[9px] tracking-widest mb-1">
+                  <div className="text-tx-blue font-bold text-[9px] tracking-wide mb-1">
                     ▸ TX 검증 {tx.verifySnapshot.done && <span className="text-success">완료 ✓</span>}
                   </div>
                   {tx.verifySnapshot.short && (
@@ -183,7 +183,7 @@ export default function TxStreamPanel({ txStream, compact }) {
 
       {/* 푸터 (멤풀 이동 카운터) */}
       {doneCount > 0 && (
-        <div className="px-3 py-1.5 shrink-0 border-t border-tx-blue/20
+        <div className="px-3 py-1.5 shrink-0 border-t border-white/6
                        text-mempool-green text-[10px] text-center">
           → Mempool: {doneCount}건 이동 중
         </div>
@@ -192,12 +192,13 @@ export default function TxStreamPanel({ txStream, compact }) {
       {/* 호버 검증 툴팁 (인라인 펼침과 별도로 유지) */}
       {hoveredTx && hoveredTx.verifySnapshot && expandedTxid !== hoveredTx.txid && (
         <div
-          className="absolute left-full ml-2 w-[260px] bg-panel-bg-solid border border-tx-blue
-                     rounded-md px-3 py-2.5 font-mono text-xs text-text-primary z-11
-                     shadow-[0_0_20px_rgba(147,197,253,0.15)] pointer-events-none"
+          className="absolute left-full ml-2 w-[260px] bg-panel-bg-solid border border-white/10
+                     rounded-xl px-3 py-2.5 font-mono text-xs text-text-primary z-11
+                     pointer-events-none"
+          style={{ boxShadow: 'var(--shadow-panel-layered)' }}
           style={{ top: Math.max(0, tooltipPos.top - 10) }}
         >
-          <div className="text-tx-blue font-bold text-[9px] tracking-widest mb-1">
+          <div className="text-tx-blue font-bold text-[9px] tracking-wide mb-1">
             ▸ TX 검증 {hoveredTx.verifySnapshot.done && <span className="text-success">완료 ✓</span>}
           </div>
           <div className="text-muted text-[9px] mb-0.5">

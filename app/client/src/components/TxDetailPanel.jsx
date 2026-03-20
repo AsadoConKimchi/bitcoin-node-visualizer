@@ -100,16 +100,16 @@ export default function TxDetailPanel({ tx, onClose, sourceType }) {
 
   return (
     <>
-      <div onClick={onClose} className="fixed inset-0 bg-black/50 z-[19]" />
+      <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[19]" />
 
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
                       w-[400px] max-h-[70vh] overflow-y-auto bg-panel-bg-solid
-                      border border-tx-blue rounded-lg px-5 py-4
+                      border border-white/10 rounded-xl px-5 py-4
                       font-mono text-sm text-text-primary backdrop-blur-md z-20
-                      shadow-[0_0_40px_rgba(147,197,253,0.2)]
-                      max-sm:w-[calc(100vw-24px)] max-sm:max-h-[80vh]">
+                      max-sm:w-[calc(100vw-24px)] max-sm:max-h-[80vh]"
+           style={{ boxShadow: 'var(--shadow-modal)' }}>
         {/* 헤더 */}
-        <div className="flex justify-between items-center mb-3 pb-2 border-b border-tx-blue/25">
+        <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/10">
           <div>
             <div className="text-tx-blue font-bold text-base">TX {short}</div>
             <div className="flex gap-2 mt-1">
@@ -131,8 +131,8 @@ export default function TxDetailPanel({ tx, onClose, sourceType }) {
           </div>
           <button
             onClick={onClose}
-            className="bg-transparent border border-muted-dim rounded text-muted
-                      cursor-pointer px-2 py-0.5 font-mono text-sm hover:text-text-primary"
+            className="bg-transparent border border-white/10 rounded text-muted
+                      cursor-pointer px-2 py-0.5 text-sm hover:text-text-primary hover:bg-white/5"
           >
             ✕
           </button>
@@ -252,8 +252,8 @@ export default function TxDetailPanel({ tx, onClose, sourceType }) {
               href={`https://mempool.space/tx/${tx?.txid}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-tx-blue text-xs no-underline border border-tx-blue/25
-                        px-3 py-1 rounded hover:bg-tx-blue/10"
+              className="text-text-secondary text-xs no-underline border border-white/10
+                        px-3 py-1 rounded hover:bg-white/5 hover:text-text-primary"
             >
               mempool.space에서 보기 ↗
             </a>

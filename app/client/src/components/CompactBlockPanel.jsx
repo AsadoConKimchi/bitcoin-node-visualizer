@@ -64,8 +64,8 @@ export default function CompactBlockPanel({ recentBlocks, mempoolCount, forceRep
   return (
     <div
       className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                  w-[340px] bg-panel-bg-solid border border-blue-400
-                  rounded-md px-4 py-3.5 font-mono text-sm text-text-primary
+                  w-[340px] bg-panel-bg-solid border border-white/10
+                  rounded-xl px-4 py-3.5 font-mono text-sm text-text-primary
                   backdrop-blur-md z-[18]
                   max-sm:w-[calc(100vw-32px)]
                   animate-[fadeScaleIn_0.3s_ease-out]"
@@ -76,7 +76,7 @@ export default function CompactBlockPanel({ recentBlocks, mempoolCount, forceRep
       {/* 헤더 + 닫기 버튼 */}
       <div className="flex justify-between items-start mb-2">
         <div>
-          <div className="text-blue-400 font-bold text-xs tracking-widest flex items-center gap-2">
+          <div className="text-blue-400 font-bold text-xs tracking-wide flex items-center gap-2">
             <span>▸ COMPACT BLOCK RELAY</span>
             {done && <span className="text-success">완료 ✓</span>}
           </div>

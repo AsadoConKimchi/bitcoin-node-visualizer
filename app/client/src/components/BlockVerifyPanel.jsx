@@ -91,12 +91,13 @@ export default function BlockVerifyPanel({ verifyState }) {
   const { blockData, steps, merkle } = verifyState;
 
   return (
-    <div className="absolute top-16 right-4 w-[300px] bg-panel-bg-light border border-block-purple
-                    rounded-md px-3.5 py-3 font-mono text-sm text-text-primary
-                    backdrop-blur-sm z-10 panel-transition
-                    max-sm:right-2 max-sm:w-[260px] max-sm:text-xs">
+    <div className="absolute top-16 right-4 w-[300px] bg-panel-bg border border-white/10
+                    rounded-xl px-3.5 py-3 font-mono text-sm text-text-primary
+                    backdrop-blur-[20px] z-10 panel-transition
+                    max-sm:right-2 max-sm:w-[260px] max-sm:text-xs"
+         style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
       {/* 헤더 */}
-      <div className="text-block-purple font-bold text-xs tracking-widest mb-2">
+      <div className="text-block-purple font-bold text-xs tracking-wide mb-2">
         ▸ 블록 검증
       </div>
       <div className="text-text-secondary text-xs mb-2">

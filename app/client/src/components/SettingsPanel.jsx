@@ -53,16 +53,16 @@ export default function SettingsPanel({ sourceType, serverUrl, onConnect, onClos
   const canConnect = selectedType === 'mempool' || selectedType === 'server';
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
-      <div className="bg-[rgba(40,40,45,0.9)] border border-white/10 rounded-xl
-                     px-6 py-5 w-[380px] text-btc-orange backdrop-blur-[20px]
+    <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
+      <div className="bg-panel-bg-solid border border-white/10 rounded-xl
+                     px-6 py-5 w-[380px] text-text-primary backdrop-blur-[20px]
                      max-sm:w-[calc(100vw-32px)] max-sm:px-4"
-           style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+           style={{ boxShadow: 'var(--shadow-modal)' }}>
         {/* 헤더 */}
         <div className="flex justify-between items-center mb-5">
-          <span className="text-base font-bold tracking-wider">DATA SOURCE</span>
+          <span className="text-base font-bold tracking-wide">DATA SOURCE</span>
           <button
-            className="bg-transparent border-none text-btc-orange cursor-pointer text-lg px-1 hover:opacity-70"
+            className="bg-transparent border-none text-text-secondary cursor-pointer text-lg px-1 hover:text-text-primary"
             onClick={onClose}
           >
             ✕
@@ -81,7 +81,7 @@ export default function SettingsPanel({ sourceType, serverUrl, onConnect, onClos
           />
           <div>
             <div className="text-sm mb-0.5">mempool.space (Demo)</div>
-            <div className="text-xs text-[#a16207]">공개 데이터로 시각화. 노드 불필요.</div>
+            <div className="text-xs text-text-secondary">공개 데이터로 시각화. 노드 불필요.</div>
           </div>
         </label>
 
@@ -97,7 +97,7 @@ export default function SettingsPanel({ sourceType, serverUrl, onConnect, onClos
           />
           <div>
             <div className="text-sm mb-0.5">My Full Node</div>
-            <div className="text-xs text-[#a16207]">내 Bitcoin Core에 연결된 서버 필요.</div>
+            <div className="text-xs text-text-secondary">내 Bitcoin Core에 연결된 서버 필요.</div>
           </div>
         </label>
 
@@ -107,15 +107,15 @@ export default function SettingsPanel({ sourceType, serverUrl, onConnect, onClos
             {sourceType === 'server' && !serverUrl && (
               <div className="text-xs text-success mb-1.5">✓ Self-hosted (자동 감지)</div>
             )}
-            <div className="text-xs text-[#a16207] mb-1">서버 URL (비워두면 same-origin)</div>
+            <div className="text-xs text-text-secondary mb-1">서버 URL (비워두면 same-origin)</div>
             <input
               type="text"
               value={serverInput}
               onChange={(e) => { setServerInput(e.target.value); setTestError(''); setTestWarning(''); }}
               placeholder="http://100.x.x.x:3000"
-              className="w-full bg-black/70 border border-[#a16207] rounded
-                        text-btc-orange font-mono text-sm px-2.5 py-2 mb-1
-                        outline-none focus:border-btc-orange"
+              className="w-full bg-black/40 border border-white/10 rounded
+                        text-text-primary font-mono text-sm px-2.5 py-2 mb-1
+                        outline-none focus:border-white/25"
               autoFocus
               disabled={testing}
             />
@@ -131,7 +131,7 @@ export default function SettingsPanel({ sourceType, serverUrl, onConnect, onClos
         {/* 버튼 행 */}
         <div className="flex justify-end gap-2.5 mt-5">
           <button
-            className={`bg-btc-orange border-none rounded text-black font-mono font-bold
+            className={`bg-btc-orange border-none rounded text-black font-bold
                        text-sm px-5 py-2 ${(!canConnect || testing) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-btc-orange/90'}`}
             onClick={handleConnect}
             disabled={!canConnect || testing}
@@ -139,8 +139,8 @@ export default function SettingsPanel({ sourceType, serverUrl, onConnect, onClos
             {testing ? 'Testing...' : 'Connect'}
           </button>
           <button
-            className="bg-transparent border border-[#a16207] rounded text-[#a16207]
-                      font-mono text-sm px-4 py-2 cursor-pointer hover:border-btc-orange hover:text-btc-orange"
+            className="bg-transparent border border-white/10 rounded text-text-secondary
+                      text-sm px-4 py-2 cursor-pointer hover:border-white/20 hover:text-text-primary"
             onClick={onClose}
           >
             Cancel

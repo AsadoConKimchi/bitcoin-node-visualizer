@@ -133,13 +133,13 @@ export default function MempoolPoolPanel({ mempoolTxs, mempoolCount, mempoolInfo
   return (
     <div className="absolute bottom-[90px] left-4
                     w-[240px] h-[200px]
-                    bg-panel-bg-light border border-mempool-green
-                    rounded-md px-3 py-2 font-mono backdrop-blur-sm z-10
+                    bg-panel-bg border border-white/10
+                    rounded-xl px-3 py-2 font-mono backdrop-blur-[20px] z-10
                     flex flex-col
                     max-sm:left-2 max-sm:w-[190px] max-sm:bottom-[80px] max-sm:h-[160px]">
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-1.5 shrink-0">
-        <span className="text-mempool-green font-bold text-xs tracking-widest">▸ MEMPOOL</span>
+        <span className="text-mempool-green font-bold text-xs tracking-wide">▸ MEMPOOL</span>
         <span className="text-muted text-[9px]">
           {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}
           {totalVB > 0 && ` · ${totalVBStr}`}

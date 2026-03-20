@@ -55,9 +55,9 @@ export default function SearchBar({ onSearchBlock, onSearchTx, onSearchAddress }
   return (
     <div className="relative">
       <div className={`flex items-center gap-1.5 bg-panel-bg-light
-                      border rounded-md px-2.5 py-1.5 transition-all duration-200
-                      ${focused ? 'border-btc-orange w-[280px] md:w-[320px]' : 'border-btc-orange/30 w-[180px] md:w-[220px]'}`}>
-        <span className="text-btc-orange/50 text-sm shrink-0" aria-hidden="true">⌕</span>
+                      border rounded-lg px-2.5 py-1.5 transition-all duration-200
+                      ${focused ? 'border-white/25 w-[280px] md:w-[320px]' : 'border-white/10 w-[180px] md:w-[220px]'}`}>
+        <span className="text-text-dim text-sm shrink-0" aria-hidden="true">⌕</span>
         <input
           type="text"
           value={query}
@@ -66,14 +66,14 @@ export default function SearchBar({ onSearchBlock, onSearchTx, onSearchAddress }
           onBlur={() => setTimeout(() => setFocused(false), 200)}
           onKeyDown={handleKeyDown}
           placeholder="블록, TX, 주소 검색…"
-          className="bg-transparent border-none outline-none text-btc-orange text-xs
-                    font-mono w-full placeholder:text-btc-orange/25"
+          className="bg-transparent border-none outline-none text-text-primary text-xs
+                    w-full placeholder:text-text-dim"
         />
         {query && (
           <button
             onClick={() => { setQuery(''); setError(''); }}
             aria-label="검색어 지우기"
-            className="text-muted text-xs cursor-pointer bg-transparent border-none hover:text-btc-orange"
+            className="text-muted text-xs cursor-pointer bg-transparent border-none hover:text-text-primary"
           >
             ✕
           </button>
@@ -83,9 +83,9 @@ export default function SearchBar({ onSearchBlock, onSearchTx, onSearchAddress }
       {/* 검색 힌트 */}
       {focused && !query && (
         <div className="absolute top-full mt-1 left-0 right-0 bg-panel-bg-solid
-                       border border-btc-orange/20 rounded-md px-3 py-2 z-20
-                       text-xs text-muted font-mono">
-          <div className="mb-1 text-btc-orange/60 text-[10px]">검색 예시:</div>
+                       border border-white/10 rounded-lg px-3 py-2 z-20
+                       text-xs text-muted">
+          <div className="mb-1 text-text-secondary text-[10px]">검색 예시:</div>
           <div className="text-text-dim">840000 — 블록 높이</div>
           <div className="text-text-dim">0000...abcd — TXID / 블록 해시</div>
           <div className="text-text-dim">bc1q... — 비트코인 주소</div>
@@ -95,8 +95,8 @@ export default function SearchBar({ onSearchBlock, onSearchTx, onSearchAddress }
       {/* 에러 메시지 */}
       {error && (
         <div className="absolute top-full mt-1 left-0 right-0 bg-panel-bg-solid
-                       border border-error/30 rounded-md px-3 py-1.5 z-20
-                       text-[10px] text-error font-mono">
+                       border border-error/30 rounded-lg px-3 py-1.5 z-20
+                       text-[10px] text-error">
           {error}
         </div>
       )}

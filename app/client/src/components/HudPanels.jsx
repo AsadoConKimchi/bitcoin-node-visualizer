@@ -22,9 +22,9 @@ const SERVER_MODE_SUFFIX = {
 
 function Row({ label, value, valueColor }) {
   return (
-    <div className="flex justify-between gap-4">
-      <span className="text-btc-orange/40 shrink-0">{label}</span>
-      <span className={`font-mono ${valueColor || 'text-btc-orange'}`}>{value ?? '—'}</span>
+    <div className="flex justify-between gap-4 py-0.5">
+      <span className="text-text-secondary shrink-0">{label}</span>
+      <span className={`font-mono ${valueColor || 'text-text-primary'}`}>{value ?? '—'}</span>
     </div>
   );
 }
@@ -61,13 +61,13 @@ const HudPanels = forwardRef(function HudPanels({ mode, serverMode, chain, block
     const mempStr = mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—';
 
     return (
-      <div className="absolute top-14 left-4 bg-[rgba(40,40,45,0.85)] border border-white/10
-                      rounded-xl px-3 py-2 text-xs text-btc-orange
+      <div className="absolute top-14 left-4 bg-panel-bg border border-white/8
+                      rounded-xl px-3 py-2 text-xs text-text-primary
                       backdrop-blur-[20px] z-8 min-w-[200px]
                       max-sm:left-2 max-sm:min-w-[170px]"
-           style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+           style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
         <div className="flex justify-between items-center mb-1">
-          <span className="font-bold text-[10px] tracking-widest">▸ NODE</span>
+          <span className="font-bold text-[10px] tracking-wide">▸ NODE</span>
           <span className={`text-[10px] font-mono ${dotColorClass}`}>{statusLabel}</span>
         </div>
         <div className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide mb-1
@@ -80,9 +80,9 @@ const HudPanels = forwardRef(function HudPanels({ mode, serverMode, chain, block
         <div className="text-[9px] text-muted mb-0.5">{sourceSubtitle}</div>
         <div className="flex gap-3 text-[11px]">
           <span>{heightStr}</span>
-          <span className="text-btc-orange/40">·</span>
+          <span className="text-text-dim">·</span>
           <span>{feeStr}</span>
-          <span className="text-btc-orange/40">·</span>
+          <span className="text-text-dim">·</span>
           <span>{mempStr}</span>
         </div>
       </div>
@@ -134,7 +134,7 @@ const HudPanels = forwardRef(function HudPanels({ mode, serverMode, chain, block
   }
 
   let timeStr = null;
-  let timeColor = 'text-btc-orange';
+  let timeColor = 'text-text-primary';
   if (sourceType === 'server' && nodeInfo?.medianTimeOffset != null) {
     const offset = nodeInfo.medianTimeOffset;
     const sign = offset >= 0 ? '+' : '';
@@ -149,16 +149,16 @@ const HudPanels = forwardRef(function HudPanels({ mode, serverMode, chain, block
     const heightStr = blockHeight != null ? `#${blockHeight.toLocaleString()}` : '—';
 
     return (
-      <div ref={ref} className="absolute top-14 left-4 bg-[rgba(40,40,45,0.85)] border border-white/10
-                      rounded-xl px-3.5 py-2.5 text-sm text-btc-orange
+      <div ref={ref} className="absolute top-14 left-4 bg-panel-bg border border-white/8
+                      rounded-xl px-3.5 py-2.5 text-sm text-text-primary
                       backdrop-blur-[20px] min-w-[240px] z-8
                       max-sm:left-2 max-sm:min-w-[200px]"
-           style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+           style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
         <div className="flex items-center gap-1.5">
           <span className="traffic-light traffic-light--close" title="닫기" onClick={onClose} />
           <span className="traffic-light traffic-light--minimize" title="최소화" onClick={onMinimize} />
           <span className="traffic-light traffic-light--expand" title="확장" onClick={onExpand} />
-          <span className="font-bold text-xs tracking-widest ml-2">▸ NODE INFO</span>
+          <span className="font-bold text-xs tracking-wide ml-2">▸ NODE INFO</span>
           <span className={`text-xs font-mono ml-auto ${dotColorClass}`}>{statusLabel}</span>
         </div>
         <div className="text-[10px] text-muted mt-1">{heightStr} · {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}</div>
@@ -167,12 +167,12 @@ const HudPanels = forwardRef(function HudPanels({ mode, serverMode, chain, block
   }
 
   return (
-    <div ref={ref} className="absolute top-14 left-4 bg-[rgba(40,40,45,0.85)] border border-white/10
-                    rounded-xl px-3.5 py-2.5 text-sm text-btc-orange
+    <div ref={ref} className="absolute top-14 left-4 bg-panel-bg border border-white/8
+                    rounded-xl px-3.5 py-2.5 text-sm text-text-primary
                     backdrop-blur-[20px] leading-7 min-w-[240px] z-8
                     lg:top-14 md:top-14 sm:top-14
                     max-sm:left-2 max-sm:min-w-[200px] max-sm:text-xs max-sm:leading-6"
-         style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+         style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
       {/* 신호등 헤더 */}
       <div className="flex items-center gap-1.5 mb-2">
         <span className="traffic-light traffic-light--close" title="닫기" onClick={onClose} />
@@ -193,7 +193,7 @@ const HudPanels = forwardRef(function HudPanels({ mode, serverMode, chain, block
 
       {/* 연결 상태 헤더 */}
       <div className="flex justify-between items-center mb-1 pb-1.5 border-b border-white/10">
-        <span className="font-bold text-xs tracking-widest">▸ NODE INFO</span>
+        <span className="font-bold text-xs tracking-wide">▸ NODE INFO</span>
         <span className={`text-xs font-mono ${dotColorClass}`}>{statusLabel}</span>
       </div>
 

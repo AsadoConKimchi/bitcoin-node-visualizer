@@ -162,7 +162,7 @@ function TxStreamSection({ txStream, onTxClick, onPinTx }) {
             {/* 인라인 검증 상세 */}
             {isExpanded && tx.verifySnapshot && (
               <div className="ml-3 mr-1 my-1.5 px-3 py-2 bg-dark-surface/60 border border-tx-blue/20 rounded">
-                <div className="text-tx-blue font-bold text-[10px] tracking-widest mb-1.5">
+                <div className="text-tx-blue font-bold text-[10px] tracking-wide mb-1.5">
                   ▸ TX 검증 {tx.verifySnapshot.done && !isFailed && <span className="text-success">완료 ✓</span>}
                   {isFailed && <span className="text-error">실패 ✗</span>}
                 </div>
@@ -308,7 +308,7 @@ function MerkleTree({ merkle }) {
 
   return (
     <div ref={treeRef} className="mt-3 border-t border-dark-border pt-3 relative">
-      <div className="text-block-purple text-[10px] font-bold tracking-widest mb-2">MERKLE TREE</div>
+      <div className="text-block-purple text-[10px] font-bold tracking-wide mb-2">MERKLE TREE</div>
 
       {/* SVG 연결선 */}
       <svg
@@ -405,7 +405,7 @@ function BlockHeaderBar({ blockData, steps }) {
 
   return (
     <div className="mt-3 mb-2">
-      <div className="text-block-purple text-[10px] font-bold tracking-widest mb-1.5">BLOCK HEADER (80 BYTES)</div>
+      <div className="text-block-purple text-[10px] font-bold tracking-wide mb-1.5">BLOCK HEADER (80 BYTES)</div>
       <div className="flex rounded overflow-hidden border border-dark-border h-10">
         {HEADER_SEGMENTS.map((seg) => {
           const widthPercent = (seg.bytes / 80) * 100;
@@ -520,7 +520,7 @@ function PinnedTxDetail({ pinnedTx, onClose }) {
   return (
     <div className="border-t border-tx-blue/20 px-4 py-3 overflow-y-auto">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-tx-blue font-bold text-[10px] tracking-widest">
+        <div className="text-tx-blue font-bold text-[10px] tracking-wide">
           ▸ PINNED TX {isDone && !isFailed && <span className="text-success">완료 ✓</span>}
           {isFailed && <span className="text-error">실패 ✗</span>}
         </div>
@@ -592,24 +592,24 @@ export default function MainPanel({
   return (
     <div
       className={`absolute right-0 top-0 z-10
-                  bg-[rgba(40,40,45,0.85)] border-l border-white/10
+                  bg-panel-bg border-l border-white/8
                   backdrop-blur-[20px] overflow-hidden flex flex-col
                   transition-all duration-300
                   max-sm:right-0 max-sm:left-0 max-sm:w-full max-sm:border-l-0
                   ${minimized ? 'h-[44px]' : 'h-full'}`}
       style={{
         width: typeof window !== 'undefined' && window.innerWidth < 640 ? '100%' : '75%',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        boxShadow: 'var(--shadow-panel-layered)',
       }}
     >
       {/* ── 헤더 바 (macOS 윈도우 스타일) ── */}
-      <div className="flex items-center px-4 py-2.5 shrink-0 border-b border-white/10 bg-[rgba(30,30,35,0.95)]">
+      <div className="flex items-center px-4 py-2.5 shrink-0 border-b border-white/8 bg-panel-bg-solid">
         <div className="flex items-center gap-1.5 mr-3">
           <span className="traffic-light traffic-light--close" title="닫기" onClick={onClose} />
           <span className="traffic-light traffic-light--minimize" title={minimized ? '확장' : '최소화'} onClick={() => setMinimized(!minimized)} />
           <span className="traffic-light traffic-light--expand" title="확장" onClick={() => setMinimized(false)} />
         </div>
-        <span className="text-btc-orange font-bold text-sm tracking-widest flex-1 text-center">
+        <span className="text-text-primary font-bold text-sm tracking-wide flex-1 text-center">
           VERIFICATION CENTER
         </span>
         {minimized && (
@@ -628,8 +628,8 @@ export default function MainPanel({
           {/* 상단: TX검증 + 블록검증 (가로 분할) */}
           <div className="flex min-h-0 flex-[45]">
             {/* TX 검증 */}
-            <div className="flex flex-col min-h-0 px-4 py-3 overflow-hidden flex-[50] border-r border-white/10">
-              <div className="text-tx-blue font-bold text-xs tracking-widest mb-2 shrink-0 flex justify-between">
+            <div className="flex flex-col min-h-0 px-4 py-3 overflow-hidden flex-[50] border-r border-white/6">
+              <div className="text-tx-blue font-bold text-xs tracking-wide mb-2 shrink-0 flex justify-between">
                 <span>▸ TX VERIFICATION</span>
                 <span className="text-muted font-normal">
                   {txCount}건
@@ -642,7 +642,7 @@ export default function MainPanel({
 
             {/* 블록 검증 */}
             <div className="flex flex-col min-h-0 px-4 py-3 overflow-hidden flex-[50]">
-              <div className="text-block-purple font-bold text-xs tracking-widest mb-2 shrink-0">
+              <div className="text-block-purple font-bold text-xs tracking-wide mb-2 shrink-0">
                 ▸ BLOCK VERIFICATION
               </div>
               <BlockVerifySection verifyState={blockVerifyState} />
@@ -652,12 +652,12 @@ export default function MainPanel({
           </div>
 
           {/* 하단: Bitfeed 바닥 */}
-          <div className="flex flex-col min-h-0 border-t border-white/10 flex-[55]"
+          <div className="flex flex-col min-h-0 border-t border-white/6 flex-[55]"
                style={{ background: 'rgba(6, 10, 20, 0.96)' }}
           >
             {/* Bitfeed 헤더 */}
             <div className="flex justify-between items-center px-4 py-2 shrink-0">
-              <span className="text-mempool-green font-bold text-xs tracking-widest">▸ MEMPOOL FLOOR</span>
+              <span className="text-mempool-green font-bold text-xs tracking-wide">▸ MEMPOOL FLOOR</span>
               <span className="text-muted text-[10px]">
                 {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}
               </span>

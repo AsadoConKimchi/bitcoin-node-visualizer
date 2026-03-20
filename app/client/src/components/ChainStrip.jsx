@@ -6,10 +6,10 @@ function BlockCell({ block, isLatest, onClick, onReplay }) {
       onClick={() => onClick?.(block)}
       title="클릭하면 블록 상세 정보"
       className={`rounded-lg relative cursor-pointer
-                 transition-all duration-300 px-3 py-2
+                 transition-all duration-300 px-4 py-2.5
                  ${isLatest
-                   ? 'border-l-2 border-l-btc-orange border border-white/10 bg-btc-orange/5'
-                   : 'border border-white/10 bg-white/5'
+                   ? 'border-l-2 border-l-btc-orange/60 border border-white/8 bg-btc-orange/5'
+                   : 'border border-white/8 bg-white/5'
                  }`}
     >
       <div className="flex items-center justify-between">
@@ -41,8 +41,8 @@ function BlockCell({ block, isLatest, onClick, onReplay }) {
 
 function PendingCell() {
   return (
-    <div className="border border-dashed border-white/15 rounded-lg
-                   px-3 py-2 text-center">
+    <div className="border border-dashed border-white/8 rounded-lg
+                   px-4 py-2.5 text-center">
       <div className="text-muted-dim text-sm">?</div>
       <div className="text-[10px] text-muted-dim">pending</div>
     </div>
@@ -65,15 +65,15 @@ export default function ChainStrip({ recentBlocks, onBlockClick, onReplayCompact
   if (minimized) {
     return (
       <div className="absolute left-4 w-[200px] z-10
-                      bg-[rgba(40,40,45,0.85)] border border-white/10 rounded-xl
+                      bg-panel-bg border border-white/8 rounded-xl
                       px-3 py-2.5 backdrop-blur-[20px]
                       max-sm:left-2 max-sm:w-[180px]"
-           style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)', ...topStyle }}>
+           style={{ boxShadow: 'var(--shadow-panel-layered)', ...topStyle }}>
         <div className="flex items-center gap-1.5">
           <span className="traffic-light traffic-light--close" title="닫기" onClick={onClose} />
           <span className="traffic-light traffic-light--minimize" title="최소화" onClick={onMinimize} />
           <span className="traffic-light traffic-light--expand" title="확장" onClick={onExpand} />
-          <span className="text-btc-orange font-bold text-[10px] tracking-widest ml-2">CHAIN</span>
+          <span className="text-text-primary font-bold text-[10px] tracking-wide ml-2">CHAIN</span>
           <span className="text-muted text-[10px] ml-auto font-mono">
             #{latestHeight?.toLocaleString() ?? '?'}
           </span>
@@ -84,16 +84,16 @@ export default function ChainStrip({ recentBlocks, onBlockClick, onReplayCompact
 
   return (
     <div className="absolute left-4 w-[200px] z-10
-                    bg-[rgba(40,40,45,0.85)] border border-white/10 rounded-xl
+                    bg-panel-bg border border-white/8 rounded-xl
                     px-3 py-3 backdrop-blur-[20px]
                     max-sm:left-2 max-sm:w-[180px]"
-         style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)', ...topStyle }}>
+         style={{ boxShadow: 'var(--shadow-panel-layered)', ...topStyle }}>
       {/* 신호등 + 타이틀 */}
       <div className="flex items-center gap-1.5 mb-2.5">
         <span className="traffic-light traffic-light--close" title="닫기" onClick={onClose} />
         <span className="traffic-light traffic-light--minimize" title="최소화" onClick={onMinimize} />
         <span className="traffic-light traffic-light--expand" title="확장" onClick={onExpand} />
-        <span className="text-btc-orange font-bold text-[10px] tracking-widest ml-2">CHAIN</span>
+        <span className="text-text-primary font-bold text-[10px] tracking-wide ml-2">CHAIN</span>
       </div>
 
       {/* 세로 블록 목록 */}

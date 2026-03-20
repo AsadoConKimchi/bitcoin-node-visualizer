@@ -221,16 +221,16 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
 
   return (
     <>
-      <div onClick={onClose} className="fixed inset-0 bg-black/50 z-[19]" />
+      <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[19]" />
 
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
                       w-[400px] max-h-[75vh] overflow-y-auto bg-panel-bg-solid
-                      border border-btc-orange rounded-lg px-5 py-4
+                      border border-white/10 rounded-xl px-5 py-4
                       font-mono text-sm text-text-primary backdrop-blur-md z-20
-                      shadow-[0_0_40px_rgba(247,147,26,0.2)]
-                      max-sm:w-[calc(100vw-24px)] max-sm:max-h-[80vh]">
+                      max-sm:w-[calc(100vw-24px)] max-sm:max-h-[80vh]"
+           style={{ boxShadow: 'var(--shadow-modal)' }}>
         {/* 헤더 */}
-        <div className="flex justify-between items-center mb-3 pb-2 border-b border-btc-orange/25">
+        <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/10">
           <div>
             <div className="text-btc-orange font-bold text-base">
               블록 #{block?.height?.toLocaleString() ?? '?'}
@@ -241,8 +241,8 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
           </div>
           <button
             onClick={onClose}
-            className="bg-transparent border border-muted-dim rounded text-muted
-                      cursor-pointer px-2 py-0.5 font-mono text-sm hover:text-text-primary"
+            className="bg-transparent border border-white/10 rounded text-muted
+                      cursor-pointer px-2 py-0.5 text-sm hover:text-text-primary hover:bg-white/5"
           >
             ✕
           </button>
@@ -302,8 +302,8 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
                   <button
                     onClick={() => setTxPage(p => p + 1)}
                     className="w-full text-center text-btc-orange text-xs py-2 cursor-pointer
-                              bg-transparent border border-btc-orange/20 rounded mt-1.5
-                              hover:bg-btc-orange/10"
+                              bg-transparent border border-white/10 rounded mt-1.5
+                              hover:bg-white/5"
                   >
                     더 보기 ({(txids.length - visibleTxids.length).toLocaleString()}개 남음)
                   </button>
@@ -319,8 +319,8 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
               href={`https://mempool.space/block/${block?.hash}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-btc-orange text-xs no-underline border border-btc-orange/25
-                        px-3 py-1 rounded hover:bg-btc-orange/10"
+              className="text-text-secondary text-xs no-underline border border-white/10
+                        px-3 py-1 rounded hover:bg-white/5 hover:text-text-primary"
             >
               mempool.space에서 보기 ↗
             </a>

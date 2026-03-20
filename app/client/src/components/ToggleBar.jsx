@@ -1,28 +1,19 @@
 import React from 'react';
 
 const BUTTONS = [
-  { key: 'p2p', label: 'P2P', icon: '◉', color: 'btc-orange' },
-  { key: 'verifyCenter', label: '검증센터', icon: '▣', color: 'btc-orange' },
-  { key: 'internals', label: 'Internals', icon: '⚙', color: 'btc-orange' },
+  { key: 'p2p', label: 'P2P', icon: '◉' },
+  { key: 'verifyCenter', label: '검증센터', icon: '▣' },
+  { key: 'internals', label: 'Internals', icon: '⚙' },
 ];
-
-// 각 토글별 활성 스타일
-const ACTIVE_STYLES = {
-  'btc-orange': 'bg-btc-orange text-black border-btc-orange',
-};
-
-const INACTIVE_STYLES = {
-  'btc-orange': 'bg-transparent text-btc-orange border-btc-orange/60 hover:bg-btc-orange/10',
-};
 
 export default function ToggleBar({ visible, onToggle }) {
   return (
-    <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20
-                    bg-[rgba(40,40,45,0.85)] border border-white/10 rounded-xl
-                    px-2 py-1.5 backdrop-blur-[20px]
-                    md:gap-2 md:px-3 md:py-2"
-         style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
-      {BUTTONS.map(({ key, label, icon, color }) => {
+    <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-0.5 z-20
+                    bg-panel-bg border border-white/8 rounded-xl
+                    p-1 backdrop-blur-[20px]
+                    md:gap-0.5 md:p-1.5"
+         style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
+      {BUTTONS.map(({ key, label, icon }) => {
         const active = visible[key];
         return (
           <button
@@ -30,10 +21,12 @@ export default function ToggleBar({ visible, onToggle }) {
             onClick={() => onToggle(key)}
             aria-label={`${label} 토글`}
             aria-pressed={active}
-            className={`font-mono text-xs px-2.5 py-1.5 rounded cursor-pointer
-                       border transition-all duration-150 tracking-wide
+            className={`text-xs px-2.5 py-1.5 rounded-lg cursor-pointer
+                       transition-all duration-150 tracking-wide
                        md:px-3.5 md:py-1.5 md:text-sm
-                       ${active ? ACTIVE_STYLES[color] : INACTIVE_STYLES[color]}`}
+                       ${active
+                         ? 'bg-white/12 text-white font-medium shadow-sm'
+                         : 'text-text-secondary hover:text-text-primary hover:bg-white/5'}`}
           >
             <span className="hidden sm:inline mr-1">{icon}</span>
             {label}

@@ -121,7 +121,7 @@ function TxStreamSection({ txStream, onTxClick }) {
             {/* 인라인 검증 상세 */}
             {isExpanded && tx.verifySnapshot && (
               <div className="ml-2 mr-0.5 my-1 px-2 py-1.5 bg-dark-surface/60 border border-tx-blue/20 rounded">
-                <div className="text-tx-blue font-bold text-[9px] tracking-widest mb-1">
+                <div className="text-tx-blue font-bold text-[9px] tracking-wide mb-1">
                   ▸ TX 검증 {tx.verifySnapshot.done && <span className="text-success">완료 ✓</span>}
                 </div>
                 {tx.verifySnapshot.short && (
@@ -353,7 +353,7 @@ function MempoolSection({ mempoolTxs, mempoolCount, mempoolInfo, onTxClick }) {
     <div className="flex flex-col min-h-0">
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-1 shrink-0">
-        <span className="text-mempool-green font-bold text-xs tracking-widest">▸ MEMPOOL</span>
+        <span className="text-mempool-green font-bold text-xs tracking-wide">▸ MEMPOOL</span>
         <span className="text-muted text-[9px]">
           {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}
           {totalVB > 0 && ` · ${totalVBStr}`}
@@ -469,8 +469,8 @@ export default function UnifiedPanel({
   return (
     <div
       className={`absolute right-4 top-[60px] z-10 font-mono
-                  bg-panel-bg-light border border-btc-orange/40 rounded-md
-                  backdrop-blur-sm overflow-hidden flex flex-col
+                  bg-panel-bg border border-white/10 rounded-xl
+                  backdrop-blur-[20px] overflow-hidden flex flex-col
                   transition-all duration-300
                   max-sm:right-2 max-sm:left-2 max-sm:w-auto
                   ${minimized ? 'h-[40px]' : ''}`}
@@ -481,8 +481,8 @@ export default function UnifiedPanel({
       }}
     >
       {/* ── 헤더 ── */}
-      <div className="flex items-center justify-between px-3 py-2 shrink-0 border-b border-btc-orange/20">
-        <span className="text-btc-orange font-bold text-xs tracking-widest">
+      <div className="flex items-center justify-between px-3 py-2.5 shrink-0 border-b border-white/6">
+        <span className="text-text-primary font-bold text-xs tracking-wide">
           ▸ VERIFICATION CENTER
         </span>
         <div className="flex items-center gap-2">
@@ -495,7 +495,7 @@ export default function UnifiedPanel({
           )}
           <button
             onClick={() => setMinimized(!minimized)}
-            className="text-muted hover:text-btc-orange text-xs cursor-pointer px-1"
+            className="text-muted hover:text-text-primary text-xs cursor-pointer px-1"
             title={minimized ? '확장' : '최소화'}
           >
             {minimized ? '▢' : '▁'}
@@ -511,9 +511,9 @@ export default function UnifiedPanel({
             <div className={`flex min-h-0 ${showMempool ? 'flex-[55]' : 'flex-1'}`}>
               {/* TX 검증 */}
               {showTx && (
-                <div className={`flex flex-col min-h-0 px-3 py-2 overflow-hidden
-                               ${showBlock ? 'flex-[55] border-r border-btc-orange/10' : 'flex-1'}`}>
-                  <div className="text-tx-blue font-bold text-[10px] tracking-widest mb-1 shrink-0 flex justify-between">
+                <div className={`flex flex-col min-h-0 px-3 py-2.5 overflow-hidden
+                               ${showBlock ? 'flex-[55] border-r border-white/6' : 'flex-1'}`}>
+                  <div className="text-tx-blue font-bold text-[10px] tracking-wide mb-1 shrink-0 flex justify-between">
                     <span>▸ TX VERIFICATION</span>
                     <span className="text-muted font-normal">{txCount}건 {verifyingCount > 0 && `(⟳${verifyingCount})`}</span>
                   </div>
@@ -523,9 +523,9 @@ export default function UnifiedPanel({
 
               {/* 블록 검증 */}
               {showBlock && (
-                <div className={`flex flex-col min-h-0 px-3 py-2 overflow-hidden
+                <div className={`flex flex-col min-h-0 px-3 py-2.5 overflow-hidden
                                ${showTx ? 'flex-[45]' : 'flex-1'}`}>
-                  <div className="text-block-purple font-bold text-[10px] tracking-widest mb-1 shrink-0">
+                  <div className="text-block-purple font-bold text-[10px] tracking-wide mb-1 shrink-0">
                     ▸ BLOCK VERIFICATION
                   </div>
                   <BlockVerifySection verifyState={blockVerifyState} />
@@ -536,7 +536,7 @@ export default function UnifiedPanel({
 
           {/* 하단: 멤풀 treemap */}
           {showMempool && (
-            <div className={`flex flex-col min-h-0 px-3 py-2 border-t border-btc-orange/10
+            <div className={`flex flex-col min-h-0 px-3 py-2.5 border-t border-white/6
                            ${topVisible ? 'flex-[45]' : 'flex-1'}`}>
               <MempoolSection
                 mempoolTxs={mempoolTxs}

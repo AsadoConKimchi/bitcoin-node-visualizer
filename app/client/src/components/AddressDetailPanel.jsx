@@ -72,16 +72,16 @@ export default function AddressDetailPanel({ address, onClose, onTxClick }) {
 
   return (
     <>
-      <div onClick={onClose} className="fixed inset-0 bg-black/50 z-[19]" />
+      <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[19]" />
 
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
                       w-[420px] max-h-[75vh] overflow-y-auto bg-panel-bg-solid
-                      border border-btc-orange rounded-lg px-5 py-4
+                      border border-white/10 rounded-xl px-5 py-4
                       font-mono text-sm text-text-primary backdrop-blur-md z-20
-                      shadow-[0_0_40px_rgba(247,147,26,0.2)]
-                      max-sm:w-[calc(100vw-24px)] max-sm:max-h-[80vh]">
+                      max-sm:w-[calc(100vw-24px)] max-sm:max-h-[80vh]"
+           style={{ boxShadow: 'var(--shadow-modal)' }}>
         {/* 헤더 */}
-        <div className="flex justify-between items-center mb-3 pb-2 border-b border-btc-orange/25">
+        <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/10">
           <div className="min-w-0">
             <div className="text-btc-orange font-bold text-base">주소 상세</div>
             <div className="text-xs text-muted mt-0.5 truncate max-w-[320px]">{address}</div>
@@ -89,8 +89,8 @@ export default function AddressDetailPanel({ address, onClose, onTxClick }) {
           </div>
           <button
             onClick={onClose}
-            className="bg-transparent border border-muted-dim rounded text-muted
-                      cursor-pointer px-2 py-0.5 font-mono text-sm hover:text-text-primary shrink-0 ml-2"
+            className="bg-transparent border border-white/10 rounded text-muted
+                      cursor-pointer px-2 py-0.5 text-sm hover:text-text-primary hover:bg-white/5 shrink-0 ml-2"
           >
             ✕
           </button>
@@ -118,15 +118,15 @@ export default function AddressDetailPanel({ address, onClose, onTxClick }) {
             </div>
 
             {/* 탭 바 */}
-            <div className="flex gap-1 mb-3">
+            <div className="flex gap-0.5 mb-3 bg-white/5 rounded-lg p-0.5">
               {tabs.map(tab => (
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`font-mono text-xs px-2.5 py-1 rounded cursor-pointer border transition-colors
+                  className={`text-xs px-2.5 py-1 rounded-md cursor-pointer transition-colors
                              ${activeTab === tab.key
-                               ? 'bg-btc-orange text-black border-btc-orange'
-                               : 'bg-transparent text-btc-orange/60 border-btc-orange/25 hover:border-btc-orange/50'
+                               ? 'bg-white/12 text-white font-medium shadow-sm'
+                               : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
                              }`}
                 >
                   {tab.label}
@@ -218,8 +218,8 @@ export default function AddressDetailPanel({ address, onClose, onTxClick }) {
             href={`https://mempool.space/address/${address}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-btc-orange text-xs no-underline border border-btc-orange/25
-                      px-3 py-1 rounded hover:bg-btc-orange/10"
+            className="text-text-secondary text-xs no-underline border border-white/10
+                      px-3 py-1 rounded hover:bg-white/5 hover:text-text-primary"
           >
             mempool.space에서 보기 ↗
           </a>
