@@ -31,7 +31,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
   // 블록 크기 계산 (weight 기반)
   const calcSize = useCallback((weight) => {
     const side = Math.sqrt(weight || 560) * 0.45 + 4;
-    return Math.max(8, Math.min(45, Math.round(side)));
+    return Math.max(14, Math.min(45, Math.round(side)));
   }, []);
 
   // 가장 빈 컬럼 찾기 (좌측 정렬, 밀집 배치)
@@ -408,7 +408,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
         }
 
         // settled 블록에 TXID 텍스트
-        if (b.settled && b.txid && b.w >= 16) {
+        if (b.settled && b.txid && b.w >= 25) {
           ctx.fillStyle = isHovered ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)';
           ctx.font = '8px monospace';
           ctx.textAlign = 'center';

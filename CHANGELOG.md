@@ -4,6 +4,76 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ---
 
+## [1.2.0] — 2026-03-20
+
+### Changed — 디자인 크리틱 9가지 UX 개선 + TX 데이터 정확성 수정
+
+v1.1.1 디자인 리뷰 피드백 반영. 패널 레이아웃, 정보 밀도, 탐색 UX 전면 개선.
+
+#### 1. ToggleBar 라디오 모드
+- P2P / 검증센터 / Internals 중 **하나만 활성** (기존: 동시 활성 → 지구본 가림)
+- 모드 전환 시 관련 패널 자동 show/hide (NODE INFO + CHAIN = P2P 전용)
+- `block:received` 이벤트도 라디오 모드 준수 (검증센터로 자동 전환)
+
+#### 2. NODE INFO 컴팩트 모드
+- 기본 6줄 (Chain, Height, Fee, Mempool, Peers, TX/s)
+- "▸ 상세" 토글로 Min Fee, Diff Adj, Security, Time, Services, UTXO 확장
+
+#### 3. CHAIN TIPS 축약
+- ACTIVE + 최근 2개 fork/headers만 기본 표시
+- "N tips 전체 보기 ▾" 확장 토글 추가
+
+#### 4. BitfeedFloor 블록 최소 크기 상향
+- 최소 크기: 8px → **14px** (작은 TX도 가시성 확보)
+- TXID 텍스트 표시: 16px → **25px** 이상에서만 (가독성 개선)
+
+#### 5. Internals 아이콘 변경
+- ⚙ → 🔧 (Settings ⚙와 구분)
+
+#### 6. P2P 아크 연결선 클리핑 수정
+- 피어 연결선 altitude: 0.08 → **0.15** (지구본 뒤로 갈 때 짤림 방지)
+- `arcAltitudeAutoScale(0.3)` 추가
+
+#### 7. 검색창 크기 확대
+- 기본: 220px → **280px**, 포커스: 320px → **420px**
+- 폰트: text-xs → **text-sm**
+
+#### 8. ChainStrip 제네시스까지 스크롤
+- 상하 스크롤 가능한 리스트로 변경 (고정 높이 380px)
+- 위로 스크롤 시 mempool.space API로 이전 블록 10개씩 lazy load
+- `previousblockhash` 체이닝으로 제네시스(height=0)까지 도달 가능
+
+#### 9. MacWindow UX 개선
+- **9a**: 초록 버튼(expand) 클릭 → 뷰포트 전체 최대화/복원 토글
+- **9b**: 드래그 시 텍스트 선택 방지 (이미 useDrag.js에 구현 확인)
+
+### Fixed — TX 상세 패널 서버 모드 데이터 정확성
+
+#### 서버 사이드 prevout/fee 보강 (`server/index.js`)
+- `getrawtransaction` verbosity=2 응답에 `prevout` 누락 시 → 각 input의 이전 TX 개별 조회
+- `fee` 누락 시 → prevout 합계 - vout 합계 계산, 또는 `getmempoolentry` fallback
+
+#### 클라이언트 정규화 개선 (`TxDetailPanel.jsx`)
+- `isCoinbase` 플래그로 실제 coinbase와 데이터 누락 구분 (기존: 모두 "coinbase" 표시)
+- prevout 없는 일반 input → `txid:vout` 참조 표시
+- 클라이언트 fee 자체 계산 fallback 추가
+- Sankey 다이어그램 input 라벨 동일 수정
+
+### Files Modified
+- `client/src/App.jsx` — 라디오 모드 토글, block:received 모드 전환
+- `client/src/components/ToggleBar.jsx` — Internals 아이콘 🔧
+- `client/src/components/HudPanels.jsx` — 컴팩트/확장 모드
+- `client/src/components/ChainTipsPanel.jsx` — 축약 + 확장 토글
+- `client/src/components/BitfeedFloor.jsx` — 최소 크기 14px, TXID 25px
+- `client/src/globe/GlobeScene.jsx` — 아크 altitude 상향
+- `client/src/components/SearchBar.jsx` — 크기 확대 + font-size
+- `client/src/components/ChainStrip.jsx` — 스크롤 + lazy load
+- `client/src/components/MacWindow.jsx` — 최대화 버튼
+- `client/src/components/TxDetailPanel.jsx` — coinbase 구분, fee 계산
+- `server/index.js` — prevout/fee 보강 로직
+
+---
+
 ## [1.1.1] — 2026-03-20
 
 ### Fixed — 서버 모드 버그 4건

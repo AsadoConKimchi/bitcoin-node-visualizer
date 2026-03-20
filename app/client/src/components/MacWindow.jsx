@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import useDrag from '../hooks/useDrag.js';
 
 /**
@@ -36,19 +36,22 @@ export default function MacWindow({
 }) {
   const initPos = useMemo(() => initialPosition, [initialPosition.x, initialPosition.y]);
   const { position, dragHandleProps, elRef } = useDrag(initPos);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   // 모바일에서는 고정 위치
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
 
-  const style = isMobile
-    ? { zIndex, width: 'calc(100vw - 16px)', left: 8, bottom: 8, position: 'fixed' }
-    : {
-        zIndex,
-        left: position.x,
-        top: position.y,
-        width: typeof width === 'number' ? `${width}px` : width,
-        ...(height && !minimized ? { height: typeof height === 'number' ? `${height}px` : height } : {}),
-      };
+  const style = isMaximized
+    ? { position: 'fixed', top: 8, left: 8, width: 'calc(100vw - 16px)', height: 'calc(100vh - 16px)', zIndex: 50 }
+    : isMobile
+      ? { zIndex, width: 'calc(100vw - 16px)', left: 8, bottom: 8, position: 'fixed' }
+      : {
+          zIndex,
+          left: position.x,
+          top: position.y,
+          width: typeof width === 'number' ? `${width}px` : width,
+          ...(height && !minimized ? { height: typeof height === 'number' ? `${height}px` : height } : {}),
+        };
 
   return (
     <div
@@ -77,13 +80,11 @@ export default function MacWindow({
               onClick={(e) => { e.stopPropagation(); onMinimize(); }}
             />
           )}
-          {onMinimize && (
-            <span
-              className="traffic-light traffic-light--expand"
-              title="확장"
-              onClick={(e) => { e.stopPropagation(); if (minimized) onMinimize(); }}
-            />
-          )}
+          <span
+            className="traffic-light traffic-light--expand"
+            title={isMaximized ? '복원' : '최대화'}
+            onClick={(e) => { e.stopPropagation(); setIsMaximized(m => !m); }}
+          />
         </div>
         <span className={`${titleColor} font-bold text-xs tracking-wide flex-1`}>
           {title}

@@ -3,7 +3,7 @@ import React from 'react';
 const BUTTONS = [
   { key: 'p2p', label: 'P2P', icon: '◉' },
   { key: 'verifyCenter', label: '검증센터', icon: '▣' },
-  { key: 'internals', label: 'Internals', icon: '⚙' },
+  { key: 'internals', label: 'Internals', icon: '🔧' },
 ];
 
 export default function ToggleBar({ visible, onToggle }) {

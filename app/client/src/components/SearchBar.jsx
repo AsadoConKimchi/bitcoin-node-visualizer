@@ -56,7 +56,7 @@ export default function SearchBar({ onSearchBlock, onSearchTx, onSearchAddress }
     <div className="relative">
       <div className={`flex items-center gap-1.5 bg-panel-bg-light
                       border rounded-lg px-2.5 py-1.5 transition-all duration-200
-                      ${focused ? 'border-white/25 w-[280px] md:w-[320px]' : 'border-white/10 w-[180px] md:w-[220px]'}`}>
+                      ${focused ? 'border-white/25 w-[320px] md:w-[420px]' : 'border-white/10 w-[220px] md:w-[280px]'}`}>
         <span className="text-text-dim text-sm shrink-0" aria-hidden="true">⌕</span>
         <input
           type="text"
@@ -66,7 +66,7 @@ export default function SearchBar({ onSearchBlock, onSearchTx, onSearchAddress }
           onBlur={() => setTimeout(() => setFocused(false), 200)}
           onKeyDown={handleKeyDown}
           placeholder="블록, TX, 주소 검색…"
-          className="bg-transparent border-none outline-none text-text-primary text-xs
+          className="bg-transparent border-none outline-none text-text-primary text-sm
                     w-full placeholder:text-text-dim"
         />
         {query && (

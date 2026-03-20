@@ -19,28 +19,54 @@ function scriptTypeLabel(type) {
 
 // RPC 응답 → 정규화 (verbosity=2: vin[].prevout 포함)
 function normalizeRpcTx(rpc) {
-  // verbosity=2 응답에서 fee 필드 직접 사용 (BTC float → sats)
+  // fee: BTC float → sats (서버 보강 또는 verbosity=2 응답)
   const fee = rpc.fee != null ? Math.round(rpc.fee * 1e8) : null;
+
+  const vins = (rpc.vin || []).map(v => {
+    const isCoinbase = !!v.coinbase;
+    let prevout = null;
+
+    if (v.prevout) {
+      prevout = {
+        value: v.prevout.value != null ? Math.round(v.prevout.value * 1e8) : null,
+        scriptpubkey_address: v.prevout.scriptPubKey?.address ?? null,
+        scriptpubkey_type: v.prevout.scriptPubKey?.type ?? null,
+      };
+    }
+
+    return {
+      ...v,
+      isCoinbase,
+      sequence: v.sequence,
+      prevout,
+    };
+  });
+
+  const vouts = (rpc.vout || []).map(v => ({
+    value: v.value != null ? Math.round(v.value * 1e8) : null,
+    scriptpubkey_address: v.scriptPubKey?.address ?? null,
+    scriptpubkey_type: v.scriptPubKey?.type ?? null,
+  }));
+
+  // fee 없을 때 prevout에서 계산 시도
+  let computedFee = fee;
+  if (computedFee == null) {
+    const hasAllPrevout = vins.every(v => v.isCoinbase || v.prevout?.value != null);
+    const hasCoinbase = vins.some(v => v.isCoinbase);
+    if (hasAllPrevout && !hasCoinbase) {
+      const totalIn = vins.reduce((s, v) => s + (v.prevout?.value || 0), 0);
+      const totalOut = vouts.reduce((s, v) => s + (v.value || 0), 0);
+      computedFee = totalIn - totalOut;
+    }
+  }
 
   return {
     txid: rpc.txid,
     size: rpc.size,
     weight: rpc.weight,
-    fee,
-    vin: (rpc.vin || []).map(v => ({
-      ...v,
-      sequence: v.sequence,
-      prevout: v.prevout ? {
-        value: v.prevout.value != null ? Math.round(v.prevout.value * 1e8) : null,
-        scriptpubkey_address: v.prevout.scriptPubKey?.address ?? null,
-        scriptpubkey_type: v.prevout.scriptPubKey?.type ?? null,
-      } : v.coinbase ? null : null,
-    })),
-    vout: (rpc.vout || []).map(v => ({
-      value: v.value != null ? Math.round(v.value * 1e8) : null,
-      scriptpubkey_address: v.scriptPubKey?.address ?? null,
-      scriptpubkey_type: v.scriptPubKey?.type ?? null,
-    })),
+    fee: computedFee,
+    vin: vins,
+    vout: vouts,
     status: {
       confirmed: rpc.blockhash != null,
       block_height: rpc.blockheight ?? null,
@@ -103,7 +129,7 @@ export default function TxDetailPanel({ tx, onClose, sourceType }) {
 
   // Sankey input/output 데이터
   const sankeyInputs = detail?.vin?.map(v => ({
-    address: v.prevout?.scriptpubkey_address,
+    address: v.isCoinbase ? 'coinbase' : (v.prevout?.scriptpubkey_address || (v.txid ? `${v.txid.slice(0, 8)}…:${v.vout}` : null)),
     value: v.prevout?.value || 0,
     type: v.prevout?.scriptpubkey_type,
   })) || [];
@@ -201,11 +227,15 @@ export default function TxDetailPanel({ tx, onClose, sourceType }) {
                 <div key={i} className="text-xs text-text-secondary py-0.5 border-b border-dark-surface">
                   <div className="flex items-center gap-1">
                     <span className="text-muted">{i}: </span>
-                    {inp.prevout?.scriptpubkey_address
-                      ? <span className="truncate max-w-[260px]">{inp.prevout.scriptpubkey_address}</span>
-                      : <span className="text-text-dim">coinbase</span>
+                    {inp.isCoinbase
+                      ? <span className="text-text-dim">coinbase</span>
+                      : inp.prevout?.scriptpubkey_address
+                        ? <span className="truncate max-w-[260px]">{inp.prevout.scriptpubkey_address}</span>
+                        : <span className="text-text-dim">
+                            {inp.txid ? `${inp.txid.slice(0, 12)}…:${inp.vout}` : '(unknown)'}
+                          </span>
                     }
-                    {inp.prevout?.value != null && (
+                    {inp.prevout?.value != null && inp.prevout.value > 0 && (
                       <span className="ml-auto text-btc-orange shrink-0">
                         {(inp.prevout.value / 1e8).toFixed(8)} BTC
                       </span>

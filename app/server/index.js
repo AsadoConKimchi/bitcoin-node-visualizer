@@ -358,10 +358,48 @@ app.get('/api/fees', async (req, res) => {
   }
 });
 
-/** TX 상세 (getrawtransaction verbose) */
+/** TX 상세 (getrawtransaction verbose + prevout/fee 보강) */
 app.get('/api/tx/:txid', async (req, res) => {
   try {
     const data = await rpc.getRawTransactionVerbose(req.params.txid);
+
+    // prevout 누락 시 이전 TX에서 조회하여 보강
+    const needsPrevout = data.vin?.some(v => !v.coinbase && !v.prevout);
+    if (needsPrevout) {
+      for (const vin of data.vin) {
+        if (vin.coinbase || vin.prevout) continue;
+        try {
+          const prevTx = await rpc.getRawTransactionVerbose(vin.txid);
+          const prevOut = prevTx?.vout?.[vin.vout];
+          if (prevOut) {
+            vin.prevout = {
+              value: prevOut.value,
+              scriptPubKey: prevOut.scriptPubKey,
+            };
+          }
+        } catch { /* 이전 TX 조회 실패 시 건너뜀 */ }
+      }
+    }
+
+    // fee 누락 시: prevout 합계 - vout 합계로 계산, 또는 mempool entry에서 조회
+    if (data.fee == null) {
+      // 방법 1: prevout에서 계산
+      const hasAllPrevout = data.vin?.every(v => v.coinbase || v.prevout?.value != null);
+      if (hasAllPrevout && !data.vin?.some(v => v.coinbase)) {
+        const totalIn = data.vin.reduce((s, v) => s + (v.prevout?.value || 0), 0);
+        const totalOut = data.vout?.reduce((s, v) => s + (v.value || 0), 0) || 0;
+        data.fee = totalIn - totalOut;
+      } else {
+        // 방법 2: mempool entry에서 fee 조회
+        try {
+          const entry = await rpc.getMempoolEntry(req.params.txid);
+          if (entry?.fees?.base != null) {
+            data.fee = entry.fees.base;
+          }
+        } catch { /* mempool에 없으면 건너뜀 */ }
+      }
+    }
+
     res.json(data);
   } catch (err) {
     console.error(`[api/tx]`, err.message);

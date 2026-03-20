@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useState } from 'react';
 import MacWindow from './MacWindow.jsx';
 
 const STATUS_COLOR = {
@@ -113,6 +113,9 @@ const HudPanels = forwardRef(function HudPanels({
 
   const isIBD = sourceType === 'server' && nodeInfo?.verificationProgress != null && nodeInfo.verificationProgress < 0.9999;
 
+  // 컴팩트/확장 모드
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <MacWindow
       title="NODE INFO"
@@ -170,7 +173,7 @@ const HudPanels = forwardRef(function HudPanels({
           <div className="text-[11px] text-white/30 mb-1.5">⟳ 서버 감지 중...</div>
         )}
 
-        {/* 데이터 행 */}
+        {/* 기본 행 (컴팩트) */}
         <Row label="Chain"   value={chain ?? 'mainnet'} />
         <Row label="Height"  value={blockHeight != null ? `#${blockHeight.toLocaleString()}` : null} />
         <Row label="Fee"     value={
@@ -181,26 +184,41 @@ const HudPanels = forwardRef(function HudPanels({
             : null
         } />
         <Row label="Mempool" value={mempoolStr} />
-        {sourceType === 'server' && mempoolInfo?.mempoolminfee != null && (
-          <Row label="Min Fee" value={`${(mempoolInfo.mempoolminfee * 1e5).toFixed(1)} sat/vB`} />
-        )}
-        {diffStr && <Row label="Diff Adj" value={diffStr} />}
         {peersStr != null && <Row label="Peers" value={peersStr} />}
         {isServer && peersStr != null && (
           <div className="text-[11px] text-white/30 -mt-1 mb-0.5 pl-1">🟢 피어 · 🟠 연결선</div>
         )}
-        {securityStr && <Row label="Security" value={securityStr} />}
-        {timeStr && <Row label="Time Δ" value={timeStr} valueColor={timeColor} />}
-        {sourceType === 'server' && nodeInfo?.localServices?.length > 0 && (
-          <Row label="Services" value={nodeInfo.localServices.join(' ')} />
-        )}
-        {utxoStats?.txouts != null && (
-          <Row label="UTXOs" value={utxoStats.txouts.toLocaleString()} />
-        )}
-        {utxoStats?.diskSize != null && (
-          <Row label="UTXO Size" value={`${(utxoStats.diskSize / 1e9).toFixed(1)} GB`} />
-        )}
         <Row label="TX/s" value={txPerSec != null ? txPerSec.toFixed(1) : null} />
+
+        {/* 확장 토글 */}
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="w-full text-left text-[11px] text-text-dim hover:text-text-secondary
+                     cursor-pointer bg-transparent border-none mt-1 py-0.5"
+        >
+          {expanded ? '▾ 접기' : '▸ 상세'}
+        </button>
+
+        {/* 확장 행 */}
+        {expanded && (
+          <>
+            {sourceType === 'server' && mempoolInfo?.mempoolminfee != null && (
+              <Row label="Min Fee" value={`${(mempoolInfo.mempoolminfee * 1e5).toFixed(1)} sat/vB`} />
+            )}
+            {diffStr && <Row label="Diff Adj" value={diffStr} />}
+            {securityStr && <Row label="Security" value={securityStr} />}
+            {timeStr && <Row label="Time Δ" value={timeStr} valueColor={timeColor} />}
+            {sourceType === 'server' && nodeInfo?.localServices?.length > 0 && (
+              <Row label="Services" value={nodeInfo.localServices.join(' ')} />
+            )}
+            {utxoStats?.txouts != null && (
+              <Row label="UTXOs" value={utxoStats.txouts.toLocaleString()} />
+            )}
+            {utxoStats?.diskSize != null && (
+              <Row label="UTXO Size" value={`${(utxoStats.diskSize / 1e9).toFixed(1)} GB`} />
+            )}
+          </>
+        )}
       </div>
     </MacWindow>
   );

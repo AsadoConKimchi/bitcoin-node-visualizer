@@ -338,28 +338,32 @@ export default function App() {
   // verifyCenter 토글 → 검증 패널 ON/OFF + 블록 검증 시작
   const handleToggle = useCallback((key) => {
     setVisible((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
+      // 라디오 모드: 이미 활성이면 끄기, 아니면 해당 키만 활성
+      const turning = !prev[key];
+      const next = { p2p: false, verifyCenter: false, internals: false };
+      if (turning) next[key] = true;
 
-      if (key === 'verifyCenter') {
-        // TX + Block 검증 패널 동시 제어
-        setWindowStates(ws => ({
-          ...ws,
-          txStream: { ...ws.txStream, visible: next.verifyCenter },
-          blockVerify: { ...ws.blockVerify, visible: next.verifyCenter },
-        }));
+      // 검증 패널 동시 제어
+      setWindowStates(ws => ({
+        ...ws,
+        txStream: { ...ws.txStream, visible: next.verifyCenter },
+        blockVerify: { ...ws.blockVerify, visible: next.verifyCenter },
+        // P2P 모드일 때만 NODE INFO + CHAIN 표시
+        nodeInfo: { ...ws.nodeInfo, visible: next.p2p },
+        chain: { ...ws.chain, visible: next.p2p },
+      }));
 
-        if (next.verifyCenter) {
-          const blocks = recentBlocksRef.current;
-          if (blocks.length > 0) {
-            setTimeout(() => startBlockVerification(blocks[0]), 50);
-          } else {
-            setTimeout(() => startBlockVerification({
-              height: 0,
-              hash: 'aaaa1111bbbb2222cccc3333dddd4444eeee5555ffff666677778888' + '99990000',
-              txCount: 2847,
-              pool: 'Demo',
-            }), 50);
-          }
+      if (next.verifyCenter) {
+        const blocks = recentBlocksRef.current;
+        if (blocks.length > 0) {
+          setTimeout(() => startBlockVerification(blocks[0]), 50);
+        } else {
+          setTimeout(() => startBlockVerification({
+            height: 0,
+            hash: 'aaaa1111bbbb2222cccc3333dddd4444eeee5555ffff666677778888' + '99990000',
+            txCount: 2847,
+            pool: 'Demo',
+          }), 50);
         }
       }
 
@@ -544,9 +548,12 @@ export default function App() {
       }
 
       startBlockVerification(data);
-      setVisible((prev) => ({ ...prev, verifyCenter: true }));
+      // 라디오 모드: 블록 수신 시 검증센터로 전환
+      setVisible({ p2p: false, verifyCenter: true, internals: false });
       setWindowStates(ws => ({
         ...ws,
+        nodeInfo: { ...ws.nodeInfo, visible: false },
+        chain: { ...ws.chain, visible: false },
         txStream: { ...ws.txStream, visible: true },
         blockVerify: { ...ws.blockVerify, visible: true },
       }));
@@ -719,8 +726,8 @@ export default function App() {
         />
       )}
 
-      {/* 체인 분기 패널 (서버 모드) */}
-      {sourceType === 'server' && chaintips.length > 0 && (
+      {/* 체인 분기 패널 (서버 모드, P2P 모드일 때) */}
+      {sourceType === 'server' && visible.p2p && chaintips.length > 0 && (
         <ChainTipsPanel chaintips={chaintips} />
       )}
 
@@ -782,6 +789,7 @@ export default function App() {
           onBlockClick={handleBlockClick}
           onReplayCompactBlock={handleReplayCompactBlock}
           hudHeight={hudHeight}
+          sourceType={sourceType}
           minimized={windowStates.chain.minimized}
           onClose={() => setWinState('chain', { visible: false })}
           onMinimize={() => setWinState('chain', { minimized: !windowStates.chain.minimized })}

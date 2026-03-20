@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 
 const STATUS_COLOR = {
   'active': 'text-success',
@@ -50,6 +50,15 @@ export default function ChainTipsPanel({ chaintips }) {
   });
 
   const forks = sorted.filter((t) => t.status !== 'active');
+  const [tipsExpanded, setTipsExpanded] = useState(false);
+
+  // 기본: 최근 FORK/HEADERS 2개만
+  const visibleForks = useMemo(() => {
+    if (tipsExpanded) return forks;
+    return forks.slice(0, 2);
+  }, [forks, tipsExpanded]);
+
+  const hiddenCount = forks.length - visibleForks.length;
 
   return (
     <div className="absolute top-14 right-4 bg-panel-bg border border-white/10
@@ -92,28 +101,39 @@ export default function ChainTipsPanel({ chaintips }) {
       {forks.length === 0 ? (
         <div className="text-text-dim text-xs">분기 없음</div>
       ) : (
-        forks.map((tip) => {
-          const isReverted = reorgEvent && tip.hash === reorgEvent.prevHash;
-          return (
-            <div
-              key={tip.hash}
-              className={`mb-1 ${isReverted ? 'opacity-50 border-l-2 border-error pl-1.5' : ''}`}
+        <>
+          {visibleForks.map((tip) => {
+            const isReverted = reorgEvent && tip.hash === reorgEvent.prevHash;
+            return (
+              <div
+                key={tip.hash}
+                className={`mb-1 ${isReverted ? 'opacity-50 border-l-2 border-error pl-1.5' : ''}`}
+              >
+                <div className="flex justify-between gap-2">
+                  <span className={`text-xs ${isReverted ? 'text-error' : (STATUS_COLOR[tip.status] || 'text-orange-500')}`}>
+                    {isReverted ? 'REVERTED' : (STATUS_LABEL[tip.status] || tip.status.toUpperCase())}
+                  </span>
+                  <span className={isReverted ? 'text-muted' : 'text-text-primary'}>
+                    #{tip.height.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between text-text-dim text-xs">
+                  <span>{tip.hash?.slice(0, 12)}…</span>
+                  {tip.branchlen > 0 && <span>{tip.branchlen} blk</span>}
+                </div>
+              </div>
+            );
+          })}
+          {forks.length > 2 && (
+            <button
+              onClick={() => setTipsExpanded(e => !e)}
+              className="w-full text-center text-[11px] text-text-dim hover:text-text-secondary
+                         cursor-pointer bg-transparent border-none mt-1 py-0.5"
             >
-              <div className="flex justify-between gap-2">
-                <span className={`text-xs ${isReverted ? 'text-error' : (STATUS_COLOR[tip.status] || 'text-orange-500')}`}>
-                  {isReverted ? 'REVERTED' : (STATUS_LABEL[tip.status] || tip.status.toUpperCase())}
-                </span>
-                <span className={isReverted ? 'text-muted' : 'text-text-primary'}>
-                  #{tip.height.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between text-text-dim text-xs">
-                <span>{tip.hash?.slice(0, 12)}…</span>
-                {tip.branchlen > 0 && <span>{tip.branchlen} blk</span>}
-              </div>
-            </div>
-          );
-        })
+              {tipsExpanded ? '접기 ▴' : `${chaintips.length} tips 전체 보기 ▾`}
+            </button>
+          )}
+        </>
       )}
     </div>
   );
