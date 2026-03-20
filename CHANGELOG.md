@@ -32,9 +32,21 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ### Added — 앱 아이콘
 
-- `favicon.svg` — Bitcoin ₿ + 지구본 와이어프레임 + P2P 노드 점
+- `favicon.svg` — Bitcoin ₿ + 지구본 와이어프레임 + P2P 노드 점 (쿨 다크 배경 + 오렌지 심볼 + 틸 노드)
 - `favicon-32.png`, `icon-192.png`, `icon-512.png` — PNG 변환
-- `index.html`에 favicon/apple-touch-icon/theme-color 메타태그 추가
+- `index.html`에 favicon/apple-touch-icon/theme-color(`#141820`) 메타태그 추가
+- 기존 favicon 404 에러 해소
+
+### Deployment
+
+- **Vercel**: main push → 자동 배포 (https://fullnode-visualizer.vercel.app)
+- **Docker**: `v1.0.4` 태그 → GitHub Actions 멀티아키텍처(amd64/arm64) 빌드 → GHCR push
+- **Umbrel**: `umbrel-app-store` 레포 동기화 — `umbrel-app.yml` version `1.0.3` → `1.0.4`, `docker-compose.yml` 이미지 태그 `v1.0.3` → `v1.0.4`
+
+#### Files Modified (배포 관련)
+- `docker-compose.yml` — 이미지 태그 `v1.0.3` → `v1.0.4`
+- `umbrel-app.yml` — version `1.0.0` → `1.0.4`, releaseNotes 추가
+- `umbrel-app-store` 레포 — 앱스토어용 `umbrel-app.yml` + `docker-compose.yml` 동기화
 
 ---
 
