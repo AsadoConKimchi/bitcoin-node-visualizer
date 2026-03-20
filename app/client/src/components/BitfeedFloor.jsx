@@ -22,7 +22,7 @@ const COLUMN_COUNT = 40;
  *   addRejected(txData)   — 반려 TX를 빨간색으로 떨어뜨림 (바닥 전 파편화)
  *   sweepBlocks(txids)    — 블록 채굴 시 TX들을 위로 날림
  */
-const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
+const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, ref) {
   const canvasRef = useRef(null);
   const blocksRef = useRef([]);      // { x, y, w, h, vy, color, glow, txid, settled, rejected, shards, opacity, enterTime }
   const dimsRef = useRef({ w: 600, h: 200 });
@@ -183,6 +183,22 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
     return shards;
   }, []);
 
+  // Canvas 클릭 → TX 상세
+  const handleCanvasClick = useCallback((e) => {
+    if (!onTxClick) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    for (let i = blocksRef.current.length - 1; i >= 0; i--) {
+      const b = blocksRef.current[i];
+      if (b.shards || b.sweeping) continue;
+      if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+        onTxClick({ txid: b.txid, data: { feeRate: b.feeRate } });
+        return;
+      }
+    }
+  }, [onTxClick]);
+
   // 메인 애니메이션 루프
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -227,27 +243,8 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
       for (let i = blocks.length - 1; i >= 0; i--) {
         const b = blocks[i];
 
-        // sweep 후 떠있는 settled 블록 → 재낙하
-        if (b.settled && !b.sweeping) {
-          let maxH = 0;
-          for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
-            if (j < COLUMN_COUNT) {
-              // 자신의 높이를 제외한 컬럼 높이
-              const selfContrib = b.h + 1;
-              const othersH = cols[j] - selfContrib;
-              if (othersH > maxH) maxH = othersH;
-            }
-          }
-          const expectedFloorY = h - maxH - b.h - 2;
-          if (b.y < expectedFloorY - 2) {
-            // 블록이 떠있음 (아래 지지대 제거됨) → 재낙하
-            b.settled = false;
-            b.floorY = expectedFloorY;
-            b.vy = 0;
-          }
-          // 위로 스냅하는 else if 제거 — settled 블록은 위로 이동하면 안 됨
-          continue;
-        }
+        // settled 블록은 영원히 고정. sweepBlocks()만이 해제 가능.
+        if (b.settled && !b.sweeping) continue;
 
         if (b.settled) continue;
 
@@ -372,6 +369,8 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
       <canvas
         ref={canvasRef}
         className="absolute inset-0 w-full h-full"
+        onClick={handleCanvasClick}
+        style={{ cursor: 'pointer' }}
       />
     </div>
   );

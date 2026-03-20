@@ -84,9 +84,10 @@ export async function fetchNodePoints(signal) {
  * 노드 데이터 관리 클래스 (주기적 갱신)
  */
 export class NodeDataManager {
-  constructor(onUpdate, serverUrl = '') {
+  constructor(onUpdate, serverUrl = '', isServerMode = false) {
     this._onUpdate = onUpdate;
     this._serverUrl = serverUrl ? serverUrl.replace(/\/+$/, '') : '';
+    this._isServerMode = isServerMode;
     this._timer = null;
     this._nodes = [];
     this._destroyed = false;
@@ -104,10 +105,11 @@ export class NodeDataManager {
     this._abortController = new AbortController();
     const { signal } = this._abortController;
 
-    const bgPoints = await fetchNodePoints(signal);
+    // 서버 모드: bitnodes 외부 API 스킵, 실제 피어만 표시
+    const bgPoints = this._isServerMode ? [] : await fetchNodePoints(signal);
     this._nodes = bgPoints;
 
-    if (this._serverUrl) {
+    if (this._isServerMode) {
       // 서버 모드: /api/info에서 노드 위치 가져와 MY_NODE 업데이트
       try {
         const infoRes = await fetch(`${this._serverUrl}/api/info`, { signal });

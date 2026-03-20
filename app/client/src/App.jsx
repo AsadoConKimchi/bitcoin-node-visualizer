@@ -192,10 +192,10 @@ export default function App() {
     const mgr = new NodeDataManager((points) => {
       nodePointsRef.current = points;
       setNodePoints(points);
-    }, serverUrl);
+    }, serverUrl, sourceType === 'server');
     mgr.start();
     return () => mgr.destroy();
-  }, [serverUrl]);
+  }, [serverUrl, sourceType]);
 
   // 상시 피어 연결선
   const peerArcs = useMemo(() => {
@@ -636,7 +636,7 @@ export default function App() {
   return (
     <div className="relative w-screen h-screen overflow-hidden">
       {/* 3D 지구본 — 전체 배경 */}
-      <GlobeScene nodePoints={nodePoints} arcs={combinedArcs} rings={rings} />
+      <GlobeScene nodePoints={nodePoints} arcs={combinedArcs} rings={rings} isServerMode={sourceType === 'server'} />
 
       {/* 상단 토글 바 */}
       <ToggleBar visible={visible} onToggle={handleToggle} />
@@ -720,6 +720,7 @@ export default function App() {
           block={selectedBlock}
           onClose={() => setSelectedBlock(null)}
           onTxClick={handleTxClick}
+          sourceType={sourceType}
         />
       )}
 
@@ -728,6 +729,7 @@ export default function App() {
         <TxDetailPanel
           tx={selectedTx}
           onClose={() => setSelectedTx(null)}
+          sourceType={sourceType}
         />
       )}
 

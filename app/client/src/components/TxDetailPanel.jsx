@@ -28,7 +28,35 @@ function scriptTypeLabel(type) {
   return labels[type] || type || '?';
 }
 
-export default function TxDetailPanel({ tx, onClose }) {
+// RPC 응답을 mempool.space 형식으로 정규화
+function normalizeRpcTx(rpc) {
+  return {
+    txid: rpc.txid,
+    size: rpc.size,
+    weight: rpc.weight,
+    fee: rpc.fee != null ? Math.round(rpc.fee * 1e8) : null,
+    vin: (rpc.vin || []).map(v => ({
+      ...v,
+      sequence: v.sequence,
+      prevout: v.vout != null ? {
+        value: v.prevout?.value != null ? Math.round(v.prevout.value * 1e8) : null,
+        scriptpubkey_address: v.prevout?.scriptPubKey?.address ?? null,
+        scriptpubkey_type: v.prevout?.scriptPubKey?.type ?? null,
+      } : null,
+    })),
+    vout: (rpc.vout || []).map(v => ({
+      value: v.value != null ? Math.round(v.value * 1e8) : null,
+      scriptpubkey_address: v.scriptPubKey?.address ?? null,
+      scriptpubkey_type: v.scriptPubKey?.type ?? null,
+    })),
+    status: {
+      confirmed: rpc.blockhash != null,
+      block_height: rpc.blockheight ?? null,
+    },
+  };
+}
+
+export default function TxDetailPanel({ tx, onClose, sourceType }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -40,20 +68,24 @@ export default function TxDetailPanel({ tx, onClose }) {
     setLoading(true);
     setError(null);
 
-    fetch(`${REST_BASE}/tx/${tx.txid}`)
+    const url = sourceType === 'server'
+      ? `/api/tx/${tx.txid}`
+      : `${REST_BASE}/tx/${tx.txid}`;
+
+    fetch(url)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
       })
       .then((data) => {
-        setDetail(data);
+        setDetail(sourceType === 'server' ? normalizeRpcTx(data) : data);
         setLoading(false);
       })
       .catch((err) => {
         setError(err.message);
         setLoading(false);
       });
-  }, [tx?.txid]);
+  }, [tx?.txid, sourceType]);
 
   const short = tx?.txid ? tx.txid.slice(0, 8) + '…' + tx.txid.slice(-4) : '?';
   const localData = tx?.data || {};
@@ -107,7 +139,7 @@ export default function TxDetailPanel({ tx, onClose }) {
         </div>
 
         {loading && !detail && (
-          <div className="text-text-dim text-center py-4">mempool.space에서 로드 중…</div>
+          <div className="text-text-dim text-center py-4">로드 중…</div>
         )}
 
         {error && !detail && (
@@ -214,17 +246,19 @@ export default function TxDetailPanel({ tx, onClose }) {
           </>
         )}
 
-        <div className="mt-3 text-center">
-          <a
-            href={`https://mempool.space/tx/${tx?.txid}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-tx-blue text-xs no-underline border border-tx-blue/25
-                      px-3 py-1 rounded hover:bg-tx-blue/10"
-          >
-            mempool.space에서 보기 ↗
-          </a>
-        </div>
+        {sourceType !== 'server' && (
+          <div className="mt-3 text-center">
+            <a
+              href={`https://mempool.space/tx/${tx?.txid}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-tx-blue text-xs no-underline border border-tx-blue/25
+                        px-3 py-1 rounded hover:bg-tx-blue/10"
+            >
+              mempool.space에서 보기 ↗
+            </a>
+          </div>
+        )}
       </div>
     </>
   );

@@ -213,7 +213,7 @@ app.get('/api/peers', async (req, res) => {
         };
       })
       .filter((p) => p.lat != null);
-    res.json({ peers: points, count: peers.length });
+    res.json({ peers: points, count: peers.length, geoResolved: points.length, total: peers.length });
   } catch (err) {
     console.error(`[api]`, err.message);
     res.status(503).json({ error: 'Service unavailable' });
@@ -349,6 +349,28 @@ app.get('/api/fees', async (req, res) => {
   }
 });
 
+/** TX 상세 (getrawtransaction verbose) */
+app.get('/api/tx/:txid', async (req, res) => {
+  try {
+    const data = await rpc.getRawTransactionVerbose(req.params.txid);
+    res.json(data);
+  } catch (err) {
+    console.error(`[api/tx]`, err.message);
+    res.status(503).json({ error: 'Service unavailable' });
+  }
+});
+
+/** 블록 상세 (getblock verbosity=1) */
+app.get('/api/block/:hash', async (req, res) => {
+  try {
+    const data = await rpc.getBlock(req.params.hash, 1);
+    res.json(data);
+  } catch (err) {
+    console.error(`[api/block]`, err.message);
+    res.status(503).json({ error: 'Service unavailable' });
+  }
+});
+
 // SPA 폴백 (React Router 지원)
 app.get('*', (req, res) => {
   res.sendFile(path.join(CLIENT_DIST, 'index.html'));
@@ -396,18 +418,21 @@ wss.on('connection', (ws) => {
       try {
         let hash = info.bestblockhash;
         for (let i = 0; i < 5 && hash; i++) {
-          const header = await rpc.getBlockHeader(hash);
+          // verbosity 1: txid 목록 포함, TX 본문 미포함 → Merkle tree 구성 가능
+          const block = await rpc.getBlock(hash, 1);
+          const txids = block.tx || [];
           recentBlocks.push({
             hash,
-            height: header.height,
-            txCount: header.nTx,
-            version: header.version,
-            time: header.time,
-            nBits: header.bits,
-            nonce: header.nonce,
-            merkleRoot: header.merkleroot,
+            height: block.height,
+            txCount: block.nTx,
+            version: block.version,
+            time: block.time,
+            nBits: block.bits,
+            nonce: block.nonce,
+            merkleRoot: block.merkleroot,
+            txidSample: txids.length <= 8 ? txids : [...txids.slice(0, 4), ...txids.slice(-4)],
           });
-          hash = header.previousblockhash;
+          hash = block.previousblockhash;
         }
       } catch (_) {}
 

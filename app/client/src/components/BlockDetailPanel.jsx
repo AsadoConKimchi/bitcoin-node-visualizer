@@ -43,7 +43,7 @@ function FeeBar({ feeRange }) {
 }
 
 // SegWit/Taproot 비율 계산
-function SegwitStats({ txids, blockHash }) {
+function SegwitStats({ txids, blockHash, sourceType }) {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
@@ -53,9 +53,31 @@ function SegwitStats({ txids, blockHash }) {
     if (sampleSize === 0) return;
 
     const sample = txids.slice(0, sampleSize);
+    const txUrl = (txid) => sourceType === 'server' ? `/api/tx/${txid}` : `${REST_BASE}/tx/${txid}`;
     Promise.all(sample.map(txid =>
-      fetch(`${REST_BASE}/tx/${txid}`).then(r => r.ok ? r.json() : null).catch(() => null)
-    )).then(txs => {
+      fetch(txUrl(txid)).then(r => r.ok ? r.json() : null).catch(() => null)
+    )).then(rawTxs => {
+      // 서버 모드: RPC 형식 정규화
+      const txs = rawTxs.map(tx => {
+        if (!tx) return null;
+        if (sourceType === 'server' && tx.vout?.[0]?.scriptPubKey) {
+          return {
+            ...tx,
+            vin: (tx.vin || []).map(v => ({
+              ...v,
+              prevout: v.prevout ? {
+                ...v.prevout,
+                scriptpubkey_type: v.prevout.scriptPubKey?.type,
+              } : null,
+            })),
+            vout: (tx.vout || []).map(v => ({
+              ...v,
+              scriptpubkey_type: v.scriptPubKey?.type,
+            })),
+          };
+        }
+        return tx;
+      });
       const valid = txs.filter(Boolean);
       if (valid.length === 0) return;
 
@@ -97,7 +119,28 @@ function SegwitStats({ txids, blockHash }) {
   );
 }
 
-export default function BlockDetailPanel({ block, onClose, onTxClick }) {
+// RPC 응답(getblock verbosity=1)을 mempool.space 형식으로 정규화
+function normalizeRpcBlock(rpc) {
+  return {
+    id: rpc.hash,
+    height: rpc.height,
+    timestamp: rpc.time,
+    tx_count: rpc.nTx,
+    size: rpc.size,
+    weight: rpc.weight,
+    difficulty: rpc.difficulty,
+    nonce: rpc.nonce,
+    bits: rpc.bits,
+    merkle_root: rpc.merkleroot,
+    previousblockhash: rpc.previousblockhash,
+    // extras는 RPC에서 직접 제공 불가
+    extras: null,
+    // txid 목록 (verbosity=1)
+    _txids: rpc.tx || [],
+  };
+}
+
+export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -111,20 +154,29 @@ export default function BlockDetailPanel({ block, onClose, onTxClick }) {
     setLoading(true);
     setError(null);
 
-    fetch(`${REST_BASE}/block/${block.hash}`)
+    const url = sourceType === 'server'
+      ? `/api/block/${block.hash}`
+      : `${REST_BASE}/block/${block.hash}`;
+
+    fetch(url)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
       })
       .then((data) => {
-        setDetail(data);
+        const normalized = sourceType === 'server' ? normalizeRpcBlock(data) : data;
+        setDetail(normalized);
+        // 서버 모드: txid 목록이 응답에 포함됨
+        if (sourceType === 'server' && normalized._txids?.length) {
+          setTxids(normalized._txids);
+        }
         setLoading(false);
       })
       .catch((err) => {
         setError(err.message);
         setLoading(false);
       });
-  }, [block?.hash]);
+  }, [block?.hash, sourceType]);
 
   const loadTxids = () => {
     if (txids.length > 0) {
@@ -133,6 +185,12 @@ export default function BlockDetailPanel({ block, onClose, onTxClick }) {
     }
     setTxLoading(true);
     setShowTxList(true);
+
+    if (sourceType === 'server') {
+      // 서버 모드: txids는 이미 블록 응답에 포함됨
+      setTxLoading(false);
+      return;
+    }
 
     fetch(`${REST_BASE}/block/${block.hash}/txids`)
       .then((r) => {
@@ -191,7 +249,7 @@ export default function BlockDetailPanel({ block, onClose, onTxClick }) {
         </div>
 
         {loading && (
-          <div className="text-text-dim text-center py-4">mempool.space에서 로드 중…</div>
+          <div className="text-text-dim text-center py-4">로드 중…</div>
         )}
 
         {error && (
@@ -209,7 +267,7 @@ export default function BlockDetailPanel({ block, onClose, onTxClick }) {
         {(loading || feeRange) && <FeeBar feeRange={feeRange} />}
 
         {/* SegWit/Taproot 비율 */}
-        {txids.length > 0 && <SegwitStats txids={txids} blockHash={block?.hash} />}
+        {txids.length > 0 && <SegwitStats txids={txids} blockHash={block?.hash} sourceType={sourceType} />}
 
         {/* TX 목록 */}
         {txCount > 0 && (
@@ -255,17 +313,19 @@ export default function BlockDetailPanel({ block, onClose, onTxClick }) {
           </div>
         )}
 
-        <div className="mt-3 text-center">
-          <a
-            href={`https://mempool.space/block/${block?.hash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-btc-orange text-xs no-underline border border-btc-orange/25
-                      px-3 py-1 rounded hover:bg-btc-orange/10"
-          >
-            mempool.space에서 보기 ↗
-          </a>
-        </div>
+        {sourceType !== 'server' && (
+          <div className="mt-3 text-center">
+            <a
+              href={`https://mempool.space/block/${block?.hash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-btc-orange text-xs no-underline border border-btc-orange/25
+                        px-3 py-1 rounded hover:bg-btc-orange/10"
+            >
+              mempool.space에서 보기 ↗
+            </a>
+          </div>
+        )}
       </div>
     </>
   );

@@ -665,7 +665,7 @@ export default function MainPanel({
 
             {/* Canvas 영역 */}
             <div className="flex-1 min-h-0 px-2 pb-2 relative">
-              <BitfeedFloor ref={bitfeedRef} />
+              <BitfeedFloor ref={bitfeedRef} onTxClick={onTxClick} />
 
               {/* 범례 */}
               <div className="absolute bottom-3 right-3 flex gap-3 text-[9px] bg-[rgba(6,10,20,0.8)] rounded px-2 py-1">

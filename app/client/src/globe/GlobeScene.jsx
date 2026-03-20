@@ -23,7 +23,7 @@ function makeStars() {
  *   arcs:       [{ startLat, startLng, endLat, endLng, color }]
  *   rings:      [{ lat, lng }]
  */
-const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings }, ref) {
+const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isServerMode }, ref) {
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
 
@@ -71,7 +71,7 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings }, r
     globe.atmosphereColor('#4a8bdf');
     globe.atmosphereAltitude(0.15);
 
-    // 포인트 (전세계 노드)
+    // 포인트 (전세계 노드) — mempool 모드: pointsData, 서버 모드: htmlElementsData(CSS glow)
     globe.pointsData(nodePointsRef.current || []);
     globe.pointLat('lat');
     globe.pointLng('lng');
@@ -79,6 +79,24 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings }, r
     globe.pointRadius((d) => (d.isMyNode ? 1.0 : d.isMyPeer ? 0.7 : 0.25));
     globe.pointColor((d) => (d.isMyNode ? '#f7931a' : d.isMyPeer ? '#22c55e' : '#4a7dff'));
     globe.pointsMerge(false);
+
+    // 서버 모드: HTML 요소로 노드 표시 (CSS glow로 겹침 방지)
+    globe.htmlElementsData([]);
+    globe.htmlLat('lat');
+    globe.htmlLng('lng');
+    globe.htmlAltitude(0.02);
+    globe.htmlElement((d) => {
+      const el = document.createElement('div');
+      const size = d.isMyNode ? 8 : 5;
+      const color = d.isMyNode ? '#f7931a' : '#22c55e';
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+      el.style.borderRadius = '50%';
+      el.style.background = color;
+      el.style.boxShadow = `0 0 ${size}px ${color}, 0 0 ${size * 2}px ${color}80`;
+      el.style.pointerEvents = 'none';
+      return el;
+    });
 
     // 아크 (블록 전파 경로)
     globe.arcsData(arcsRef.current || []);
@@ -187,8 +205,18 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings }, r
 
   // props 변경 시 globe 업데이트
   useEffect(() => {
-    sceneRef.current?.globe?.pointsData(nodePoints || []);
-  }, [nodePoints]);
+    const globe = sceneRef.current?.globe;
+    if (!globe) return;
+    if (isServerMode) {
+      // 서버 모드: pointsData 비우고 htmlElementsData로 표시
+      globe.pointsData([]);
+      globe.htmlElementsData(nodePoints || []);
+    } else {
+      // mempool 모드: 기존 pointsData
+      globe.htmlElementsData([]);
+      globe.pointsData(nodePoints || []);
+    }
+  }, [nodePoints, isServerMode]);
 
   useEffect(() => {
     sceneRef.current?.globe?.arcsData(arcs || []);

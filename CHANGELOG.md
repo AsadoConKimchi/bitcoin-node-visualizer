@@ -4,6 +4,50 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ---
 
+## [Unreleased] — 2026-03-20
+
+### Changed — TX 실제 검증 파이프라인
+
+#### 가짜 실패 제거
+- `Math.random() < 0.03` 기반 3% 랜덤 실패 시뮬레이션 완전 제거
+- `FAIL_REASONS`, `FAIL_STEPS`, `failChance`, `TX_FAIL_CHANCE` 상수 모두 삭제
+- 정상 TX가 "이중 지불 감지" 등으로 잘못 표시되던 문제 해결
+
+#### 2-Phase TX Processing (서버)
+- Phase 1 (즉시): 기존과 동일하게 `broadcast('tx', basicSummary)`
+- Phase 2 (비동기): `verifyTx()` → `broadcast('tx:verified', result)` — Bitcoin Core RPC 기반 실제 검증
+- RPC 세마포어 (MAX_CONCURRENT_RPC = 5) — Bitcoin Core 과부하 방지
+
+#### 6단계 실제 검증 (`verifyTx`)
+| Step | 검증 항목 | 데이터 소스 | 실패 조건 |
+|------|----------|-----------|----------|
+| 0 | 구문 파싱 | bitcoinjs-lib parse | 파싱 예외 |
+| 1 | IsStandard 검사 | classifyOutput() | 'nonstandard' 스크립트 |
+| 2 | UTXO 조회 | getrawtransaction verbose → vin[].prevout | prevout null |
+| 3 | 이중 지불 검사 | getmempoolentry → depends, bip125 | 멤풀 제거 |
+| 4 | 서명 검증 | witness 구조 분석 | witness 비정상 |
+| 5 | 금액 합산 | prevout 합계 vs output 합계 | fee < 0 |
+
+#### 클라이언트 검증 상태 머신 개선
+- `TxVerificationState.injectVerification(result)` — 서버 실제 검증 결과 주입
+- 타이머 애니메이션 중 서버 데이터 도착 시 실제 detail로 업데이트
+- `_failAtReal(step, reason)` — 실제 실패 시 이후 타이머 무효화
+- mempool.space 모드: `tx:verified` 이벤트 없음 → 기본 성공 텍스트 표시
+
+#### Edge Cases
+- RPC 실패/타임아웃 → fallback "RPC 건너뜀" (기본 성공)
+- Bitcoin Core < 22 → `vin[].prevout` null check 대응
+- TX가 검증 전 블록 포함 → catch에서 처리
+
+#### Files Modified
+- `server/rpc.js` — `getMempoolEntry()`, `getRawTransactionVerbose()` 추가
+- `server/validator.js` — RPC 세마포어, `verifyTx()` 6단계 파이프라인, `processRawTx()` Phase 2 호출
+- `client/src/datasource/ServerAdapter.js` — `tx:verified` 이벤트 패스스루
+- `client/src/verification/TxVerificationState.js` — 가짜 실패 제거, `injectVerification()` 추가
+- `client/src/App.jsx` — `TX_FAIL_CHANCE` 제거, `tx:verified` 구독 추가
+
+---
+
 ## [Unreleased] — 2026-03-19
 
 ### Fixed — 서버 감지 + 노드 연결 증명
