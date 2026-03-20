@@ -19,6 +19,7 @@ dependencies:
 repo: https://github.com/AsadoConKimchi/bitcoin-node-visualizer
 support: https://github.com/AsadoConKimchi/bitcoin-node-visualizer/issues
 port: 3000
+icon: https://raw.githubusercontent.com/AsadoConKimchi/umbrel-app-store/main/asadoconkimchi-bitcoin-node-visualizer/appicon.png
 gallery: []
 releaseNotes: "Major UI overhaul: floating MacWindow panels, Sankey TX flow diagrams, 6-tier fee colors, TX hover tooltips, full-width mempool floor. Globe is now the visual centerpiece."
 submitter: AsadoConKimchi
