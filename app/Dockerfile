@@ -20,10 +20,17 @@ WORKDIR /app
 # 네이티브 바인딩 런타임 의존성
 RUN apk add --no-cache libstdc++
 
+# non-root 사용자 (Umbrel 보안 요구사항)
+RUN addgroup -S appgrp && adduser -S appusr -G appgrp
+
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/client/dist ./client/dist
 COPY --from=builder /app/package.json .
+
+RUN chown -R appusr:appgrp /app
+
+USER appusr
 
 EXPOSE 3000
 
