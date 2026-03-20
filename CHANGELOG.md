@@ -4,6 +4,34 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ---
 
+## [1.1.0] — 2026-03-20
+
+### Changed — macOS 플로팅 패널 UI 대개편
+
+MainPanel(화면 75%) 해체 → 독립 드래그 가능 MacWindow 패널 시스템으로 전환. 3D 지구본이 전체 배경으로 노출.
+
+#### 신규 컴포넌트
+- **MacWindow**: macOS 스타일 플로팅 패널 래퍼 (드래그, 최소화, 닫기)
+- **useDrag 훅**: viewport 클램핑, 마우스/터치 드래그 지원
+- **WindowDock**: 최소화된 윈도우 복원 Dock (하단 중앙)
+- **TxTooltip**: BitfeedFloor 호버 시 컴팩트 6줄 TX 정보 카드
+- **TxSankeyDiagram**: SVG Sankey input→output 흐름도
+
+#### 패널 재구성
+- TxStreamPanel, BlockVerifyPanel → 독립 MacWindow로 추출
+- HudPanels, ChainStrip → MacWindow 래퍼 적용 (드래그 가능)
+- BitfeedFloor → 전체 너비 하단 200px 바 (항상 표시)
+- MainPanel.jsx 삭제
+
+#### 비주얼 개선
+- 수수료 색상: 4단계 → 6단계 그라데이션 (빨강/주황/노랑/초록/시안/파랑)
+- TxDetailPanel: 600px 리디자인, Sankey 다이어그램 + 수수료 공식 카드
+- settled 블록 투명도 0x88 → 0xCC (더 선명), 블록 테두리 제거
+- frosted glass 24px blur + saturate, 스프링 전환 커브
+- 타이포그래피 최소 11px 적용
+
+---
+
 ## [1.0.4] — 2026-03-20
 
 ### Changed — UI 리디자인: macOS Dark Mode + Bitfeed 질감
