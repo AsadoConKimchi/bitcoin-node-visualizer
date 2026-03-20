@@ -4,6 +4,41 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ---
 
+## [1.1.1] — 2026-03-20
+
+### Fixed — 서버 모드 버그 4건
+
+#### Bug 1: TxDetailPanel — Fee "—", Sankey "???" 표시
+- **근본 원인**: `getrawtransaction(txid, true)` = verbosity=1 → `vin[].prevout` 미포함
+- `server/rpc.js`: verbosity `true` → `2`로 변경 (prevout 데이터 포함)
+- `TxDetailPanel.jsx`: `normalizeRpcTx()` — `v.prevout.value` (BTC→sats), `v.prevout.scriptPubKey.address/type` 매핑 수정
+
+#### Bug 2: TX 검증 상세보기 누락
+- `TxStreamPanel.jsx`: TX 행에 🔍 상세보기 아이콘 추가
+- 아이콘 클릭 시 `onTxClick()` → TxDetailPanel 모달 열림 (기존 행 클릭 = inline expansion 유지)
+
+#### Bug 3: 노드 위치가 유럽으로 표시
+- **근본 원인**: `.onion`/`.i2p` localaddress GeoIP 실패 → 피어 median fallback → 유럽 중앙 좌표
+- `server/index.js`: `.onion`/`.i2p` 주소 필터링, 피어 median fallback 제거
+- 외부 IP 감지 (`api.ipify.org`) → GeoIP → 캐시 (서버 시작 시 1회)
+- `nodeData.js`: `nodeLocation` null 시 기본값(서울) 유지
+
+#### Bug 4: BitfeedFloor 블록 레이아웃 빈 공간
+- **근본 원인**: `COLUMN_COUNT=40` 고정 → 전체 너비에서 빈 공간 과다
+- `BitfeedFloor.jsx`: 동적 컬럼 수 (`Math.floor(width / 12)` — 1400px → ~116컬럼)
+- 좌측 정렬 (중앙 정렬 제거), 블록 간 1px 간격으로 밀집 배치
+- 미확인 TX 영역 점선 구분선 추가
+
+### Changed
+- Docker 빌드: arm64 제거, amd64만 빌드 (Umbrel Home = Intel N100)
+- GitHub Actions: QEMU setup 스텝 제거
+
+### Deployment
+- **Docker**: `v1.1.1` 태그 → GitHub Actions amd64 빌드 → GHCR push
+- **Umbrel**: `umbrel-app-store` 레포 동기화 — version `1.1.0` → `1.1.1`
+
+---
+
 ## [1.1.0] — 2026-03-20
 
 ### Changed — macOS 플로팅 패널 UI 대개편
