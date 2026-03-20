@@ -240,13 +240,12 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className }, ref) {
           }
           const expectedFloorY = h - maxH - b.h - 2;
           if (b.y < expectedFloorY - 2) {
-            // 블록이 떠있음 → 재낙하
+            // 블록이 떠있음 (아래 지지대 제거됨) → 재낙하
             b.settled = false;
             b.floorY = expectedFloorY;
-          } else if (b.y > expectedFloorY + 2) {
-            // 블록이 겹침/아래로 밀림 → 올바른 위치로 스냅
-            b.y = expectedFloorY;
+            b.vy = 0;
           }
+          // 위로 스냅하는 else if 제거 — settled 블록은 위로 이동하면 안 됨
           continue;
         }
 

@@ -7,8 +7,8 @@ const BITNODES_API = 'https://bitnodes.io/api/v1/snapshots/latest/';
 const MAX_NODES = 500;
 const REFRESH_INTERVAL = 5 * 60 * 1000; // 5분
 
-// "내 노드" 기본 위치 (서울)
-export const MY_NODE = { lat: 37.5665, lng: 126.978, isMyNode: true };
+// "내 노드" 기본 위치 (서울) — 서버 모드에서 동적 업데이트
+export let MY_NODE = { lat: 37.5665, lng: 126.978, isMyNode: true };
 
 // 폴백: 주요 도시 기반 더미 노드
 function getFallbackNodes() {
@@ -108,6 +108,17 @@ export class NodeDataManager {
     this._nodes = bgPoints;
 
     if (this._serverUrl) {
+      // 서버 모드: /api/info에서 노드 위치 가져와 MY_NODE 업데이트
+      try {
+        const infoRes = await fetch(`${this._serverUrl}/api/info`, { signal });
+        if (infoRes.ok) {
+          const info = await infoRes.json();
+          if (info.nodeLocation?.lat != null && info.nodeLocation?.lng != null) {
+            MY_NODE = { lat: info.nodeLocation.lat, lng: info.nodeLocation.lng, isMyNode: true };
+          }
+        }
+      } catch (_) { /* 위치 조회 실패 시 기본값 유지 */ }
+
       // 서버 모드: bitnodes 배경 노드 제거 — 실제 피어 + 내 노드만 표시
       const peerPoints = await this._fetchPeers(signal);
       if (!this._destroyed) this._onUpdate([...peerPoints, MY_NODE]);

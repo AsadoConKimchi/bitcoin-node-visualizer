@@ -60,6 +60,32 @@ app.get('/api/info', async (req, res) => {
       rpc.getNetworkInfo(),
       rpc.getPeerInfo(),
     ]);
+
+    // 노드 위치: localaddresses → GeoIP, 없으면 피어 median
+    let nodeLocation = null;
+    const localAddrs = networkInfo.localaddresses || [];
+    for (const la of localAddrs) {
+      const geo = geoip.lookup(la.address);
+      if (geo?.ll) {
+        nodeLocation = { lat: geo.ll[0], lng: geo.ll[1] };
+        break;
+      }
+    }
+    if (!nodeLocation && peerInfo.length > 0) {
+      // fallback: 피어 위치 median
+      const lats = [], lngs = [];
+      for (const p of peerInfo) {
+        const ip = p.addr.split(':')[0].replace(/^\[/, '').replace(/\]$/, '');
+        const geo = geoip.lookup(ip);
+        if (geo?.ll) { lats.push(geo.ll[0]); lngs.push(geo.ll[1]); }
+      }
+      if (lats.length > 0) {
+        lats.sort((a, b) => a - b);
+        lngs.sort((a, b) => a - b);
+        const mid = Math.floor(lats.length / 2);
+        nodeLocation = { lat: lats[mid], lng: lngs[mid] };
+      }
+    }
     // DA 진행률 계산
     const daBlocks = chainInfo.blocks % 2016;
     const difficultyAdjustment = {
@@ -144,6 +170,8 @@ app.get('/api/info', async (req, res) => {
       networks,
       torPeers,
       i2pPeers,
+      // 노드 위치
+      nodeLocation,
       // pruning
       pruned: chainInfo.pruned || false,
       pruneHeight: chainInfo.pruneheight || null,

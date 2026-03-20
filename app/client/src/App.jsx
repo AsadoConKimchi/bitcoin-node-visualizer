@@ -204,7 +204,7 @@ export default function App() {
       .map(peer => ({
         startLat: MY_NODE.lat, startLng: MY_NODE.lng,
         endLat: peer.lat, endLng: peer.lng,
-        color: 'rgba(247,147,26,0.25)',
+        color: 'rgba(247,147,26,0.5)',
         type: 'connection',
       }));
   }, [nodePoints]);

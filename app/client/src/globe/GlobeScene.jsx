@@ -76,7 +76,7 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings }, r
     globe.pointLat('lat');
     globe.pointLng('lng');
     globe.pointAltitude(0.015);
-    globe.pointRadius((d) => (d.isMyNode ? 2.5 : d.isMyPeer ? 0.7 : 0.25));
+    globe.pointRadius((d) => (d.isMyNode ? 1.0 : d.isMyPeer ? 0.7 : 0.25));
     globe.pointColor((d) => (d.isMyNode ? '#f7931a' : d.isMyPeer ? '#22c55e' : '#4a7dff'));
     globe.pointsMerge(false);
 
@@ -87,8 +87,8 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings }, r
     globe.arcEndLat('endLat');
     globe.arcEndLng('endLng');
     globe.arcColor('color');
-    globe.arcAltitude(d => d.type === 'connection' ? 0.12 : 0.25);
-    globe.arcStroke(d => d.type === 'connection' ? 0.15 : d.type === 'block' ? 1.5 : 0.6);
+    globe.arcAltitude(d => d.type === 'connection' ? 0.08 : 0.25);
+    globe.arcStroke(d => d.type === 'connection' ? 0.5 : d.type === 'block' ? 1.5 : 0.6);
     globe.arcDashLength(d => d.type === 'connection' ? 1.0 : 0.6);
     globe.arcDashGap(d => d.type === 'connection' ? 0 : 0.3);
     globe.arcDashAnimateTime(d => d.type === 'connection' ? 0 : d.type === 'block' ? 600 : 1200);
