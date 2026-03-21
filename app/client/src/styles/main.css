@@ -170,6 +170,16 @@ body {
   100% { opacity: 0.6; }
 }
 
+/* StepProgressBar 활성 세그먼트 펄스 */
+@keyframes stepPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.step-pulse {
+  animation: stepPulse 1s ease-in-out infinite;
+}
+
 /* CompactBlock 패널 진입 애니메이션 */
 @keyframes fadeScaleIn {
   from {

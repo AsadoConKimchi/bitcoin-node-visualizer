@@ -123,7 +123,6 @@ export default function App() {
   // ── 윈도우 상태 (MacWindow 시스템) ──
   const [windowStates, setWindowStates] = useState({
     nodeInfo: { visible: true, minimized: false },
-    chain: { visible: true, minimized: false },
     txStream: { visible: false, minimized: false },
     blockVerify: { visible: false, minimized: false },
   });
@@ -348,9 +347,8 @@ export default function App() {
         ...ws,
         txStream: { ...ws.txStream, visible: next.verifyCenter },
         blockVerify: { ...ws.blockVerify, visible: next.verifyCenter },
-        // P2P 모드일 때만 NODE INFO + CHAIN 표시
+        // P2P 모드일 때만 NODE INFO 표시
         nodeInfo: { ...ws.nodeInfo, visible: next.p2p },
-        chain: { ...ws.chain, visible: next.p2p },
       }));
 
       if (next.verifyCenter) {
@@ -553,7 +551,6 @@ export default function App() {
       setWindowStates(ws => ({
         ...ws,
         nodeInfo: { ...ws.nodeInfo, visible: false },
-        chain: { ...ws.chain, visible: false },
         txStream: { ...ws.txStream, visible: true },
         blockVerify: { ...ws.blockVerify, visible: true },
       }));
@@ -652,14 +649,6 @@ export default function App() {
         title: 'NODE INFO',
         titleColor: 'text-text-primary',
         onRestore: () => setWinState('nodeInfo', { minimized: false }),
-      });
-    }
-    if (windowStates.chain.visible && windowStates.chain.minimized) {
-      items.push({
-        key: 'chain',
-        title: 'CHAIN',
-        titleColor: 'text-text-primary',
-        onRestore: () => setWinState('chain', { minimized: false }),
       });
     }
     if (windowStates.txStream.visible && windowStates.txStream.minimized) {
@@ -782,21 +771,14 @@ export default function App() {
         visible={!visible.verifyCenter && mempoolBlocks.length > 0}
       />
 
-      {/* 체인 스트립 — MacWindow */}
-      {windowStates.chain.visible && (
-        <ChainStrip
-          recentBlocks={recentBlocks}
-          onBlockClick={handleBlockClick}
-          onReplayCompactBlock={handleReplayCompactBlock}
-          hudHeight={hudHeight}
-          sourceType={sourceType}
-          minimized={windowStates.chain.minimized}
-          onClose={() => setWinState('chain', { visible: false })}
-          onMinimize={() => setWinState('chain', { minimized: !windowStates.chain.minimized })}
-          zIndex={getZIndex('chain')}
-          onFocus={() => focusWindow('chain')}
-        />
-      )}
+      {/* 체인 스트립 — 가로 상단 바 */}
+      <ChainStrip
+        recentBlocks={recentBlocks}
+        onBlockClick={handleBlockClick}
+        onReplayCompactBlock={handleReplayCompactBlock}
+        sourceType={sourceType}
+        visible={visible.p2p}
+      />
 
       {/* 블록 상세 패널 */}
       {selectedBlock && (
@@ -805,6 +787,7 @@ export default function App() {
           onClose={() => setSelectedBlock(null)}
           onTxClick={handleTxClick}
           sourceType={sourceType}
+          onAddressClick={(addr) => { setSelectedBlock(null); setSelectedAddress(addr); }}
         />
       )}
 
@@ -814,6 +797,7 @@ export default function App() {
           tx={selectedTx}
           onClose={() => setSelectedTx(null)}
           sourceType={sourceType}
+          onAddressClick={(addr) => { setSelectedTx(null); setSelectedAddress(addr); }}
         />
       )}
 

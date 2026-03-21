@@ -2,32 +2,48 @@ import React, { useState, useCallback } from 'react';
 import MacWindow from './MacWindow.jsx';
 import { feeColor } from '../utils/colors.js';
 
-// ── MiniProgress (6단계 도트) ──
-function MiniProgress({ steps }) {
+// ── StepProgressBar (6세그먼트 바 + 현재 단계명) ──
+function StepProgressBar({ steps }) {
   if (!steps?.length) return null;
+
+  // 현재 활성 단계 찾기
+  const activeStep = steps.find(s => s.status === 'active');
+  const allDone = steps.every(s => s.status === 'done');
+  const hasFail = steps.some(s => s.status === 'fail');
+
   return (
-    <span className="inline-flex gap-[3px] items-center ml-1">
-      {steps.map((step, i) => {
-        const color = step.status === 'done' ? '#22c55e'
-          : step.status === 'fail' ? '#ef4444'
-          : step.status === 'active' ? '#f7931a'
-          : '#4b5563';
-        return (
-          <span
-            key={i}
-            style={{
-              display: 'inline-block',
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              backgroundColor: color,
-              transition: 'background-color 0.3s',
-            }}
-            title={step.name}
-          />
-        );
-      })}
-    </span>
+    <div className="flex flex-col items-end gap-0.5 ml-1 min-w-[120px]">
+      {/* 세그먼트 바 */}
+      <div className="flex gap-[2px] w-[120px] h-[8px]">
+        {steps.map((step, i) => {
+          let bg;
+          let className = 'flex-1 rounded-sm transition-all duration-300';
+          if (step.status === 'done') bg = '#22c55e';
+          else if (step.status === 'fail') bg = '#ef4444';
+          else if (step.status === 'active') {
+            bg = '#f7931a';
+            className += ' step-pulse';
+          } else {
+            bg = '#1e2328';
+          }
+          return (
+            <div
+              key={i}
+              className={className}
+              style={{ backgroundColor: bg }}
+              title={step.name}
+            />
+          );
+        })}
+      </div>
+      {/* 현재 단계명 텍스트 */}
+      <div className="text-[9px] font-mono leading-none whitespace-nowrap"
+           style={{
+             color: hasFail ? '#ef4444' : allDone ? '#22c55e' : '#f7931a',
+           }}>
+        {hasFail ? '실패' : allDone ? '완료' : activeStep?.name || '대기'}
+      </div>
+    </div>
   );
 }
 
@@ -52,7 +68,9 @@ function InlineStepRow({ step }) {
   return (
     <div>
       <div
-        className={`flex justify-between py-1 gap-2 ${detail ? 'cursor-pointer hover:bg-white/5 rounded px-1 -mx-1' : ''}`}
+        className={`flex justify-between py-1 gap-2
+                    ${step.status === 'active' ? 'bg-btc-orange/8 rounded px-1 -mx-1' : ''}
+                    ${detail ? 'cursor-pointer hover:bg-white/5 rounded px-1 -mx-1' : ''}`}
         onClick={(e) => { e.stopPropagation(); detail && setExpanded(!expanded); }}
       >
         <span className={`${color} min-w-[14px] text-sm`}>{icon}</span>
@@ -148,7 +166,7 @@ export default function TxStreamPanel({
                   boxShadow: '0 0 12px rgba(34,197,94,0.3)',
                 } : undefined}
               >
-                {/* Line 1: icon + txid + mini dots */}
+                {/* Line 1: icon + txid + step progress bar */}
                 <div className="flex items-center gap-2">
                   <span className={`text-sm min-w-[14px] ${isFailed ? 'text-error' : isDone ? 'text-success' : 'text-warning'}`}>
                     {isFailed ? '✗' : isDone ? '✓' : '⟳'}
@@ -159,10 +177,16 @@ export default function TxStreamPanel({
                   {isFailed && tx.failReason && (
                     <span className="text-error text-[11px] ml-1">{tx.failReason}</span>
                   )}
-                  <span className="ml-auto text-text-dim text-[11px] flex items-center">
-                    {isFailed ? '반려' : isAnimating ? '→ 멤풀' : snap?.steps
-                      ? <MiniProgress steps={snap.steps} />
-                      : '검증중'}
+                  <span className="ml-auto">
+                    {isFailed ? (
+                      <span className="text-error text-[11px]">반려</span>
+                    ) : isAnimating ? (
+                      <span className="text-mempool-green text-[11px]">→ 멤풀</span>
+                    ) : snap?.steps ? (
+                      <StepProgressBar steps={snap.steps} />
+                    ) : (
+                      <span className="text-text-dim text-[11px]">검증중</span>
+                    )}
                   </span>
                 </div>
                 {/* Line 2: feeRate · size/weight · vin→vout · 상세보기 */}
