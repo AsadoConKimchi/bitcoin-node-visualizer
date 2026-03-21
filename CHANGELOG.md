@@ -4,6 +4,97 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ---
 
+## [1.3.0] — 2026-03-21
+
+### Changed — UI Overhaul: mempool.space 수준의 상세 패널 + 검증 시각화 개선
+
+교육적 목적에 맞게 정보 밀도와 시각적 품질을 mempool.space 수준으로 대폭 개선.
+
+#### Sprint 1: TX Detail + Sankey 재설계
+- **TxSankeyDiagram**: N*M stroke 경로 → **filled-area cubic bezier Sankey** 완전 재작성
+  - purple-blue 그라데이션 (mempool.space 스타일)
+  - SVG viewBox 360px → 520px, 8개 초과 시 "…N more" 요약 바
+  - "Hide diagram" 토글 버튼 추가
+- **TxDetailPanel**: 600px → **720px**, 5개 섹션 구조로 재설계
+  - Header: TXID + CopyButton + 확인 배지 (Confirmed/Unconfirmed)
+  - Info Grid: 2열 CSS grid (Timestamp, Fee, Fee Rate, Size, Vsize, Weight)
+  - Feature 배지: SegWit/Taproot/RBF/OP_RETURN/Multisig 자동 감지 (colored pill)
+  - Inputs & Outputs: 2열 나란히 배치 (빨간/초록 원 + 스크립트 타입 배지)
+  - Details: 접이식 (Version, Locktime)
+  - `normalizeRpcTx`에 `version`, `locktime` 필드 추가
+  - 주소 클릭 → `onAddressClick` → AddressDetailPanel 이동
+
+#### Sprint 2: Block Detail 재설계
+- **BlockDetailPanel**: 400px → **780px**, 2열 레이아웃으로 재설계
+  - Block Navigation: "< Block #941,513 >" prev/next 화살표
+  - 좌측(~45%): Hash+Copy, Timestamp(절대+상대), Size, Weight, Fee span, Total fees, Subsidy+fees, Miner
+  - 우측(~55%): **Block Treemap** (TX fee rate별 색상 사각형 시각화) + Fee 분포 차트
+  - Details: 접이식 (Difficulty, Nonce, Bits, Merkle root, Previous block hash)
+  - TX 목록: Coinbase TX 식별, 페이지네이션 유지
+  - `calculateSubsidy(height)` — 블록 보상 계산 유틸 추가
+
+#### Sprint 3: TX Verification 시각화 개선
+- **TxStreamPanel**: MiniProgress 6px 도트 → **StepProgressBar** 교체
+  - 120px 너비, 8px 높이 세그먼트 바
+  - 색상: waiting(#1e2328), active(pulsing #f7931a), done(#22c55e), fail(#ef4444)
+  - **바 아래 현재 단계명 텍스트 표시** (핵심 개선: "서명 검증 중…")
+  - active 세그먼트: CSS `@keyframes stepPulse` 애니메이션
+  - 인라인 상세: 현재 active step에 하이라이트 배경색
+
+#### Sprint 4: Chain Strip 가로 상단 배치
+- **ChainStrip**: MacWindow 세로(200×380px) → **가로 상단 바**로 완전 재설계
+  - `position: absolute; top: 40px` (ToggleBar 아래)
+  - 블록 카드: 130px 너비, fee rate, TX 수, 채굴풀, 경과 시간 표시
+  - 최신 블록 좌측 강조 (150px, orange 테두리)
+  - 블록 간 연결선 (수평선) + PendingCard
+  - 수평 스크롤: 좌측으로 스크롤하면 과거 블록 lazy load
+  - MacWindow props 제거 (minimized, onClose, onMinimize, zIndex 등)
+
+#### 공유 유틸리티 (새 파일)
+- `client/src/utils/format.jsx`:
+  - `relativeTime(unixTimestamp)` — "3h ago" 상대 시간
+  - `calculateSubsidy(height)` — 블록 보상 sats
+  - `formatBtc(sats)` — BTC 포맷
+  - `shortAddr(addr)` — 주소 축약
+  - `CopyButton` — 클립보드 복사 컴포넌트
+  - `detectTxFeatures(vin, vout)` — SegWit/Taproot/RBF 감지
+  - `scriptTypeLabel(type)` — 스크립트 타입 표시
+
+#### App.jsx 변경
+- `windowStates`에서 `chain` 제거 (더 이상 MacWindow가 아님)
+- TxDetailPanel에 `onAddressClick` prop → `setSelectedAddress` 연결
+- BlockDetailPanel에 `onAddressClick` prop → `setSelectedAddress` 연결
+- ChainStrip: `visible={visible.p2p}` prop으로 P2P 모드 시만 표시
+
+### Deployment
+- **Vercel**: main push → 자동 배포
+- **Docker**: `v1.3.0` 태그 → GitHub Actions amd64 빌드 → GHCR push
+- **Umbrel**: `umbrel-app-store` 레포 동기화 — version `1.2.0` → `1.3.0`
+
+#### 배포 절차 (향후 참고)
+1. `cd app && npm run build` — 빌드 확인
+2. 메인 레포 커밋 & 푸시 (`git push origin main`)
+3. 태그 생성 & 푸시 (`git tag v1.X.0 && git push origin v1.X.0`)
+   → `.github/workflows/docker-publish.yml`가 자동 트리거
+   → GitHub Actions에서 amd64 Docker 이미지 빌드 → `ghcr.io/asadoconkimchi/bitcoin-node-visualizer:vX.X.X` push
+4. `gh run watch <run-id> --exit-status`로 빌드 완료 대기
+5. Umbrel 앱스토어 레포 업데이트:
+   - `umbrel-app-store/asadoconkimchi-bitcoin-node-visualizer/umbrel-app.yml` — version, releaseNotes
+   - `umbrel-app-store/asadoconkimchi-bitcoin-node-visualizer/docker-compose.yml` — image 태그
+   - 커밋 & 푸시 (`git push origin main`)
+
+### Files Modified
+- `client/src/utils/format.jsx` — 신규 (공유 유틸)
+- `client/src/components/TxSankeyDiagram.jsx` — 완전 재작성
+- `client/src/components/TxDetailPanel.jsx` — 완전 재작성
+- `client/src/components/BlockDetailPanel.jsx` — 완전 재작성
+- `client/src/components/TxStreamPanel.jsx` — MiniProgress → StepProgressBar
+- `client/src/components/ChainStrip.jsx` — 가로 배치 완전 재작성
+- `client/src/App.jsx` — ChainStrip 배치 변경, onAddressClick 연결
+- `client/src/styles/main.css` — stepPulse 애니메이션 추가
+
+---
+
 ## [1.2.0] — 2026-03-20
 
 ### Changed — 디자인 크리틱 9가지 UX 개선 + TX 데이터 정확성 수정
