@@ -1,7 +1,7 @@
 import React from 'react';
 
 const BUTTONS = [
-  { key: 'p2p', label: 'P2P', icon: '◉' },
+  { key: 'p2p', label: '노드 정보', icon: '◉' },
   { key: 'verifyCenter', label: '검증센터', icon: '▣' },
   { key: 'internals', label: 'Internals', icon: '🔧' },
 ];

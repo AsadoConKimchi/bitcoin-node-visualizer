@@ -497,6 +497,18 @@ export default function App() {
           }
 
           addArcs(arcs);
+
+          // 릴레이 전파: 내 노드 → 나머지 모든 피어
+          const relayPeers = peers.filter(n => n !== src);
+          if (relayPeers.length > 0) {
+            setTimeout(() => {
+              addArcs(relayPeers.map(p => ({
+                startLat: MY_NODE.lat, startLng: MY_NODE.lng,
+                endLat: p.lat, endLng: p.lng,
+                color: '#93c5fd', type: 'tx',
+              })));
+            }, 150);
+          }
         }
       }
 
@@ -518,13 +530,27 @@ export default function App() {
       if (data.height != null) setBlockHeight(data.height);
 
       const peers = nodePointsRef.current.filter((n) => n.isMyPeer);
+      const blockSrcPeers = pickRandom(peers.length ? peers : nodePointsRef.current.filter((n) => !n.isMyNode), 4);
       addArcs(
-        pickRandom(peers.length ? peers : nodePointsRef.current.filter((n) => !n.isMyNode), 4).map((n) => ({
+        blockSrcPeers.map((n) => ({
           startLat: n.lat, startLng: n.lng,
           endLat: MY_NODE.lat, endLng: MY_NODE.lng,
           color: '#f7931a', type: 'block',
         }))
       );
+
+      // 릴레이 전파: 내 노드 → 나머지 모든 피어
+      const blockSrcSet = new Set(blockSrcPeers.map(n => `${n.lat},${n.lng}`));
+      const blockRelayPeers = peers.filter(n => !blockSrcSet.has(`${n.lat},${n.lng}`));
+      if (blockRelayPeers.length > 0) {
+        setTimeout(() => {
+          addArcs(blockRelayPeers.map(p => ({
+            startLat: MY_NODE.lat, startLng: MY_NODE.lng,
+            endLat: p.lat, endLng: p.lng,
+            color: '#fbbf24', type: 'block',
+          })));
+        }, 200);
+      }
 
       if (sourceType !== 'server') {
         const bgNodes = nodePointsRef.current.filter((n) => !n.isMyNode && !n.isMyPeer);

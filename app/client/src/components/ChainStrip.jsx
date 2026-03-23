@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { relativeTime } from '../utils/format.jsx';
 
 const REST_BASE = 'https://mempool.space/api';
-const LOAD_BATCH = 10;
+const LOAD_BATCH = 20;
 
 function BlockCard({ block, isLatest, onClick, onReplay }) {
   return (
@@ -74,10 +74,12 @@ export default function ChainStrip({
   const [olderBlocks, setOlderBlocks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [reachedGenesis, setReachedGenesis] = useState(false);
+  const oldestBlockRef = useRef(null);
+  const isPreloadRef = useRef(false);
 
   const blocks = [...recentBlocks]
     .sort((a, b) => (a.height ?? 0) - (b.height ?? 0))
-    .slice(-5);
+    .slice(-10);
 
   // 전체 블록 목록: 오래된 순 → 최신 순
   const allBlocks = [...olderBlocks, ...blocks]
@@ -85,11 +87,18 @@ export default function ChainStrip({
 
   const latestHeight = blocks[blocks.length - 1]?.height;
 
+  // oldestBlockRef 동기화
+  useEffect(() => {
+    if (allBlocks.length > 0) {
+      oldestBlockRef.current = allBlocks[0];
+    }
+  }, [allBlocks]);
+
   // 이전 블록 로드 (좌로 스크롤 시)
   const loadOlderBlocks = useCallback(async () => {
     if (loading || reachedGenesis) return;
 
-    const oldest = allBlocks[0];
+    const oldest = oldestBlockRef.current;
     if (!oldest?.hash && oldest?.height == null) return;
 
     setLoading(true);
@@ -146,23 +155,37 @@ export default function ChainStrip({
       console.warn('[ChainStrip] 이전 블록 로드 실패:', err);
     }
     setLoading(false);
-  }, [loading, reachedGenesis, allBlocks]);
+  }, [loading, reachedGenesis]);
 
   // 스크롤 좌측 끝 감지
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    if (el.scrollLeft < 60) {
+    if (el.scrollLeft < 200) {
       loadOlderBlocks();
     }
   }, [loadOlderBlocks]);
 
-  // 최초 렌더 시 스크롤을 우측(최신)으로
+  // 초기 이전 블록 프리로드 (스크롤 가능하게)
+  const preloadedRef = useRef(false);
+  useEffect(() => {
+    if (preloadedRef.current || !blocks.length) return;
+    preloadedRef.current = true;
+    isPreloadRef.current = true;
+    loadOlderBlocks();
+  }, [blocks.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 새 블록 도착 시에만 스크롤을 우측(최신)으로 (preload 후에는 안 이동)
+  const prevBlockCountRef = useRef(0);
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) {
+    if (!el) return;
+    const newCount = recentBlocks.length;
+    // 최초 렌더 또는 새 블록 도착 시에만 우측으로
+    if (prevBlockCountRef.current === 0 || newCount > prevBlockCountRef.current) {
       el.scrollLeft = el.scrollWidth;
     }
+    prevBlockCountRef.current = newCount;
   }, [recentBlocks.length]);
 
   return (

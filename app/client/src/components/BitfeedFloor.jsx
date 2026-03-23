@@ -21,6 +21,8 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
   const dimsRef = useRef({ w: 600, h: 200 });
   const columnCountRef = useRef(Math.floor(600 / COL_PIXEL_WIDTH));
   const columnsRef = useRef(new Float32Array(columnCountRef.current));
+  const stableColumnsRef = useRef(new Float32Array(columnCountRef.current));
+  const dirtyRef = useRef(true);
   const animRef = useRef(null);
 
   // 호버 상태
@@ -111,6 +113,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
 
     if (blocks.length > MAX_BLOCKS) {
       blocks.shift();
+      dirtyRef.current = true;
     }
   }, [calcSize, findBestColumn, updateColumnHeight]);
 
@@ -143,6 +146,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
     };
 
     blocksRef.current.push(block);
+    dirtyRef.current = true;
   }, [calcSize]);
 
   // 블록 채굴 sweep
@@ -158,9 +162,11 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
         b.sweeping = true;
       }
     }
+    dirtyRef.current = true;
 
     setTimeout(() => {
       blocksRef.current = blocksRef.current.filter((b) => !b.sweeping || b.opacity > 0.05);
+      dirtyRef.current = true;
     }, 600);
   }, []);
 
@@ -260,6 +266,8 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
         const newColCount = Math.max(20, Math.floor(width / COL_PIXEL_WIDTH));
         columnCountRef.current = newColCount;
         columnsRef.current = new Float32Array(newColCount);
+        stableColumnsRef.current = new Float32Array(newColCount);
+        dirtyRef.current = true;
       }
     });
     resizeObs.observe(canvas.parentElement);
@@ -273,24 +281,9 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
       const colCount = columnCountRef.current;
       const hovTxid = hoveredTxRef.current;
 
-      // 매 프레임 컬럼 높이 재계산
-      cols.fill(0);
-      for (const b of blocks) {
-        if (b.settled && !b.sweeping) {
-          for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
-            if (j < colCount) cols[j] += b.h + 1;
-          }
-        }
-      }
-
-      // 물리 업데이트
+      // sweep, 파편 처리 (먼저)
       for (let i = blocks.length - 1; i >= 0; i--) {
         const b = blocks[i];
-
-        if (b.settled && !b.sweeping) continue;
-        if (b.settled) continue;
-
-        // sweep 중인 블록
         if (b.sweeping) {
           b.y += b.vy;
           b.opacity -= 0.03;
@@ -299,8 +292,6 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
           }
           continue;
         }
-
-        // 반려 TX 파편 처리
         if (b.shards) {
           let allDone = true;
           for (const s of b.shards) {
@@ -310,35 +301,76 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
             s.opacity -= 0.025;
             if (s.opacity > 0) allDone = false;
           }
-          if (allDone) {
-            blocks.splice(i, 1);
+          if (allDone) blocks.splice(i, 1);
+        }
+      }
+
+      // Phase 2: dirty일 때만 settled 블록 전체 재계산
+      const stableCols = stableColumnsRef.current;
+
+      if (dirtyRef.current) {
+        stableCols.fill(0);
+        // settled 블록만 y 큰 순 정렬 후 cols 재빌드
+        const settledBlocks = [];
+        for (const b of blocks) {
+          if (b.sweeping || b.shards || b.rejected) continue;
+          if (b.settled) settledBlocks.push(b);
+        }
+        settledBlocks.sort((a, b) => b.y - a.y);
+
+        for (const b of settledBlocks) {
+          let maxH = 0;
+          for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
+            if (j < colCount && stableCols[j] > maxH) maxH = stableCols[j];
+          }
+          const correctFloorY = h - maxH - b.h - 1;
+          b.y = correctFloorY;
+          b.floorY = correctFloorY;
+          for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
+            if (j < colCount) stableCols[j] += b.h + 1;
+          }
+        }
+        dirtyRef.current = false;
+      }
+
+      // Phase 3: falling 블록 + 반려 블록 처리 (매 프레임)
+      for (const b of blocks) {
+        if (b.sweeping || b.shards) continue;
+
+        if (b.rejected && !b.settled) {
+          b.vy = Math.min(b.vy + GRAVITY, TERMINAL_VEL);
+          b.y += b.vy;
+          if (b.y >= b.floorY) {
+            b.y = b.floorY;
+            b.vy = 0;
+            b.shards = createShards(b);
           }
           continue;
         }
 
-        // 낙하 중: floorY 동적 재계산
-        if (!b.rejected) {
+        if (!b.settled) {
+          // stableCols 기반으로 floorY 계산
           let maxH = 0;
           for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
-            if (j < colCount && cols[j] > maxH) maxH = cols[j];
+            if (j < colCount && stableCols[j] > maxH) maxH = stableCols[j];
           }
           b.floorY = h - maxH - b.h - 1;
-        }
-
-        b.vy = Math.min(b.vy + GRAVITY, TERMINAL_VEL);
-        b.y += b.vy;
-
-        if (b.y >= b.floorY) {
-          b.y = b.floorY;
-          b.vy = 0;
-
-          if (b.rejected) {
-            b.shards = createShards(b);
-          } else {
+          b.vy = Math.min(b.vy + GRAVITY, TERMINAL_VEL);
+          b.y += b.vy;
+          if (b.y >= b.floorY) {
+            b.y = b.floorY;
+            b.vy = 0;
             b.settled = true;
+            // 착지 시 stableCols 증분 업데이트
+            for (let j = b.startCol; j < b.startCol + b.spanCols; j++) {
+              if (j < colCount) stableCols[j] += b.h + 1;
+            }
           }
         }
       }
+
+      // cols를 stableCols와 동기화 (점선 표시용)
+      cols.set(stableCols);
 
       // 렌더링
       ctx.clearRect(0, 0, w, h);

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import MacWindow from './MacWindow.jsx';
 import { feeColor } from '../utils/colors.js';
 
@@ -100,6 +100,20 @@ export default function TxStreamPanel({
   onFocus,
 }) {
   const [expandedTxid, setExpandedTxid] = useState(null);
+  const [detailTx, setDetailTx] = useState(null);
+
+  // TX 스냅샷 복사본 — txStream에서 제거되어도 패널 유지
+  useEffect(() => {
+    if (!expandedTxid) { setDetailTx(null); return; }
+    const found = txStream.find(t => t.txid === expandedTxid);
+    if (found?.verifySnapshot) {
+      setDetailTx({
+        ...found,
+        verifySnapshot: { ...found.verifySnapshot, steps: [...found.verifySnapshot.steps] },
+      });
+    }
+    // found === undefined (TX 제거됨) → detailTx 유지
+  }, [expandedTxid, txStream]);
 
   const handleClick = useCallback((txid) => {
     setExpandedTxid((prev) => prev === txid ? null : txid);
@@ -113,146 +127,181 @@ export default function TxStreamPanel({
   const doneCount = txStream.filter((t) => t.status === 'done' || t.status === 'animating').length;
 
   return (
-    <MacWindow
-      title="TX VERIFICATION"
-      titleColor="text-tx-blue"
-      initialPosition={{ x: typeof window !== 'undefined' ? window.innerWidth - 340 : 800, y: 56 }}
-      onClose={onClose}
-      onMinimize={onMinimize}
-      minimized={minimized}
-      zIndex={zIndex}
-      onFocus={onFocus}
-      width={320}
-      height="45vh"
-      headerRight={
-        <span className="text-muted text-[11px] font-mono">
-          {txCount}건
-          {verifyingCount > 0 && ` ⟳${verifyingCount}`}
-          {failedCount > 0 && <span className="text-error ml-1">✗{failedCount}</span>}
-        </span>
-      }
-    >
-      {/* TX 리스트 */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-1">
-        {txStream.length === 0 && (
-          <div className="text-muted-dim text-sm text-center py-4">TX 대기 중…</div>
-        )}
+    <>
+      <MacWindow
+        title="TX VERIFICATION"
+        titleColor="text-tx-blue"
+        initialPosition={{ x: 16, y: 56 }}
+        onClose={onClose}
+        onMinimize={onMinimize}
+        minimized={minimized}
+        zIndex={zIndex}
+        onFocus={onFocus}
+        width={320}
+        height="45vh"
+        headerRight={
+          <span className="text-muted text-[11px] font-mono">
+            {txCount}건
+            {verifyingCount > 0 && ` ⟳${verifyingCount}`}
+            {failedCount > 0 && <span className="text-error ml-1">✗{failedCount}</span>}
+          </span>
+        }
+      >
+        {/* TX 리스트 */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-1">
+          {txStream.length === 0 && (
+            <div className="text-muted-dim text-sm text-center py-4">TX 대기 중…</div>
+          )}
 
-        {txStream.map((tx) => {
-          const isDone = tx.status === 'done' || tx.status === 'animating';
-          const isFailed = tx.status === 'failed';
-          const isAnimating = tx.status === 'animating';
-          const isExpanded = expandedTxid === tx.txid;
-          const short = tx.txid ? tx.txid.slice(0, 10) + '…' : '?';
+          {txStream.map((tx) => {
+            const isDone = tx.status === 'done' || tx.status === 'animating';
+            const isFailed = tx.status === 'failed';
+            const isAnimating = tx.status === 'animating';
+            const isExpanded = expandedTxid === tx.txid;
+            const short = tx.txid ? tx.txid.slice(0, 10) + '…' : '?';
 
-          const snap = tx.verifySnapshot;
-          const txFeeRate = snap?.feeRate ?? tx.data?.feeRate;
-          const txSize = snap?.size ?? tx.data?.size;
-          const txWeight = snap?.weight ?? tx.data?.weight;
-          const txVin = snap?.vin ?? tx.data?.vin;
-          const txVout = snap?.vout ?? tx.data?.vout;
+            const snap = tx.verifySnapshot;
+            const txFeeRate = snap?.feeRate ?? tx.data?.feeRate;
+            const txSize = snap?.size ?? tx.data?.size;
+            const txWeight = snap?.weight ?? tx.data?.weight;
+            const txVin = snap?.vin ?? tx.data?.vin;
+            const txVout = snap?.vout ?? tx.data?.vout;
 
-          return (
-            <div key={tx.txid}>
-              <div
-                onClick={() => handleClick(tx.txid)}
-                className={`px-2 py-1.5 rounded cursor-pointer
-                           transition-all duration-500
-                           ${isFailed ? 'bg-error/10' : isExpanded ? 'bg-tx-blue/10' : 'hover:bg-tx-blue/5'}
-                           ${isAnimating ? 'opacity-0 translate-y-5' : ''}`}
-                style={isAnimating ? {
-                  opacity: 0,
-                  transform: 'translateY(20px)',
-                  boxShadow: '0 0 12px rgba(34,197,94,0.3)',
-                } : undefined}
-              >
-                {/* Line 1: icon + txid + step progress bar */}
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm min-w-[14px] ${isFailed ? 'text-error' : isDone ? 'text-success' : 'text-warning'}`}>
-                    {isFailed ? '✗' : isDone ? '✓' : '⟳'}
-                  </span>
-                  <span className={`text-sm font-mono ${isFailed ? 'text-error/70' : isDone ? 'text-success/70' : 'text-text-primary'}`}>
-                    {short}
-                  </span>
-                  {isFailed && tx.failReason && (
-                    <span className="text-error text-[11px] ml-1">{tx.failReason}</span>
-                  )}
-                  <span className="ml-auto">
-                    {isFailed ? (
-                      <span className="text-error text-[11px]">반려</span>
-                    ) : isAnimating ? (
-                      <span className="text-mempool-green text-[11px]">→ 멤풀</span>
-                    ) : snap?.steps ? (
-                      <StepProgressBar steps={snap.steps} />
-                    ) : (
-                      <span className="text-text-dim text-[11px]">검증중</span>
+            return (
+              <div key={tx.txid}>
+                <div
+                  onClick={() => handleClick(tx.txid)}
+                  className={`px-2 py-1.5 rounded cursor-pointer
+                             transition-all duration-500
+                             ${isFailed ? 'bg-error/10' : isExpanded ? 'bg-tx-blue/10' : 'hover:bg-tx-blue/5'}
+                             ${isAnimating ? 'opacity-0 translate-y-5' : ''}`}
+                  style={isAnimating ? {
+                    opacity: 0,
+                    transform: 'translateY(20px)',
+                    boxShadow: '0 0 12px rgba(34,197,94,0.3)',
+                  } : undefined}
+                >
+                  {/* Line 1: icon + txid + step progress bar */}
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm min-w-[14px] ${isFailed ? 'text-error' : isDone ? 'text-success' : 'text-warning'}`}>
+                      {isFailed ? '✗' : isDone ? '✓' : '⟳'}
+                    </span>
+                    <span className={`text-sm font-mono ${isFailed ? 'text-error/70' : isDone ? 'text-success/70' : 'text-text-primary'}`}>
+                      {short}
+                    </span>
+                    {isFailed && tx.failReason && (
+                      <span className="text-error text-[11px] ml-1">{tx.failReason}</span>
                     )}
-                  </span>
-                </div>
-                {/* Line 2: feeRate · size/weight · vin→vout · 상세보기 */}
-                <div className="flex items-center gap-1.5 ml-6 mt-0.5 text-[11px] font-mono">
-                  {txFeeRate != null && (
-                    <span style={{ color: feeColor(txFeeRate) }}>{txFeeRate} sat/vB</span>
-                  )}
-                  {(txSize != null || txWeight != null) && (
-                    <span className="text-text-dim">
-                      {txSize != null && `${txSize}B`}
-                      {txSize != null && txWeight != null && ' · '}
-                      {txWeight != null && `${txWeight}WU`}
+                    <span className="ml-auto">
+                      {isFailed ? (
+                        <span className="text-error text-[11px]">반려</span>
+                      ) : isAnimating ? (
+                        <span className="text-mempool-green text-[11px]">→ 멤풀</span>
+                      ) : snap?.steps ? (
+                        <StepProgressBar steps={snap.steps} />
+                      ) : (
+                        <span className="text-text-dim text-[11px]">검증중</span>
+                      )}
                     </span>
-                  )}
-                  {txVin != null && txVout != null && (
-                    <span className="text-muted">{txVin}in → {txVout}out</span>
-                  )}
-                  {onTxClick && (
-                    <span
-                      className="ml-auto text-muted hover:text-tx-blue cursor-pointer transition-colors"
-                      title="TX 상세보기"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onTxClick({ txid: tx.txid, data: tx.data || {} });
-                      }}
-                    >
-                      🔍
-                    </span>
-                  )}
+                  </div>
+                  {/* Line 2: feeRate · size/weight · vin→vout · 상세보기 */}
+                  <div className="flex items-center gap-1.5 ml-6 mt-0.5 text-[11px] font-mono">
+                    {txFeeRate != null && (
+                      <span style={{ color: feeColor(txFeeRate) }}>{txFeeRate} sat/vB</span>
+                    )}
+                    {(txSize != null || txWeight != null) && (
+                      <span className="text-text-dim">
+                        {txSize != null && `${txSize}B`}
+                        {txSize != null && txWeight != null && ' · '}
+                        {txWeight != null && `${txWeight}WU`}
+                      </span>
+                    )}
+                    {txVin != null && txVout != null && (
+                      <span className="text-muted">{txVin}in → {txVout}out</span>
+                    )}
+                    {onTxClick && (
+                      <span
+                        className="ml-auto text-muted hover:text-tx-blue cursor-pointer transition-colors"
+                        title="TX 상세보기"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTxClick({ txid: tx.txid, data: tx.data || {} });
+                        }}
+                      >
+                        🔍
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
+            );
+          })}
+        </div>
 
-              {/* 인라인 검증 상세 */}
-              {isExpanded && tx.verifySnapshot && (
-                <div className="ml-3 mr-1 my-1.5 px-3 py-2 bg-dark-surface/60 border border-tx-blue/20 rounded">
-                  <div className="text-tx-blue font-bold text-[11px] tracking-wide mb-1.5">
-                    ▸ TX 검증 {tx.verifySnapshot.done && !isFailed && <span className="text-success">완료 ✓</span>}
-                    {isFailed && <span className="text-error">실패 ✗</span>}
-                  </div>
-                  {tx.verifySnapshot.short && (
-                    <div className="text-muted text-[11px] mb-1">{tx.verifySnapshot.short}</div>
-                  )}
-                  {(tx.verifySnapshot.size != null || tx.verifySnapshot.weight != null) && (
-                    <div className="text-btc-orange/30 text-[11px] mb-1.5">
-                      {tx.verifySnapshot.size != null && `${tx.verifySnapshot.size} B`}
-                      {tx.verifySnapshot.size != null && tx.verifySnapshot.weight != null && ' · '}
-                      {tx.verifySnapshot.weight != null && `${tx.verifySnapshot.weight} WU`}
-                    </div>
-                  )}
-                  {tx.verifySnapshot.steps.map((step, i) => (
-                    <InlineStepRow key={i} step={step} />
-                  ))}
-                </div>
+        {/* 푸터 (멤풀 이동 카운터) */}
+        {doneCount > 0 && (
+          <div className="px-3 py-1.5 shrink-0 border-t border-white/6
+                         text-mempool-green text-[11px] text-center">
+            → Mempool: {doneCount}건 이동 중
+          </div>
+        )}
+      </MacWindow>
+
+      {/* 사이드 검증 상세 패널 */}
+      {detailTx?.verifySnapshot && (
+        <div
+          className="fixed bg-panel-bg border border-tx-blue/20 rounded-xl
+                     backdrop-blur-[20px] w-[280px] max-h-[45vh] overflow-y-auto
+                     px-3.5 py-3 z-[15]"
+          style={{
+            left: 344,
+            top: 56,
+            boxShadow: 'var(--shadow-panel-layered)',
+          }}
+        >
+          <div className="flex justify-between items-center mb-2">
+            <div className="text-tx-blue font-bold text-[11px] tracking-wide">
+              ▸ TX 검증 상세
+              {detailTx.verifySnapshot.done && detailTx.status !== 'failed' && (
+                <span className="text-success ml-1">완료 ✓</span>
+              )}
+              {detailTx.status === 'failed' && (
+                <span className="text-error ml-1">실패 ✗</span>
               )}
             </div>
-          );
-        })}
-      </div>
+            <button
+              onClick={() => setExpandedTxid(null)}
+              className="text-muted hover:text-text-primary text-xs cursor-pointer
+                         bg-transparent border-none"
+            >
+              ✕
+            </button>
+          </div>
 
-      {/* 푸터 (멤풀 이동 카운터) */}
-      {doneCount > 0 && (
-        <div className="px-3 py-1.5 shrink-0 border-t border-white/6
-                       text-mempool-green text-[11px] text-center">
-          → Mempool: {doneCount}건 이동 중
+          {/* TXID */}
+          <div className="text-text-dim text-[11px] font-mono mb-1.5 truncate" title={detailTx.txid}>
+            {detailTx.txid}
+          </div>
+
+          {/* 크기 정보 */}
+          {(detailTx.verifySnapshot.size != null || detailTx.verifySnapshot.weight != null) && (
+            <div className="text-btc-orange/50 text-[11px] mb-2">
+              {detailTx.verifySnapshot.size != null && `${detailTx.verifySnapshot.size} B`}
+              {detailTx.verifySnapshot.size != null && detailTx.verifySnapshot.weight != null && ' · '}
+              {detailTx.verifySnapshot.weight != null && `${detailTx.verifySnapshot.weight} WU`}
+            </div>
+          )}
+
+          {detailTx.verifySnapshot.short && (
+            <div className="text-muted text-[11px] mb-2">{detailTx.verifySnapshot.short}</div>
+          )}
+
+          {/* 검증 단계 */}
+          {detailTx.verifySnapshot.steps.map((step, i) => (
+            <InlineStepRow key={i} step={step} />
+          ))}
         </div>
       )}
-    </MacWindow>
+    </>
   );
 }
