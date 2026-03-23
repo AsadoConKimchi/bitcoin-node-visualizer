@@ -94,7 +94,7 @@ export default function ChainStrip({
     }
   }, [allBlocks]);
 
-  // 이전 블록 로드 (좌로 스크롤 시)
+  // 이전 블록 로드 (좌로 스크롤 시) — 블록당 1회 fetch
   const loadOlderBlocks = useCallback(async () => {
     if (loading || reachedGenesis) return;
 
@@ -112,33 +112,34 @@ export default function ChainStrip({
 
       if (!currentHash) { setLoading(false); return; }
 
+      // 현재 블록의 previousblockhash부터 체이닝
+      const startRes = await fetch(`${REST_BASE}/block/${currentHash}`);
+      if (!startRes.ok) { setLoading(false); return; }
+      const startBlock = await startRes.json();
+      let prevHash = startBlock.previousblockhash;
+
+      if (!prevHash) {
+        setReachedGenesis(true);
+        setLoading(false);
+        return;
+      }
+
       const fetched = [];
       for (let i = 0; i < LOAD_BATCH; i++) {
-        const res = await fetch(`${REST_BASE}/block/${currentHash}`);
+        const res = await fetch(`${REST_BASE}/block/${prevHash}`);
         if (!res.ok) break;
         const blockData = await res.json();
 
-        const prevHash = blockData.previousblockhash;
-        if (!prevHash) {
-          setReachedGenesis(true);
-          break;
-        }
-
-        const prevRes = await fetch(`${REST_BASE}/block/${prevHash}`);
-        if (!prevRes.ok) break;
-        const prevBlock = await prevRes.json();
-
         fetched.unshift({
-          height: prevBlock.height,
+          height: blockData.height,
           hash: prevHash,
-          txCount: prevBlock.tx_count,
-          pool: prevBlock.extras?.pool?.name,
-          timestamp: prevBlock.timestamp,
+          txCount: blockData.tx_count,
+          pool: blockData.extras?.pool?.name,
+          timestamp: blockData.timestamp,
         });
 
-        currentHash = prevHash;
-
-        if (prevBlock.height === 0) {
+        prevHash = blockData.previousblockhash;
+        if (!prevHash || blockData.height <= 1) {
           setReachedGenesis(true);
           break;
         }
@@ -175,21 +176,40 @@ export default function ChainStrip({
     loadOlderBlocks();
   }, [blocks.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 새 블록 도착 시에만 스크롤을 우측(최신)으로 (preload 후에는 안 이동)
+  // olderBlocks 추가 시 scroll 위치 보정 (좌측에 블록이 추가되므로)
+  const prevOlderCountRef = useRef(0);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const added = olderBlocks.length - prevOlderCountRef.current;
+    if (added > 0 && prevOlderCountRef.current > 0) {
+      // 추가된 블록 너비만큼 scrollLeft 증가 (~130px card + 16px connector + 2px gap)
+      el.scrollLeft += added * 148;
+    }
+    prevOlderCountRef.current = olderBlocks.length;
+  }, [olderBlocks.length]);
+
+  // 새 블록 도착 시에만 스크롤을 우측(최신)으로 — preload/lazy-load는 무시
   const prevBlockCountRef = useRef(0);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const newCount = recentBlocks.length;
-    // 최초 렌더 또는 새 블록 도착 시에만 우측으로
-    if (prevBlockCountRef.current === 0 || newCount > prevBlockCountRef.current) {
+    if (prevBlockCountRef.current === 0) {
+      // 최초 렌더: 우측 끝으로
+      requestAnimationFrame(() => {
+        el.scrollLeft = el.scrollWidth;
+      });
+    } else if (newCount > prevBlockCountRef.current) {
+      // 새 블록 도착: 우측 끝으로
       el.scrollLeft = el.scrollWidth;
     }
+    // olderBlocks 변경은 여기서 무시 (위 effect가 처리)
     prevBlockCountRef.current = newCount;
   }, [recentBlocks.length]);
 
   return (
-    <div className="absolute top-[40px] left-0 right-0 z-[9]
+    <div className="absolute top-[48px] left-0 right-0 z-[9]
                     bg-dark-bg/80 backdrop-blur-sm border-b border-white/6">
       <div
         ref={scrollRef}

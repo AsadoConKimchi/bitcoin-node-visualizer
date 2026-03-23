@@ -138,7 +138,7 @@ export default function TxStreamPanel({
         zIndex={zIndex}
         onFocus={onFocus}
         width={320}
-        height="45vh"
+        height="calc(100vh - 72px)"
         headerRight={
           <span className="text-muted text-[11px] font-mono">
             {txCount}건

@@ -794,7 +794,7 @@ export default function App() {
       {/* 예상 블록 적층 (검증 OFF일 때) */}
       <MempoolBlocksPanel
         mempoolBlocks={mempoolBlocks}
-        visible={!visible.verifyCenter && mempoolBlocks.length > 0}
+        visible={visible.p2p && mempoolBlocks.length > 0}
       />
 
       {/* 체인 스트립 — 가로 상단 바 */}

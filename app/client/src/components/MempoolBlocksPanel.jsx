@@ -21,7 +21,7 @@ export default function MempoolBlocksPanel({ mempoolBlocks, visible }) {
   const maxSize = Math.max(...blocks.map(b => b.blockSize || b.blockVSize || 1));
 
   return (
-    <div className="absolute top-16 right-4 w-[260px] bg-panel-bg border border-white/8
+    <div className="absolute top-[120px] right-4 w-[260px] bg-panel-bg border border-white/8
                     rounded-xl px-3.5 py-3 font-mono text-sm text-text-primary
                     backdrop-blur-[20px] z-10 panel-transition
                     max-sm:right-2 max-sm:w-[220px]"

@@ -120,7 +120,7 @@ const HudPanels = forwardRef(function HudPanels({
     <MacWindow
       title="NODE INFO"
       titleColor="text-text-primary"
-      initialPosition={{ x: 16, y: 56 }}
+      initialPosition={{ x: 16, y: 110 }}
       onClose={onClose}
       onMinimize={onMinimize}
       minimized={minimized}

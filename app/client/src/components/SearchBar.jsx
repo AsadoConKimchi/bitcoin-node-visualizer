@@ -56,7 +56,7 @@ export default function SearchBar({ onSearchBlock, onSearchTx, onSearchAddress }
     <div className="relative">
       <div className={`flex items-center gap-1.5 bg-panel-bg-light
                       border rounded-lg px-2.5 py-1.5 transition-all duration-200
-                      ${focused ? 'border-white/25 w-[320px] md:w-[420px]' : 'border-white/10 w-[220px] md:w-[280px]'}`}>
+                      ${focused ? 'border-white/25 w-[400px] md:w-[540px]' : 'border-white/10 w-[300px] md:w-[380px]'}`}>
         <span className="text-text-dim text-sm shrink-0" aria-hidden="true">⌕</span>
         <input
           type="text"
