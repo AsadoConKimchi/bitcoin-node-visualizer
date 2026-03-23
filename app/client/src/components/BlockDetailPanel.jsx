@@ -12,10 +12,14 @@ function SegwitStats({ txids, blockHash, sourceType }) {
 
   useEffect(() => {
     if (!blockHash) return;
-    const sampleSize = Math.min(txids.length, 10);
+    const sampleSize = Math.min(txids.length, 50);
     if (sampleSize === 0) return;
 
-    const sample = txids.slice(0, sampleSize);
+    // 균등 간격 추출 (편향 방지)
+    const step = txids.length / sampleSize;
+    const sample = Array.from({ length: sampleSize }, (_, i) =>
+      txids[Math.floor(i * step)]
+    );
     const txUrl = (txid) => sourceType === 'server' ? `/api/tx/${txid}` : `${REST_BASE}/tx/${txid}`;
     Promise.all(sample.map(txid =>
       fetch(txUrl(txid)).then(r => r.ok ? r.json() : null).catch(() => null)
@@ -66,7 +70,7 @@ function SegwitStats({ txids, blockHash, sourceType }) {
 
   return (
     <div className="p-2 bg-dark-surface rounded border border-dark-border">
-      <div className="text-muted text-xs mb-1.5">TX 유형 (샘플 {stats.sampleSize}개)</div>
+      <div className="text-muted text-xs mb-1.5">TX 유형 ({stats.sampleSize} / {txids.length})</div>
       <div className="flex gap-1 h-3 rounded overflow-hidden mb-1">
         {stats.legacy > 0 && <div className="bg-orange-500" style={{ width: `${stats.legacy}%` }} />}
         {stats.segwit > 0 && <div className="bg-blue-400" style={{ width: `${stats.segwit}%` }} />}

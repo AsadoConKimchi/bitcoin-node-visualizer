@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { forwardRef, useRef, useState, useEffect, useMemo } from 'react';
 
 const STATUS_COLOR = {
   'active': 'text-success',
@@ -16,7 +16,7 @@ const STATUS_LABEL = {
   'invalid': 'INVALID',
 };
 
-export default function ChainTipsPanel({ chaintips }) {
+const ChainTipsPanel = forwardRef(function ChainTipsPanel({ chaintips }, ref) {
   if (!chaintips?.length) return null;
 
   const prevActiveRef = useRef(null);
@@ -61,7 +61,7 @@ export default function ChainTipsPanel({ chaintips }) {
   const hiddenCount = forks.length - visibleForks.length;
 
   return (
-    <div className="absolute top-14 right-4 bg-panel-bg border border-white/10
+    <div ref={ref} className="absolute top-14 right-4 bg-panel-bg border border-white/10
                     rounded-xl px-3.5 py-2.5 font-mono text-sm text-text-primary
                     backdrop-blur-xl leading-7 min-w-[260px] max-w-[320px] z-[var(--z-hud)]
                     max-sm:right-2 max-sm:min-w-[220px]"
@@ -137,4 +137,6 @@ export default function ChainTipsPanel({ chaintips }) {
       )}
     </div>
   );
-}
+});
+
+export default ChainTipsPanel;

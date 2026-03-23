@@ -263,14 +263,14 @@ export default function BlockVerifyPanel({
     <MacWindow
       title="BLOCK VERIFICATION"
       titleColor="text-block-purple"
-      initialPosition={{ x: typeof window !== 'undefined' ? window.innerWidth - 380 : 800, y: 56 }}
+      initialPosition={{ x: typeof window !== 'undefined' ? window.innerWidth - 340 : 800, y: 56 }}
       onClose={onClose}
       onMinimize={onMinimize}
       minimized={minimized}
       zIndex={zIndex}
       onFocus={onFocus}
-      width={360}
-      height="calc(100vh - 72px)"
+      width={300}
+      height="calc(100vh - 280px)"
       headerRight={
         verifyState && (
           <span className="text-muted text-label font-mono">

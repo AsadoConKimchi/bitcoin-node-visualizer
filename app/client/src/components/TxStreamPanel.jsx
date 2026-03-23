@@ -137,8 +137,8 @@ export default function TxStreamPanel({
         minimized={minimized}
         zIndex={zIndex}
         onFocus={onFocus}
-        width={320}
-        height="calc(100vh - 72px)"
+        width={280}
+        height="calc(100vh - 280px)"
         headerRight={
           <span className="text-muted text-label font-mono">
             {txCount}건
@@ -153,12 +153,13 @@ export default function TxStreamPanel({
             <div className="text-muted-dim text-sm text-center py-4">TX 대기 중…</div>
           )}
 
-          {txStream.map((tx) => {
+          {txStream.map((tx, idx) => {
             const isDone = tx.status === 'done' || tx.status === 'animating';
             const isFailed = tx.status === 'failed';
             const isAnimating = tx.status === 'animating';
             const isExpanded = expandedTxid === tx.txid;
             const short = tx.txid ? tx.txid.slice(0, 10) + '…' : '?';
+            const oddRow = idx % 2 === 1;
 
             const snap = tx.verifySnapshot;
             const txFeeRate = snap?.feeRate ?? tx.data?.feeRate;
@@ -173,7 +174,7 @@ export default function TxStreamPanel({
                   onClick={() => handleClick(tx.txid)}
                   className={`px-2 py-1.5 rounded cursor-pointer
                              transition-all duration-500
-                             ${isFailed ? 'bg-error/10' : isExpanded ? 'bg-tx-blue/10' : 'hover:bg-tx-blue/5'}
+                             ${isFailed ? 'bg-error/10' : isExpanded ? 'bg-tx-blue/10' : oddRow ? 'bg-white/3 hover:bg-tx-blue/5' : 'hover:bg-tx-blue/5'}
                              ${isAnimating ? 'opacity-0 translate-y-5' : ''}`}
                   style={isAnimating ? {
                     opacity: 0,

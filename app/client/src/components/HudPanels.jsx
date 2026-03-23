@@ -80,26 +80,27 @@ const HudPanels = forwardRef(function HudPanels({
   }
 
   let peersStr = null;
+  let peersDetail = null;
   if (nodeInfo?.connections != null) {
     if (nodeInfo.peerTypes) {
       const pt = nodeInfo.peerTypes;
-      peersStr = `${nodeInfo.outbound ?? '?'}↑ ${nodeInfo.inbound ?? '?'}↓`;
-      const parts = [];
-      if (pt.fullRelay) parts.push(`FR:${pt.fullRelay}`);
-      if (pt.blockRelayOnly) parts.push(`BR:${pt.blockRelayOnly}`);
-      if (pt.feeler) parts.push(`F:${pt.feeler}`);
-      if (parts.length) peersStr += ` (${parts.join(' ')})`;
+      peersStr = `${nodeInfo.connections} peers (${nodeInfo.outbound ?? '?'} out · ${nodeInfo.inbound ?? '?'} in)`;
+      const detailParts = [];
+      if (pt.fullRelay) detailParts.push(`Full-Relay: ${pt.fullRelay}`);
+      if (pt.blockRelayOnly) detailParts.push(`Block-Only: ${pt.blockRelayOnly}`);
+      if (pt.feeler) detailParts.push(`Feeler: ${pt.feeler}`);
+      if (detailParts.length) peersDetail = detailParts.join(' · ');
     } else {
-      peersStr = `${nodeInfo.connections}`;
+      peersStr = `${nodeInfo.connections} peers`;
     }
   }
 
   let securityStr = null;
   if (sourceType === 'server' && nodeInfo?.v2Transport != null) {
-    const parts = [`v2:${nodeInfo.v2Transport}`];
-    if (nodeInfo.torPeers != null) parts.push(`Tor:${nodeInfo.torPeers}`);
-    if (nodeInfo.i2pPeers != null) parts.push(`I2P:${nodeInfo.i2pPeers}`);
-    securityStr = parts.join(' ');
+    const parts = [`v2 Transport: ${nodeInfo.v2Transport}`];
+    if (nodeInfo.torPeers != null) parts.push(`Tor: ${nodeInfo.torPeers}`);
+    if (nodeInfo.i2pPeers != null) parts.push(`I2P: ${nodeInfo.i2pPeers}`);
+    securityStr = parts.join(' · ');
   }
 
   let timeStr = null;
@@ -178,9 +179,7 @@ const HudPanels = forwardRef(function HudPanels({
         <Row label="Height"  value={blockHeight != null ? `#${blockHeight.toLocaleString()}` : null} />
         <Row label="Fee"     value={
           feeRate != null
-            ? halfHourFee != null
-              ? `${feeRate}/${halfHourFee}/${hourFee} sat/vB`
-              : `${feeRate} sat/vB`
+            ? `~${feeRate} sat/vB`
             : null
         } />
         <Row label="Mempool" value={mempoolStr} />
@@ -202,6 +201,20 @@ const HudPanels = forwardRef(function HudPanels({
         {/* 확장 행 */}
         {expanded && (
           <>
+            {feeRate != null && halfHourFee != null && (
+              <div className="flex justify-between gap-4 py-0.5">
+                <span className="text-text-secondary shrink-0">Fee 상세</span>
+                <span className="font-mono text-sm">
+                  <span className="text-btc-orange">{feeRate}</span>
+                  {' · '}
+                  <span className="text-yellow-400">{halfHourFee}</span>
+                  {' · '}
+                  <span className="text-success">{hourFee}</span>
+                  <span className="text-muted ml-1">sat/vB</span>
+                </span>
+              </div>
+            )}
+            {peersDetail && <Row label="Peers 상세" value={peersDetail} />}
             {sourceType === 'server' && mempoolInfo?.mempoolminfee != null && (
               <Row label="Min Fee" value={`${(mempoolInfo.mempoolminfee * 1e5).toFixed(1)} sat/vB`} />
             )}

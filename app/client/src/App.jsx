@@ -27,7 +27,7 @@ const ARC_LIFETIME_MS = 3000;
 const RING_LIFETIME_MS = 2000;
 const RING_THROTTLE_MS = 300;
 const TX_BUFFER_MAX = 60;
-const TX_STREAM_MAX = 20;
+const TX_STREAM_MAX = 15;
 const TX_ARC_THROTTLE_MS = 500;
 const LS_SOURCE_TYPE = 'bnv_sourceType';
 const LS_SERVER_URL = 'bnv_serverUrl';
@@ -49,6 +49,41 @@ function pickRandom(arr, n) {
 // 윈도우 z-index 베이스
 const Z_BASE = 10;
 const Z_FOCUSED = 15;
+
+// ── MempoolFloor (적응형 높이) ──
+function MempoolFloor({ bitfeedRef, mempoolCount, onTxClick }) {
+  const [expanded, setExpanded] = useState(false);
+  const height = expanded ? 200 : 120;
+
+  return (
+    <div
+      className="absolute bottom-0 left-0 right-0 z-[var(--z-strip)] transition-[height] duration-300"
+      style={{ height, background: 'rgba(6, 10, 20, 0.96)' }}
+    >
+      {/* 헤더 */}
+      <div className="flex justify-between items-center px-4 py-2 shrink-0">
+        <span className="text-mempool-green font-bold text-xs tracking-wide">▸ MEMPOOL FLOOR</span>
+        <div className="flex items-center gap-2">
+          <span className="text-muted text-label">
+            {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}
+          </span>
+          <button
+            onClick={() => setExpanded(e => !e)}
+            className="text-muted hover:text-text-primary text-label cursor-pointer
+                       bg-transparent border-none transition-colors"
+            aria-label={expanded ? '축소' : '확장'}
+          >
+            {expanded ? '▾' : '▴'}
+          </button>
+        </div>
+      </div>
+      {/* Canvas */}
+      <div className="absolute top-8 left-0 right-0 bottom-0 px-2 pb-2">
+        <BitfeedFloor ref={bitfeedRef} onTxClick={onTxClick} />
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   // ── 데이터 소스 설정 ──
@@ -146,6 +181,10 @@ export default function App() {
   const hudRef = useRef(null);
   const [hudHeight, setHudHeight] = useState(0);
 
+  // ── ChainTips 높이 추적 (MempoolBlocksPanel 동적 오프셋) ──
+  const chainTipsRef = useRef(null);
+  const [chainTipsHeight, setChainTipsHeight] = useState(0);
+
   const hudVisible = windowStates.nodeInfo.visible && visible.p2p;
 
   useEffect(() => {
@@ -159,6 +198,7 @@ export default function App() {
     observer.observe(hudRef.current);
     return () => observer.disconnect();
   }, [hudVisible]);
+
 
   // ── 네트워크 상태 ──
   const [mode, setMode] = useState('connecting');
@@ -183,6 +223,20 @@ export default function App() {
 
   const recentBlocksRef = useRef([]);
   recentBlocksRef.current = recentBlocks;
+
+  // ChainTips 높이 ResizeObserver (MempoolBlocksPanel 동적 오프셋)
+  const chainTipsVisible = sourceType === 'server' && visible.p2p && chaintips.length > 0;
+  useEffect(() => {
+    if (!chainTipsVisible || !chainTipsRef.current) {
+      setChainTipsHeight(0);
+      return;
+    }
+    const observer = new ResizeObserver(entries => {
+      setChainTipsHeight(entries[0].contentRect.height + 16);
+    });
+    observer.observe(chainTipsRef.current);
+    return () => observer.disconnect();
+  }, [chainTipsVisible]);
 
   // ── CompactBlock 수동 트리거 ──
   const [forceCompactBlock, setForceCompactBlock] = useState(null);
@@ -702,7 +756,7 @@ export default function App() {
       <GlobeScene nodePoints={nodePoints} arcs={combinedArcs} rings={rings} isServerMode={sourceType === 'server'} />
 
       {/* 상단 토글 바 */}
-      <ToggleBar visible={visible} onToggle={handleToggle} />
+      <ToggleBar visible={visible} onToggle={handleToggle} onSettingsClick={() => setSettingsOpen(true)} />
 
       {/* 검색 바 */}
       <div className="absolute top-3 right-4 z-[var(--z-modal)] max-sm:right-2">
@@ -743,7 +797,7 @@ export default function App() {
 
       {/* 체인 분기 패널 (서버 모드, P2P 모드일 때) */}
       {sourceType === 'server' && visible.p2p && chaintips.length > 0 && (
-        <ChainTipsPanel chaintips={chaintips} />
+        <ChainTipsPanel ref={chainTipsRef} chaintips={chaintips} />
       )}
 
       {/* TX 검증 패널 — 독립 MacWindow */}
@@ -775,27 +829,18 @@ export default function App() {
         onFocus={() => focusWindow('blockVerify')}
       />
 
-      {/* BitfeedFloor — 전체 너비 하단 바 */}
-      <div className="absolute bottom-0 left-0 right-0 h-[200px] z-[var(--z-strip)]"
-           style={{ background: 'rgba(6, 10, 20, 0.96)' }}>
-        {/* 헤더 */}
-        <div className="flex justify-between items-center px-4 py-2 shrink-0">
-          <span className="text-mempool-green font-bold text-xs tracking-wide">▸ MEMPOOL FLOOR</span>
-          <span className="text-muted text-label">
-            {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}
-          </span>
-        </div>
-        {/* Canvas */}
-        <div className="absolute top-8 left-0 right-0 bottom-0 px-2 pb-2">
-          <BitfeedFloor ref={bitfeedRef} onTxClick={handleTxClick} />
-        </div>
-      </div>
+      {/* BitfeedFloor — 전체 너비 하단 바 (적응형 높이) */}
+      <MempoolFloor
+        bitfeedRef={bitfeedRef}
+        mempoolCount={mempoolCount}
+        onTxClick={handleTxClick}
+      />
 
       {/* 예상 블록 적층 (검증 OFF일 때) */}
       <MempoolBlocksPanel
         mempoolBlocks={mempoolBlocks}
         visible={visible.p2p && mempoolBlocks.length > 0}
-        topOffset={chaintips.length > 0 ? 160 : 0}
+        topOffset={chainTipsHeight}
       />
 
       {/* 체인 스트립 — 가로 상단 바 */}
@@ -859,19 +904,6 @@ export default function App() {
 
       {/* WindowDock — 최소화된 윈도우 복원 */}
       <WindowDock items={dockItems} />
-
-      {/* 설정 버튼 */}
-      <button
-        onClick={() => setSettingsOpen(true)}
-        aria-label="설정 열기"
-        className="absolute bottom-[212px] left-5 bg-panel-bg border border-white/10
-                  rounded-lg text-text-secondary text-sm px-3.5 py-2
-                  cursor-pointer z-[var(--z-overlay)] hover:bg-white/10 hover:text-text-primary transition-colors
-                  backdrop-blur-xl
-                  max-sm:bottom-[208px] max-sm:left-3 max-sm:text-xs max-sm:px-2.5 max-sm:py-1.5"
-      >
-        ⚙ Settings
-      </button>
 
       {/* 연결 실패 에러 오버레이 */}
       {showErrorOverlay && (

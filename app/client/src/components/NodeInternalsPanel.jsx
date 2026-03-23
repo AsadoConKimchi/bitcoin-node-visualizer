@@ -17,9 +17,9 @@ function TabBar({ active, onSelect }) {
         <button
           key={key}
           onClick={() => onSelect(key)}
-          className={`text-label-sm px-2 py-1 rounded-md cursor-pointer transition-colors focus-ring
+          className={`text-xs px-2.5 py-1.5 rounded-md cursor-pointer transition-colors focus-ring
                      ${active === key
-                       ? 'bg-white/12 text-white font-medium shadow-sm'
+                       ? 'bg-white/12 text-white font-medium shadow-sm border-b-2 border-btc-orange'
                        : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
                      }`}
         >
