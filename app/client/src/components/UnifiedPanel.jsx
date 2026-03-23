@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { feeColor } from '../utils/colors.js';
+import { squarify } from '../utils/treemap.js';
 
 // ── 공유 컴포넌트 ────────────────────────────────────────────────────────────
 
@@ -253,59 +254,6 @@ function BlockVerifySection({ verifyState }) {
 }
 
 // ── 멤풀 Treemap 섹션 ───────────────────────────────────────────────────────
-
-function squarify(items, containerW, containerH) {
-  if (!items.length || containerW <= 0 || containerH <= 0) return [];
-
-  const totalArea = containerW * containerH;
-  const totalWeight = items.reduce((s, it) => s + (it.weight || 560), 0);
-  if (totalWeight <= 0) return [];
-
-  const normalized = items.map((it) => ({
-    ...it,
-    area: ((it.weight || 560) / totalWeight) * totalArea,
-  }));
-
-  const rects = [];
-  let x = 0, y = 0, w = containerW, h = containerH;
-  let remaining = [...normalized];
-
-  while (remaining.length > 0) {
-    const isHorizontal = w >= h;
-    const total = remaining.reduce((s, r) => s + r.area, 0);
-
-    let rowItems = [];
-    let rowArea = 0;
-
-    for (let i = 0; i < remaining.length; i++) {
-      rowItems.push(remaining[i]);
-      rowArea += remaining[i].area;
-      if (rowArea >= total / 2 && remaining.length - rowItems.length > 0) break;
-    }
-
-    remaining = remaining.slice(rowItems.length);
-    const rowTotal = rowItems.reduce((s, r) => s + r.area, 0);
-    const rowSize = isHorizontal ? (rowTotal / h) : (rowTotal / w);
-
-    let offset = 0;
-    for (const item of rowItems) {
-      const itemSize = item.area / Math.max(rowSize, 1);
-      const clampedSize = Math.max(itemSize, 2);
-
-      if (isHorizontal) {
-        rects.push({ ...item, x, y: y + offset, w: Math.min(rowSize, w), h: clampedSize });
-      } else {
-        rects.push({ ...item, x: x + offset, y, w: clampedSize, h: Math.min(rowSize, h) });
-      }
-      offset += clampedSize;
-    }
-
-    if (isHorizontal) { x += rowSize; w -= rowSize; }
-    else { y += rowSize; h -= rowSize; }
-  }
-
-  return rects;
-}
 
 function MempoolSection({ mempoolTxs, mempoolCount, mempoolInfo, onTxClick }) {
   const [hoveredTxid, setHoveredTxid] = useState(null);

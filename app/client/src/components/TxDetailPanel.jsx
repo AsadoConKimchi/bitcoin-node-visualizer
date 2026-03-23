@@ -1,67 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import TxSankeyDiagram from './TxSankeyDiagram.jsx';
 import { formatBtc, CopyButton, detectTxFeatures, scriptTypeLabel, relativeTime } from '../utils/format.jsx';
+import { normalizeRpcTx } from '../utils/normalize.js';
 
 const REST_BASE = 'https://mempool.space/api';
-
-// RPC 응답 → 정규화 (verbosity=2: vin[].prevout 포함)
-function normalizeRpcTx(rpc) {
-  const fee = rpc.fee != null ? Math.round(rpc.fee * 1e8) : null;
-
-  const vins = (rpc.vin || []).map(v => {
-    const isCoinbase = !!v.coinbase;
-    let prevout = null;
-
-    if (v.prevout) {
-      prevout = {
-        value: v.prevout.value != null ? Math.round(v.prevout.value * 1e8) : null,
-        scriptpubkey_address: v.prevout.scriptPubKey?.address ?? null,
-        scriptpubkey_type: v.prevout.scriptPubKey?.type ?? null,
-      };
-    }
-
-    return {
-      ...v,
-      isCoinbase,
-      sequence: v.sequence,
-      prevout,
-    };
-  });
-
-  const vouts = (rpc.vout || []).map(v => ({
-    value: v.value != null ? Math.round(v.value * 1e8) : null,
-    scriptpubkey_address: v.scriptPubKey?.address ?? null,
-    scriptpubkey_type: v.scriptPubKey?.type ?? null,
-  }));
-
-  // fee 없을 때 prevout에서 계산 시도
-  let computedFee = fee;
-  if (computedFee == null) {
-    const hasAllPrevout = vins.every(v => v.isCoinbase || v.prevout?.value != null);
-    const hasCoinbase = vins.some(v => v.isCoinbase);
-    if (hasAllPrevout && !hasCoinbase) {
-      const totalIn = vins.reduce((s, v) => s + (v.prevout?.value || 0), 0);
-      const totalOut = vouts.reduce((s, v) => s + (v.value || 0), 0);
-      computedFee = totalIn - totalOut;
-    }
-  }
-
-  return {
-    txid: rpc.txid,
-    size: rpc.size,
-    weight: rpc.weight,
-    fee: computedFee,
-    version: rpc.version,
-    locktime: rpc.locktime,
-    vin: vins,
-    vout: vouts,
-    status: {
-      confirmed: rpc.blockhash != null,
-      block_height: rpc.blockheight ?? null,
-      block_time: rpc.blocktime ?? null,
-    },
-  };
-}
 
 // Feature 배지 컴포넌트
 function FeatureBadge({ label, color }) {

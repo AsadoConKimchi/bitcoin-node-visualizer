@@ -5,6 +5,19 @@ import * as THREE from 'three';
 const AUTO_ROTATE_SPEED = 0.0008;
 const STAR_COUNT = 2000;
 
+// 지구본 색상 상수 (디자인 시스템)
+const GLOBE_COLORS = {
+  background: 0x0a1628,
+  atmosphere: '#4a8bdf',
+  nodeDefault: '#4a7dff',
+  nodeMyNode: '#f7931a',
+  nodePeer: '#22c55e',
+  ambientLight: 0x6688aa,
+  directionalLight1: 0xccddff,
+  directionalLight2: 0x445577,
+  starField: 0xffffff,
+};
+
 function makeStars() {
   const geo = new THREE.BufferGeometry();
   const pos = new Float32Array(STAR_COUNT * 3);
@@ -12,7 +25,7 @@ function makeStars() {
     pos[i] = (Math.random() - 0.5) * 3000;
   }
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5, sizeAttenuation: true });
+  const mat = new THREE.PointsMaterial({ color: GLOBE_COLORS.starField, size: 0.5, sizeAttenuation: true });
   return new THREE.Points(geo, mat);
 }
 
@@ -46,7 +59,7 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isS
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setSize(w, h);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x0a1628, 1);
+    renderer.setClearColor(GLOBE_COLORS.background, 1);
     mount.appendChild(renderer.domElement);
 
     // Scene
@@ -68,7 +81,7 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isS
 
     // 대기권 효과
     globe.showAtmosphere(true);
-    globe.atmosphereColor('#4a8bdf');
+    globe.atmosphereColor(GLOBE_COLORS.atmosphere);
     globe.atmosphereAltitude(0.15);
 
     // 포인트 (전세계 노드) — mempool 모드: pointsData, 서버 모드: htmlElementsData(CSS glow)
@@ -77,7 +90,7 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isS
     globe.pointLng('lng');
     globe.pointAltitude(0.015);
     globe.pointRadius((d) => (d.isMyNode ? 1.0 : d.isMyPeer ? 0.7 : 0.25));
-    globe.pointColor((d) => (d.isMyNode ? '#f7931a' : d.isMyPeer ? '#22c55e' : '#4a7dff'));
+    globe.pointColor((d) => (d.isMyNode ? GLOBE_COLORS.nodeMyNode : d.isMyPeer ? GLOBE_COLORS.nodePeer : GLOBE_COLORS.nodeDefault));
     globe.pointsMerge(false);
 
     // 서버 모드: HTML 요소로 노드 표시 (CSS glow로 겹침 방지)
@@ -88,7 +101,7 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isS
     globe.htmlElement((d) => {
       const el = document.createElement('div');
       const size = d.isMyNode ? 8 : 5;
-      const color = d.isMyNode ? '#f7931a' : '#22c55e';
+      const color = d.isMyNode ? GLOBE_COLORS.nodeMyNode : GLOBE_COLORS.nodePeer;
       el.style.width = size + 'px';
       el.style.height = size + 'px';
       el.style.borderRadius = '50%';
@@ -124,11 +137,11 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isS
     scene.add(globe);
 
     // 조명 (밝은 낮 분위기)
-    scene.add(new THREE.AmbientLight(0x6688aa, 2.0));
-    const dirLight = new THREE.DirectionalLight(0xccddff, 1.2);
+    scene.add(new THREE.AmbientLight(GLOBE_COLORS.ambientLight, 2.0));
+    const dirLight = new THREE.DirectionalLight(GLOBE_COLORS.directionalLight1, 1.2);
     dirLight.position.set(200, 100, 100);
     scene.add(dirLight);
-    const dirLight2 = new THREE.DirectionalLight(0x445577, 0.5);
+    const dirLight2 = new THREE.DirectionalLight(GLOBE_COLORS.directionalLight2, 0.5);
     dirLight2.position.set(-100, -50, -100);
     scene.add(dirLight2);
 

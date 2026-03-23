@@ -22,6 +22,12 @@
   --color-warning: #fcd34d;
   --color-error: #ef4444;
   --color-floor-bg: rgba(22, 26, 32, 0.96);
+  --color-fee-highest: #ef4444;
+  --color-fee-high: #f59e0b;
+  --color-fee-medium: #eab308;
+  --color-fee-normal: #22c55e;
+  --color-fee-low: #2dd4bf;
+  --color-fee-lowest: #60a5fa;
   --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
   --font-system: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif;
   --shadow-panel: 0 8px 32px rgba(0,0,0,0.4);

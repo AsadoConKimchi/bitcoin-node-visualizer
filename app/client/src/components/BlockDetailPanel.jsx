@@ -1,29 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { CopyButton, relativeTime, formatBtc, calculateSubsidy } from '../utils/format.jsx';
 import { feeColor } from '../utils/colors.js';
+import { normalizeRpcBlock } from '../utils/normalize.js';
 
 const REST_BASE = 'https://mempool.space/api';
 const PAGE_SIZE = 25;
-
-// RPC 응답(getblock verbosity=1)을 mempool.space 형식으로 정규화
-function normalizeRpcBlock(rpc) {
-  return {
-    id: rpc.hash,
-    height: rpc.height,
-    timestamp: rpc.time,
-    tx_count: rpc.nTx,
-    size: rpc.size,
-    weight: rpc.weight,
-    difficulty: rpc.difficulty,
-    nonce: rpc.nonce,
-    bits: rpc.bits,
-    merkle_root: rpc.merkleroot,
-    previousblockhash: rpc.previousblockhash,
-    version: rpc.version,
-    extras: null,
-    _txids: rpc.tx || [],
-  };
-}
 
 // SegWit/Taproot 비율 계산
 function SegwitStats({ txids, blockHash, sourceType }) {
@@ -104,8 +85,11 @@ function SegwitStats({ txids, blockHash, sourceType }) {
 function BlockTreemap({ txids, blockHash, sourceType }) {
   const [txSamples, setTxSamples] = useState([]);
 
+  const [noData, setNoData] = useState(false);
+
   useEffect(() => {
     if (!txids?.length) return;
+    setNoData(false);
     const sample = txids.slice(0, Math.min(txids.length, 100));
     const txUrl = (txid) => sourceType === 'server' ? `/api/tx/${txid}` : `${REST_BASE}/tx/${txid}`;
 
@@ -127,8 +111,17 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
       // weight 순 내림차순
       valid.sort((a, b) => b.weight - a.weight);
       setTxSamples(valid);
-    });
+      if (valid.length === 0) setNoData(true);
+    }).catch(() => setNoData(true));
   }, [txids?.length, blockHash]);
+
+  if (noData) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-muted text-[11px]">
+        TX 데이터 없음
+      </div>
+    );
+  }
 
   if (!txSamples.length) {
     return (
@@ -199,12 +192,15 @@ function FeeBar({ feeRange }) {
 // 정보 행
 function InfoRow({ label, value, mono, highlight, copyable }) {
   return (
-    <div className="flex justify-between py-1 gap-2">
+    <div className="flex justify-between py-1 gap-2 min-w-0">
       <span className="text-muted shrink-0 text-xs">{label}</span>
-      <span className={`text-right text-xs flex items-center gap-1
+      <span className={`text-right text-xs flex items-center gap-1 min-w-0
                        ${highlight ? 'text-btc-orange font-bold' : 'text-text-primary'}
-                       ${mono ? 'break-all text-[11px]' : ''}`}>
-        {value ?? '—'}
+                       ${mono ? 'text-[11px]' : ''}`}>
+        {mono
+          ? <span className="truncate min-w-0" title={value}>{value ?? '—'}</span>
+          : (value ?? '—')
+        }
         {copyable && value && <CopyButton text={value} />}
       </span>
     </div>
@@ -249,7 +245,12 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
         if (sourceType === 'server' && normalized._txids?.length) {
           setTxids(normalized._txids);
         } else {
+          // mempool 모드: txids를 바로 fetch (Treemap용)
           setTxids([]);
+          fetch(`${REST_BASE}/block/${hash}/txids`)
+            .then(r => r.ok ? r.json() : [])
+            .then(ids => setTxids(ids || []))
+            .catch(() => {});
         }
         setLoading(false);
       })

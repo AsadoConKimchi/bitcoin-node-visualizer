@@ -10,10 +10,11 @@ import { formatBtc, shortAddr } from '../utils/format.jsx';
  *   fee      — number (sats)
  */
 const PADDING = 14;
+const PADDING_BOTTOM = 24; // INPUTS/OUTPUTS 라벨 공간
 const BAR_W = 10;
 const LABEL_W = 110;
-const MIN_H = 180;
-const MAX_H = 420;
+const MIN_H = 200;
+const MAX_H = 440;
 const SVG_W = 520;
 const MAX_ITEMS = 8;
 
@@ -47,8 +48,8 @@ export default function TxSankeyDiagram({ inputs = [], outputs = [], fee = 0 }) 
     const totalOut = displayOutputs.reduce((s, o) => s + (o.value || 0), 0) || 1;
 
     const maxItems = Math.max(displayInputs.length, displayOutputs.length);
-    const chartH = Math.min(MAX_H, Math.max(MIN_H, maxItems * 38));
-    const usableH = chartH - PADDING * 2;
+    const chartH = Math.min(MAX_H, Math.max(MIN_H, maxItems * 38 + PADDING_BOTTOM));
+    const usableH = chartH - PADDING - PADDING_BOTTOM;
     const gap = 3;
 
     // 입력 바 위치
