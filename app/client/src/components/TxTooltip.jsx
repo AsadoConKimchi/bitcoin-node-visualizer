@@ -45,7 +45,7 @@ export default function TxTooltip({ tx, x, y }) {
 
   return (
     <div
-      className="fixed pointer-events-none z-30 panel-base px-3 py-2.5 font-mono text-xs"
+      className="fixed pointer-events-none z-[var(--z-modal)] panel-base px-3 py-2.5 font-mono text-xs"
       style={{
         left, top, width: tooltipW,
         background: 'rgba(22, 26, 32, 0.95)',
@@ -53,15 +53,15 @@ export default function TxTooltip({ tx, x, y }) {
       }}
     >
       <div className="flex items-center gap-1 mb-1">
-        <span className="text-text-secondary text-[11px]">TxID:</span>
-        <span className="text-text-primary text-[11px]">{shortTxid}</span>
+        <span className="text-text-secondary text-label">TxID:</span>
+        <span className="text-text-primary text-label">{shortTxid}</span>
       </div>
-      <div className="text-text-secondary text-[11px] mb-0.5">{vinCount} input → {voutCount} outputs</div>
-      <div className="text-text-secondary text-[11px] mb-0.5">Size: {vbytes} vbytes</div>
-      <div className="text-text-secondary text-[11px] mb-0.5">Fee rate: {feeRate} sats/vbyte</div>
-      <div className="text-text-secondary text-[11px] mb-0.5">Fee: {fee} sats</div>
+      <div className="text-text-secondary text-label mb-0.5">{vinCount} input → {voutCount} outputs</div>
+      <div className="text-text-secondary text-label mb-0.5">Size: {vbytes} vbytes</div>
+      <div className="text-text-secondary text-label mb-0.5">Fee rate: {feeRate} sats/vbyte</div>
+      <div className="text-text-secondary text-label mb-0.5">Fee: {fee} sats</div>
       {valueStr && (
-        <div className="text-btc-orange text-[11px]">Total: {valueStr}</div>
+        <div className="text-btc-orange text-label">Total: {valueStr}</div>
       )}
     </div>
   );

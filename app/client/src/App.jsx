@@ -705,7 +705,7 @@ export default function App() {
       <ToggleBar visible={visible} onToggle={handleToggle} />
 
       {/* 검색 바 */}
-      <div className="absolute top-3 right-4 z-10 max-sm:right-2">
+      <div className="absolute top-3 right-4 z-[var(--z-modal)] max-sm:right-2">
         <SearchBar
           onSearchBlock={handleSearchBlock}
           onSearchTx={handleSearchTx}
@@ -776,12 +776,12 @@ export default function App() {
       />
 
       {/* BitfeedFloor — 전체 너비 하단 바 */}
-      <div className="absolute bottom-0 left-0 right-0 h-[200px] z-8"
+      <div className="absolute bottom-0 left-0 right-0 h-[200px] z-[var(--z-strip)]"
            style={{ background: 'rgba(6, 10, 20, 0.96)' }}>
         {/* 헤더 */}
         <div className="flex justify-between items-center px-4 py-2 shrink-0">
           <span className="text-mempool-green font-bold text-xs tracking-wide">▸ MEMPOOL FLOOR</span>
-          <span className="text-muted text-[11px]">
+          <span className="text-muted text-label">
             {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}
           </span>
         </div>
@@ -795,6 +795,7 @@ export default function App() {
       <MempoolBlocksPanel
         mempoolBlocks={mempoolBlocks}
         visible={visible.p2p && mempoolBlocks.length > 0}
+        topOffset={chaintips.length > 0 ? 160 : 0}
       />
 
       {/* 체인 스트립 — 가로 상단 바 */}
@@ -865,8 +866,8 @@ export default function App() {
         aria-label="설정 열기"
         className="absolute bottom-[212px] left-5 bg-panel-bg border border-white/10
                   rounded-lg text-text-secondary text-sm px-3.5 py-2
-                  cursor-pointer z-15 hover:bg-white/10 hover:text-text-primary transition-colors
-                  backdrop-blur-[20px]
+                  cursor-pointer z-[var(--z-overlay)] hover:bg-white/10 hover:text-text-primary transition-colors
+                  backdrop-blur-xl
                   max-sm:bottom-[208px] max-sm:left-3 max-sm:text-xs max-sm:px-2.5 max-sm:py-1.5"
       >
         ⚙ Settings
@@ -874,9 +875,9 @@ export default function App() {
 
       {/* 연결 실패 에러 오버레이 */}
       {showErrorOverlay && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-20">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-[var(--z-modal)]">
           <div className="bg-panel-bg-solid border border-white/10 rounded-xl px-8 py-7
-                        text-text-primary text-center max-w-[320px] backdrop-blur-[20px]"
+                        text-text-primary text-center max-w-[320px] backdrop-blur-xl"
                style={{ boxShadow: 'var(--shadow-modal)' }}>
             <div className="text-base font-bold mb-2.5">연결 실패</div>
             <div className="text-sm text-text-secondary mb-5">

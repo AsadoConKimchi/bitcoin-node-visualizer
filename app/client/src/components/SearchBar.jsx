@@ -73,7 +73,7 @@ export default function SearchBar({ onSearchBlock, onSearchTx, onSearchAddress }
           <button
             onClick={() => { setQuery(''); setError(''); }}
             aria-label="검색어 지우기"
-            className="text-muted text-xs cursor-pointer bg-transparent border-none hover:text-text-primary"
+            className="text-muted text-xs cursor-pointer bg-transparent border-none hover:text-text-primary focus-ring rounded"
           >
             ✕
           </button>
@@ -83,9 +83,9 @@ export default function SearchBar({ onSearchBlock, onSearchTx, onSearchAddress }
       {/* 검색 힌트 */}
       {focused && !query && (
         <div className="absolute top-full mt-1 left-0 right-0 bg-panel-bg-solid
-                       border border-white/10 rounded-lg px-3 py-2 z-20
+                       border border-white/10 rounded-lg px-3 py-2 z-[var(--z-modal)]
                        text-xs text-muted">
-          <div className="mb-1 text-text-secondary text-[10px]">검색 예시:</div>
+          <div className="mb-1 text-text-secondary text-label-sm">검색 예시:</div>
           <div className="text-text-dim">840000 — 블록 높이</div>
           <div className="text-text-dim">0000...abcd — TXID / 블록 해시</div>
           <div className="text-text-dim">bc1q... — 비트코인 주소</div>
@@ -95,8 +95,8 @@ export default function SearchBar({ onSearchBlock, onSearchTx, onSearchAddress }
       {/* 에러 메시지 */}
       {error && (
         <div className="absolute top-full mt-1 left-0 right-0 bg-panel-bg-solid
-                       border border-error/30 rounded-lg px-3 py-1.5 z-20
-                       text-[10px] text-error">
+                       border border-error/30 rounded-lg px-3 py-1.5 z-[var(--z-modal)]
+                       text-label-sm text-error">
           {error}
         </div>
       )}

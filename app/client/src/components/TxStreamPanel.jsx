@@ -37,7 +37,7 @@ function StepProgressBar({ steps }) {
         })}
       </div>
       {/* 현재 단계명 텍스트 */}
-      <div className="text-[9px] font-mono leading-none whitespace-nowrap"
+      <div className="text-label-xs font-mono leading-none whitespace-nowrap"
            style={{
              color: hasFail ? '#ef4444' : allDone ? '#22c55e' : '#f7931a',
            }}>
@@ -76,12 +76,12 @@ function InlineStepRow({ step }) {
         <span className={`${color} min-w-[14px] text-sm`}>{icon}</span>
         <span className={`flex-1 text-sm ${step.status === 'waiting' ? 'text-text-dim' : 'text-text-primary'}`}>
           {step.name}
-          {detail && <span className="text-muted ml-1 text-[11px]">{expanded ? '▾' : '▸'}</span>}
+          {detail && <span className="text-muted ml-1 text-label">{expanded ? '▾' : '▸'}</span>}
         </span>
-        <span className="text-muted text-[11px]">{step.detail}</span>
+        <span className="text-muted text-label">{step.detail}</span>
       </div>
       {expanded && detail && (
-        <div className="text-[11px] text-muted ml-5 mr-1 mb-1 leading-relaxed bg-dark-surface/50 rounded px-2 py-1.5">
+        <div className="text-label text-muted ml-5 mr-1 mb-1 leading-relaxed bg-dark-surface/50 rounded px-2 py-1.5">
           {detail}
         </div>
       )}
@@ -140,7 +140,7 @@ export default function TxStreamPanel({
         width={320}
         height="calc(100vh - 72px)"
         headerRight={
-          <span className="text-muted text-[11px] font-mono">
+          <span className="text-muted text-label font-mono">
             {txCount}건
             {verifyingCount > 0 && ` ⟳${verifyingCount}`}
             {failedCount > 0 && <span className="text-error ml-1">✗{failedCount}</span>}
@@ -190,22 +190,22 @@ export default function TxStreamPanel({
                       {short}
                     </span>
                     {isFailed && tx.failReason && (
-                      <span className="text-error text-[11px] ml-1">{tx.failReason}</span>
+                      <span className="text-error text-label ml-1">{tx.failReason}</span>
                     )}
                     <span className="ml-auto">
                       {isFailed ? (
-                        <span className="text-error text-[11px]">반려</span>
+                        <span className="text-error text-label">반려</span>
                       ) : isAnimating ? (
-                        <span className="text-mempool-green text-[11px]">→ 멤풀</span>
+                        <span className="text-mempool-green text-label">→ 멤풀</span>
                       ) : snap?.steps ? (
                         <StepProgressBar steps={snap.steps} />
                       ) : (
-                        <span className="text-text-dim text-[11px]">검증중</span>
+                        <span className="text-text-dim text-label">검증중</span>
                       )}
                     </span>
                   </div>
                   {/* Line 2: feeRate · size/weight · vin→vout · 상세보기 */}
-                  <div className="flex items-center gap-1.5 ml-6 mt-0.5 text-[11px] font-mono">
+                  <div className="flex items-center gap-1.5 ml-6 mt-0.5 text-label font-mono">
                     {txFeeRate != null && (
                       <span style={{ color: feeColor(txFeeRate) }}>{txFeeRate} sat/vB</span>
                     )}
@@ -240,8 +240,8 @@ export default function TxStreamPanel({
 
         {/* 푸터 (멤풀 이동 카운터) */}
         {doneCount > 0 && (
-          <div className="px-3 py-1.5 shrink-0 border-t border-white/6
-                         text-mempool-green text-[11px] text-center">
+          <div className="px-3 py-1.5 shrink-0 border-t border-dark-border
+                         text-mempool-green text-label text-center">
             → Mempool: {doneCount}건 이동 중
           </div>
         )}
@@ -251,8 +251,8 @@ export default function TxStreamPanel({
       {detailTx?.verifySnapshot && (
         <div
           className="fixed bg-panel-bg border border-tx-blue/20 rounded-xl
-                     backdrop-blur-[20px] w-[280px] max-h-[45vh] overflow-y-auto
-                     px-3.5 py-3 z-[15]"
+                     backdrop-blur-xl w-[280px] max-h-[45vh] overflow-y-auto
+                     px-3.5 py-3 z-[var(--z-overlay)]"
           style={{
             left: 344,
             top: 56,
@@ -260,7 +260,7 @@ export default function TxStreamPanel({
           }}
         >
           <div className="flex justify-between items-center mb-2">
-            <div className="text-tx-blue font-bold text-[11px] tracking-wide">
+            <div className="text-tx-blue font-bold text-label tracking-wide">
               ▸ TX 검증 상세
               {detailTx.verifySnapshot.done && detailTx.status !== 'failed' && (
                 <span className="text-success ml-1">완료 ✓</span>
@@ -279,13 +279,13 @@ export default function TxStreamPanel({
           </div>
 
           {/* TXID */}
-          <div className="text-text-dim text-[11px] font-mono mb-1.5 truncate" title={detailTx.txid}>
+          <div className="text-text-dim text-label font-mono mb-1.5 truncate" title={detailTx.txid}>
             {detailTx.txid}
           </div>
 
           {/* 크기 정보 */}
           {(detailTx.verifySnapshot.size != null || detailTx.verifySnapshot.weight != null) && (
-            <div className="text-btc-orange/50 text-[11px] mb-2">
+            <div className="text-btc-orange/50 text-label mb-2">
               {detailTx.verifySnapshot.size != null && `${detailTx.verifySnapshot.size} B`}
               {detailTx.verifySnapshot.size != null && detailTx.verifySnapshot.weight != null && ' · '}
               {detailTx.verifySnapshot.weight != null && `${detailTx.verifySnapshot.weight} WU`}
@@ -293,7 +293,7 @@ export default function TxStreamPanel({
           )}
 
           {detailTx.verifySnapshot.short && (
-            <div className="text-muted text-[11px] mb-2">{detailTx.verifySnapshot.short}</div>
+            <div className="text-muted text-label mb-2">{detailTx.verifySnapshot.short}</div>
           )}
 
           {/* 검증 단계 */}

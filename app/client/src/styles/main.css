@@ -33,6 +33,40 @@
   --shadow-panel: 0 8px 32px rgba(0,0,0,0.4);
   --shadow-panel-layered: 0 2px 4px rgba(0,0,0,0.2), 0 8px 32px rgba(0,0,0,0.4);
   --shadow-modal: 0 8px 16px rgba(0,0,0,0.4), 0 24px 64px rgba(0,0,0,0.5);
+  /* Z-Index 레이어 시스템 */
+  --z-strip: 5;
+  --z-hud: 10;
+  --z-hud-float: 12;
+  --z-overlay: 15;
+  --z-modal-backdrop: 18;
+  --z-modal: 20;
+  --z-onboarding: 100;
+  /* 폰트 크기 토큰 — HUD 라벨용 */
+  --font-size-label-xs: 0.5625rem;  /* 9px */
+  --font-size-label-sm: 0.625rem;   /* 10px */
+  --font-size-label: 0.6875rem;     /* 11px */
+}
+
+@utility text-label-xs {
+  font-size: var(--font-size-label-xs);
+  line-height: 1rem;
+}
+
+@utility text-label-sm {
+  font-size: var(--font-size-label-sm);
+  line-height: 1rem;
+}
+
+@utility text-label {
+  font-size: var(--font-size-label);
+  line-height: 1rem;
+}
+
+@utility focus-ring {
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(247, 147, 26, 0.5);
+  }
 }
 
 /* 기본 리셋 + 글로벌 스타일 */

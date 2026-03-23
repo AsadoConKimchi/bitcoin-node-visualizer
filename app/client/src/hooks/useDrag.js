@@ -23,7 +23,7 @@ export default function useDrag(initialPosition = { x: 0, y: 0 }) {
     const h = el?.offsetHeight || 200;
     return {
       x: Math.max(0, Math.min(x, vw - Math.min(w, vw))),
-      y: Math.max(0, Math.min(y, vh - Math.min(44, vh))),
+      y: Math.max(56, Math.min(y, vh - Math.min(44, vh))),
     };
   }, []);
 

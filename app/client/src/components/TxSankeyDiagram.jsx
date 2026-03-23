@@ -151,7 +151,7 @@ export default function TxSankeyDiagram({ inputs = [], outputs = [], fee = 0 }) 
       <div className="flex justify-end mb-1">
         <button
           onClick={() => setHidden(!hidden)}
-          className="text-[11px] text-muted hover:text-text-secondary cursor-pointer
+          className="text-label text-muted hover:text-text-secondary cursor-pointer
                      bg-transparent border-none transition-colors"
         >
           {hidden ? 'Show diagram ▾' : 'Hide diagram ▴'}

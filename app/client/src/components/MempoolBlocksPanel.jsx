@@ -13,7 +13,7 @@ function feeRangeColor(medianFee) {
  * mempool-blocks 데이터를 활용하여 다음 N개 블록에 포함될 TX를
  * 수수료 구간별로 적층 표시
  */
-export default function MempoolBlocksPanel({ mempoolBlocks, visible }) {
+export default function MempoolBlocksPanel({ mempoolBlocks, visible, topOffset = 0 }) {
   if (!visible || !mempoolBlocks?.length) return null;
 
   // 최대 6개 블록만 표시
@@ -21,15 +21,15 @@ export default function MempoolBlocksPanel({ mempoolBlocks, visible }) {
   const maxSize = Math.max(...blocks.map(b => b.blockSize || b.blockVSize || 1));
 
   return (
-    <div className="absolute top-[120px] right-4 w-[260px] bg-panel-bg border border-white/8
+    <div className="absolute right-4 w-[260px] bg-panel-bg border border-dark-border
                     rounded-xl px-3.5 py-3 font-mono text-sm text-text-primary
-                    backdrop-blur-[20px] z-10 panel-transition
+                    backdrop-blur-xl z-[var(--z-hud)] panel-transition
                     max-sm:right-2 max-sm:w-[220px]"
-         style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
+         style={{ top: `${120 + topOffset}px`, boxShadow: 'var(--shadow-panel-layered)' }}>
       {/* 헤더 */}
       <div className="text-mempool-green font-bold text-xs tracking-wide mb-2 flex justify-between">
         <span>▸ 예상 블록</span>
-        <span className="text-muted font-normal text-[10px]">{blocks.length}개</span>
+        <span className="text-muted font-normal text-label-sm">{blocks.length}개</span>
       </div>
 
       {/* 적층 시각화 */}
@@ -83,13 +83,13 @@ export default function MempoolBlocksPanel({ mempoolBlocks, visible }) {
               </div>
 
               {/* 블록 번호 */}
-              <div className="text-[9px] text-muted mt-1">+{i + 1}</div>
+              <div className="text-label-xs text-muted mt-1">+{i + 1}</div>
 
               {/* TX 수 */}
-              <div className="text-[9px] text-text-dim">{txCount}</div>
+              <div className="text-label-xs text-text-dim">{txCount}</div>
 
               {/* 수수료 */}
-              <div className="text-[8px]" style={{ color }}>
+              <div className="text-label-xs" style={{ color }}>
                 ~{Math.round(medianFee)}
               </div>
             </div>
@@ -98,14 +98,14 @@ export default function MempoolBlocksPanel({ mempoolBlocks, visible }) {
       </div>
 
       {/* 범례 */}
-      <div className="flex justify-between mt-2 pt-1.5 border-t border-dark-border text-[9px] text-muted">
+      <div className="flex justify-between mt-2 pt-1.5 border-t border-dark-border text-label-xs text-muted">
         <span>블록 번호</span>
         <span>TX 수</span>
         <span>중간 수수료 (sat/vB)</span>
       </div>
 
       {/* 수수료 색상 범례 */}
-      <div className="flex gap-2 mt-1 text-[8px]">
+      <div className="flex gap-2 mt-1 text-label-xs">
         <span className="text-[#ef4444]">● 50+</span>
         <span className="text-[#f59e0b]">● 20+</span>
         <span className="text-[#22c55e]">● 10+</span>

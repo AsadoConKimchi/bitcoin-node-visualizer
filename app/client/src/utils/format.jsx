@@ -58,7 +58,7 @@ export function CopyButton({ text }) {
   return (
     <button
       onClick={handleCopy}
-      className="text-muted hover:text-text-primary text-[11px] cursor-pointer
+      className="text-muted hover:text-text-primary text-label cursor-pointer
                  bg-transparent border-none px-1 transition-colors shrink-0"
       title="복사"
     >

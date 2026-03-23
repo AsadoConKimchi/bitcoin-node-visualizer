@@ -10,7 +10,7 @@ export default function WindowDock({ items = [] }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[var(--z-modal)]
                     flex gap-2 px-3 py-2 panel-base">
       {items.map((item) => (
         <button

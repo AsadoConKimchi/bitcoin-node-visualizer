@@ -9,7 +9,7 @@ const REST_BASE = 'https://mempool.space/api';
 function FeatureBadge({ label, color }) {
   return (
     <span
-      className="text-[11px] px-1.5 py-0.5 rounded border"
+      className="text-label px-1.5 py-0.5 rounded border"
       style={{
         color,
         borderColor: `${color}30`,
@@ -88,12 +88,12 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
 
   return (
     <>
-      <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[19]" />
+      <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[var(--z-modal-backdrop)]" />
 
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
                       w-[720px] max-h-[85vh] overflow-y-auto bg-panel-bg-solid
                       border border-white/10 rounded-xl px-5 py-4
-                      font-mono text-sm text-text-primary backdrop-blur-md z-20
+                      font-mono text-sm text-text-primary backdrop-blur-md z-[var(--z-modal)]
                       max-sm:w-[calc(100vw-16px)] max-sm:max-h-[90vh]"
            style={{ boxShadow: 'var(--shadow-modal)' }}>
 
@@ -102,18 +102,18 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
           <div className="flex-1 min-w-0">
             <div className="text-tx-blue font-bold text-base mb-1">Transaction</div>
             <div className="flex items-center gap-1">
-              <span className="text-[11px] text-text-dim font-mono break-all">{tx?.txid}</span>
+              <span className="text-label text-text-dim font-mono break-all">{tx?.txid}</span>
               {tx?.txid && <CopyButton text={tx.txid} />}
             </div>
             <div className="flex gap-2 mt-1.5 flex-wrap">
               {detail?.status?.confirmed ? (
-                <span className="text-[11px] bg-green-500/15 border border-green-500/30 text-green-400 px-1.5 py-0.5 rounded">
+                <span className="text-label bg-green-500/15 border border-green-500/30 text-green-400 px-1.5 py-0.5 rounded">
                   {detail.status.block_height
                     ? `Confirmed (Block #${detail.status.block_height.toLocaleString()})`
                     : 'Confirmed'}
                 </span>
               ) : detail ? (
-                <span className="text-[11px] bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 px-1.5 py-0.5 rounded">
+                <span className="text-label bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 px-1.5 py-0.5 rounded">
                   Unconfirmed
                 </span>
               ) : null}
@@ -144,42 +144,42 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
             {/* 2. Info Grid — 2열 CSS grid */}
             <div className="grid grid-cols-2 gap-2 mb-3 sm:grid-cols-3">
               {detail.status?.block_time && (
-                <div className="bg-dark-surface/60 border border-white/6 rounded-lg px-3 py-2">
-                  <div className="text-[11px] text-muted mb-0.5">Timestamp</div>
+                <div className="bg-dark-surface/60 border border-dark-border rounded-lg px-3 py-2">
+                  <div className="text-label text-muted mb-0.5">Timestamp</div>
                   <div className="text-sm font-mono text-text-primary">
                     {relativeTime(detail.status.block_time)}
                   </div>
-                  <div className="text-[10px] text-text-dim">
+                  <div className="text-label-sm text-text-dim">
                     {new Date(detail.status.block_time * 1000).toLocaleString('ko-KR')}
                   </div>
                 </div>
               )}
-              <div className="bg-dark-surface/60 border border-white/6 rounded-lg px-3 py-2">
-                <div className="text-[11px] text-muted mb-0.5">Fee</div>
+              <div className="bg-dark-surface/60 border border-dark-border rounded-lg px-3 py-2">
+                <div className="text-label text-muted mb-0.5">Fee</div>
                 <div className="text-sm font-mono font-bold text-btc-orange">
                   {fee != null ? `${fee.toLocaleString()} sats` : '—'}
                 </div>
               </div>
-              <div className="bg-dark-surface/60 border border-white/6 rounded-lg px-3 py-2">
-                <div className="text-[11px] text-muted mb-0.5">Fee Rate</div>
+              <div className="bg-dark-surface/60 border border-dark-border rounded-lg px-3 py-2">
+                <div className="text-label text-muted mb-0.5">Fee Rate</div>
                 <div className="text-sm font-mono font-bold text-btc-orange">
                   {feeRate ? `${feeRate} sat/vB` : '—'}
                 </div>
               </div>
-              <div className="bg-dark-surface/60 border border-white/6 rounded-lg px-3 py-2">
-                <div className="text-[11px] text-muted mb-0.5">Size</div>
+              <div className="bg-dark-surface/60 border border-dark-border rounded-lg px-3 py-2">
+                <div className="text-label text-muted mb-0.5">Size</div>
                 <div className="text-sm font-mono text-text-primary">
                   {size != null ? `${size.toLocaleString()} B` : '—'}
                 </div>
               </div>
-              <div className="bg-dark-surface/60 border border-white/6 rounded-lg px-3 py-2">
-                <div className="text-[11px] text-muted mb-0.5">Virtual Size</div>
+              <div className="bg-dark-surface/60 border border-dark-border rounded-lg px-3 py-2">
+                <div className="text-label text-muted mb-0.5">Virtual Size</div>
                 <div className="text-sm font-mono text-text-primary">
                   {vsize ? `${vsize} vB` : '—'}
                 </div>
               </div>
-              <div className="bg-dark-surface/60 border border-white/6 rounded-lg px-3 py-2">
-                <div className="text-[11px] text-muted mb-0.5">Weight</div>
+              <div className="bg-dark-surface/60 border border-dark-border rounded-lg px-3 py-2">
+                <div className="text-label text-muted mb-0.5">Weight</div>
                 <div className="text-sm font-mono text-text-primary">
                   {weight != null ? `${weight.toLocaleString()} WU` : '—'}
                 </div>
@@ -188,8 +188,8 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
 
             {/* Total Output */}
             {totalOut != null && (
-              <div className="bg-dark-surface/60 border border-white/6 rounded-lg px-4 py-2.5 mb-3 text-center">
-                <div className="text-[11px] text-muted mb-0.5">Total Output Value</div>
+              <div className="bg-dark-surface/60 border border-dark-border rounded-lg px-4 py-2.5 mb-3 text-center">
+                <div className="text-label text-muted mb-0.5">Total Output Value</div>
                 <div className="text-lg font-mono font-bold text-btc-orange">
                   ₿ {formatBtc(totalOut)}
                 </div>
@@ -198,8 +198,8 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
 
             {/* 3. Flow Diagram */}
             {(sankeyInputs.length > 0 || sankeyOutputs.length > 0) && (
-              <div className="mb-3 border border-white/6 rounded-lg overflow-hidden bg-dark-surface/30 p-2">
-                <div className="text-[11px] text-muted font-bold tracking-wide mb-1 px-1">FLOW</div>
+              <div className="mb-3 border border-dark-border rounded-lg overflow-hidden bg-dark-surface/30 p-2">
+                <div className="text-label text-muted font-bold tracking-wide mb-1 px-1">FLOW</div>
                 <TxSankeyDiagram inputs={sankeyInputs} outputs={sankeyOutputs} fee={fee || 0} />
               </div>
             )}
@@ -212,11 +212,11 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
                   <span className="inline-block w-2 h-2 rounded-full bg-red-400" />
                   INPUTS ({detail.vin?.length ?? '?'})
                 </div>
-                <div className="bg-dark-surface/40 rounded-lg border border-white/6 overflow-hidden">
+                <div className="bg-dark-surface/40 rounded-lg border border-dark-border overflow-hidden">
                   {detail.vin?.slice(0, inputLimit).map((inp, i) => (
                     <div key={i} className="text-xs py-1.5 px-2 border-b border-dark-surface last:border-b-0">
                       <div className="flex items-center gap-1">
-                        <span className="text-muted text-[10px] min-w-[16px]">{i}</span>
+                        <span className="text-muted text-label-sm min-w-[16px]">{i}</span>
                         {inp.isCoinbase
                           ? <span className="text-btc-orange font-bold">Coinbase</span>
                           : inp.prevout?.scriptpubkey_address
@@ -233,12 +233,12 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
                       </div>
                       <div className="flex items-center justify-between mt-0.5 ml-4">
                         {inp.prevout?.scriptpubkey_type && (
-                          <span className="text-[10px] text-muted bg-white/5 px-1 rounded">
+                          <span className="text-label-sm text-muted bg-white/5 px-1 rounded">
                             {scriptTypeLabel(inp.prevout.scriptpubkey_type)}
                           </span>
                         )}
                         {inp.prevout?.value != null && inp.prevout.value > 0 && (
-                          <span className="text-btc-orange text-[11px] ml-auto shrink-0">
+                          <span className="text-btc-orange text-label ml-auto shrink-0">
                             {formatBtc(inp.prevout.value)} BTC
                           </span>
                         )}
@@ -248,7 +248,7 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
                   {detail.vin?.length > 5 && (
                     <button
                       onClick={() => setShowAllInputs(!showAllInputs)}
-                      className="w-full text-tx-blue text-[11px] cursor-pointer bg-transparent
+                      className="w-full text-tx-blue text-label cursor-pointer bg-transparent
                                  border-none hover:bg-white/5 py-1.5 text-center"
                     >
                       {showAllInputs ? '접기 ▴' : `… ${detail.vin.length - 5}개 더 ▾`}
@@ -263,11 +263,11 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
                   <span className="inline-block w-2 h-2 rounded-full bg-green-400" />
                   OUTPUTS ({detail.vout?.length ?? '?'})
                 </div>
-                <div className="bg-dark-surface/40 rounded-lg border border-white/6 overflow-hidden">
+                <div className="bg-dark-surface/40 rounded-lg border border-dark-border overflow-hidden">
                   {detail.vout?.slice(0, outputLimit).map((out, i) => (
                     <div key={i} className="text-xs py-1.5 px-2 border-b border-dark-surface last:border-b-0">
                       <div className="flex items-center gap-1">
-                        <span className="text-muted text-[10px] min-w-[16px]">{i}</span>
+                        <span className="text-muted text-label-sm min-w-[16px]">{i}</span>
                         {out.scriptpubkey_address
                           ? <span
                               className={`truncate max-w-[200px] text-text-secondary ${onAddressClick ? 'cursor-pointer hover:text-tx-blue' : ''}`}
@@ -280,12 +280,12 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
                       </div>
                       <div className="flex items-center justify-between mt-0.5 ml-4">
                         {out.scriptpubkey_type && (
-                          <span className="text-[10px] text-muted bg-white/5 px-1 rounded">
+                          <span className="text-label-sm text-muted bg-white/5 px-1 rounded">
                             {scriptTypeLabel(out.scriptpubkey_type)}
                           </span>
                         )}
                         {out.value != null && (
-                          <span className="text-success text-[11px] ml-auto shrink-0">
+                          <span className="text-success text-label ml-auto shrink-0">
                             {formatBtc(out.value)} BTC
                           </span>
                         )}
@@ -295,7 +295,7 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
                   {detail.vout?.length > 5 && (
                     <button
                       onClick={() => setShowAllOutputs(!showAllOutputs)}
-                      className="w-full text-tx-blue text-[11px] cursor-pointer bg-transparent
+                      className="w-full text-tx-blue text-label cursor-pointer bg-transparent
                                  border-none hover:bg-white/5 py-1.5 text-center"
                     >
                       {showAllOutputs ? '접기 ▴' : `… ${detail.vout.length - 5}개 더 ▾`}
@@ -304,7 +304,7 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
                 </div>
                 {/* Total output 합계 */}
                 {totalOut != null && (
-                  <div className="text-right text-[11px] text-muted mt-1 pr-2">
+                  <div className="text-right text-label text-muted mt-1 pr-2">
                     Total: <span className="text-success font-bold">{formatBtc(totalOut)} BTC</span>
                   </div>
                 )}
@@ -312,7 +312,7 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
             </div>
 
             {/* 5. Details (접이식) */}
-            <div className="border-t border-white/8 pt-2">
+            <div className="border-t border-dark-border pt-2">
               <button
                 onClick={() => setShowDetails(!showDetails)}
                 className="text-muted text-xs font-bold cursor-pointer bg-transparent border-none

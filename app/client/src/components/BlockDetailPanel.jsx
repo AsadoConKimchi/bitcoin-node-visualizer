@@ -72,7 +72,7 @@ function SegwitStats({ txids, blockHash, sourceType }) {
         {stats.segwit > 0 && <div className="bg-blue-400" style={{ width: `${stats.segwit}%` }} />}
         {stats.taproot > 0 && <div className="bg-purple-400" style={{ width: `${stats.taproot}%` }} />}
       </div>
-      <div className="flex justify-between text-[9px]">
+      <div className="flex justify-between text-label-xs">
         <span className="text-orange-500">Legacy {stats.legacy}%</span>
         <span className="text-blue-400">SegWit {stats.segwit}%</span>
         <span className="text-purple-400">Taproot {stats.taproot}%</span>
@@ -117,7 +117,7 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
 
   if (noData) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-muted text-[11px]">
+      <div className="w-full h-full flex items-center justify-center text-muted text-label">
         TX 데이터 없음
       </div>
     );
@@ -125,7 +125,7 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
 
   if (!txSamples.length) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-muted text-[11px]">
+      <div className="w-full h-full flex items-center justify-center text-muted text-label">
         로딩 중…
       </div>
     );
@@ -175,7 +175,7 @@ function FeeBar({ feeRange }) {
           return (
             <div key={i} className="flex-1 flex flex-col items-center">
               <div className="w-full rounded-sm" style={{ height: `${pct}%`, minHeight: 3, background: color }} />
-              <div className="text-muted-dim text-[8px] mt-0.5">{Math.round(fee)}</div>
+              <div className="text-muted-dim text-label-xs mt-0.5">{Math.round(fee)}</div>
             </div>
           );
         })}
@@ -196,7 +196,7 @@ function InfoRow({ label, value, mono, highlight, copyable }) {
       <span className="text-muted shrink-0 text-xs">{label}</span>
       <span className={`text-right text-xs flex items-center gap-1 min-w-0
                        ${highlight ? 'text-btc-orange font-bold' : 'text-text-primary'}
-                       ${mono ? 'text-[11px]' : ''}`}>
+                       ${mono ? 'text-label' : ''}`}>
         {mono
           ? <span className="truncate min-w-0" title={value}>{value ?? '—'}</span>
           : (value ?? '—')
@@ -323,12 +323,12 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
 
   return (
     <>
-      <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[19]" />
+      <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[var(--z-modal-backdrop)]" />
 
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
                       w-[780px] max-h-[85vh] overflow-y-auto bg-panel-bg-solid
                       border border-white/10 rounded-xl px-5 py-4
-                      font-mono text-sm text-text-primary backdrop-blur-md z-20
+                      font-mono text-sm text-text-primary backdrop-blur-md z-[var(--z-modal)]
                       max-sm:w-[calc(100vw-16px)] max-sm:max-h-[90vh]"
            style={{ boxShadow: 'var(--shadow-modal)' }}>
 
@@ -415,8 +415,8 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
               {/* 우측 (~55%) — Block Treemap + Fee 분포 */}
               <div className="col-span-2 space-y-2 max-sm:col-span-1">
                 {/* Treemap */}
-                <div className="bg-dark-surface/60 border border-white/6 rounded-lg p-2">
-                  <div className="text-[11px] text-muted font-bold mb-1">TX FEE RATE MAP</div>
+                <div className="bg-dark-surface/60 border border-dark-border rounded-lg p-2">
+                  <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP</div>
                   <div className="h-[140px]">
                     <BlockTreemap
                       txids={txids.length > 0 ? txids : (detail._txids || [])}
@@ -436,16 +436,16 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
                     ].map(l => (
                       <div key={l.label} className="flex items-center gap-0.5">
                         <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: l.color }} />
-                        <span className="text-[9px] text-muted">{l.label}</span>
+                        <span className="text-label-xs text-muted">{l.label}</span>
                       </div>
                     ))}
-                    <span className="text-[9px] text-muted ml-1">sat/vB</span>
+                    <span className="text-label-xs text-muted ml-1">sat/vB</span>
                   </div>
                 </div>
 
                 {/* Fee 분포 바 차트 */}
                 {feeRange && (
-                  <div className="bg-dark-surface/60 border border-white/6 rounded-lg p-2">
+                  <div className="bg-dark-surface/60 border border-dark-border rounded-lg p-2">
                     <FeeBar feeRange={feeRange} />
                   </div>
                 )}
@@ -453,7 +453,7 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
             </div>
 
             {/* 3. Details (접이식) */}
-            <div className="border-t border-white/8 pt-2 mb-2">
+            <div className="border-t border-dark-border pt-2 mb-2">
               <button
                 onClick={() => setShowDetails(!showDetails)}
                 className="text-muted text-xs font-bold cursor-pointer bg-transparent border-none
@@ -475,7 +475,7 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
 
             {/* 4. TX 목록 */}
             {txCount > 0 && (
-              <div className="border-t border-white/8 pt-2">
+              <div className="border-t border-dark-border pt-2">
                 <div
                   onClick={loadTxids}
                   className="text-btc-orange text-xs font-bold cursor-pointer py-1 select-none hover:text-btc-orange/80"

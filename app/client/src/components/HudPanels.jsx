@@ -151,26 +151,26 @@ const HudPanels = forwardRef(function HudPanels({
                          }`}>
           {sourceBadge}
         </div>
-        <div className="text-[11px] text-muted mb-1">{sourceSubtitle}</div>
+        <div className="text-label text-muted mb-1">{sourceSubtitle}</div>
         {!isServer && (
-          <div className="text-[11px] text-white/40 mb-0.5">📍 Seoul (default)</div>
+          <div className="text-label text-white/40 mb-0.5">📍 Seoul (default)</div>
         )}
 
         {/* 노드 정보 (서버 모드) */}
         {isServer && nodeInfo?.subversion && (
-          <div className="text-[11px] text-white/50 mb-0.5">
+          <div className="text-label text-white/50 mb-0.5">
             {nodeInfo.subversion.replace(/\//g, '')}
             {' · '}{nodeInfo.connections ?? '?'} peers
             {nodeInfo.inbound != null && ` (${nodeInfo.outbound}↑ ${nodeInfo.inbound}↓)`}
           </div>
         )}
         {isServer && bestBlockHash && (
-          <div className="text-[11px] text-white/30 font-mono truncate mb-1.5" title={bestBlockHash}>
+          <div className="text-label text-white/30 font-mono truncate mb-1.5" title={bestBlockHash}>
             tip: {bestBlockHash.slice(0, 16)}…
           </div>
         )}
         {!isServer && mode === 'connecting' && (
-          <div className="text-[11px] text-white/30 mb-1.5">⟳ 서버 감지 중...</div>
+          <div className="text-label text-white/30 mb-1.5">⟳ 서버 감지 중...</div>
         )}
 
         {/* 기본 행 (컴팩트) */}
@@ -186,14 +186,14 @@ const HudPanels = forwardRef(function HudPanels({
         <Row label="Mempool" value={mempoolStr} />
         {peersStr != null && <Row label="Peers" value={peersStr} />}
         {isServer && peersStr != null && (
-          <div className="text-[11px] text-white/30 -mt-1 mb-0.5 pl-1">🟢 피어 · 🟠 연결선</div>
+          <div className="text-label text-white/30 -mt-1 mb-0.5 pl-1">🟢 피어 · 🟠 연결선</div>
         )}
         <Row label="TX/s" value={txPerSec != null ? txPerSec.toFixed(1) : null} />
 
         {/* 확장 토글 */}
         <button
           onClick={() => setExpanded(e => !e)}
-          className="w-full text-left text-[11px] text-text-dim hover:text-text-secondary
+          className="w-full text-left text-label text-text-dim hover:text-text-secondary
                      cursor-pointer bg-transparent border-none mt-1 py-0.5"
         >
           {expanded ? '▾ 접기' : '▸ 상세'}

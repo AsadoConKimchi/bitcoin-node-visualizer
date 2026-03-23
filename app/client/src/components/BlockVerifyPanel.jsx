@@ -29,12 +29,12 @@ function BlockStepRow({ step }) {
         <span className={`${color} min-w-[14px] text-sm ${step.status === 'active' ? 'animate-spin' : ''}`}>{icon}</span>
         <span className={`flex-1 text-sm ${step.status === 'waiting' ? 'text-text-dim' : 'text-text-primary'}`}>
           {step.name}
-          {detail && <span className="text-muted ml-1 text-[11px]">{expanded ? '▾' : '▸'}</span>}
+          {detail && <span className="text-muted ml-1 text-label">{expanded ? '▾' : '▸'}</span>}
         </span>
-        <span className="text-muted text-[11px] font-mono">{step.detail}</span>
+        <span className="text-muted text-label font-mono">{step.detail}</span>
       </div>
       {expanded && detail && (
-        <div className="text-[11px] text-muted ml-5 mr-1 mb-1 leading-relaxed bg-dark-surface/50 rounded px-2 py-1.5">
+        <div className="text-label text-muted ml-5 mr-1 mb-1 leading-relaxed bg-dark-surface/50 rounded px-2 py-1.5">
           {detail}
         </div>
       )}
@@ -50,7 +50,7 @@ function MerkleNode({ label, done, active }) {
 
   return (
     <div className={`${bgClass} border ${borderClass} ${textClass} rounded
-                    text-[11px] px-2 py-1 text-center min-w-[64px] font-mono
+                    text-label px-2 py-1 text-center min-w-[64px] font-mono
                     transition-all duration-300 ${active ? 'animate-pulse' : ''}`}>
       {label}
     </div>
@@ -114,7 +114,7 @@ function MerkleTree({ merkle }) {
 
   return (
     <div ref={treeRef} className="mt-3 border-t border-dark-border pt-3 relative">
-      <div className="text-block-purple text-[11px] font-bold tracking-wide mb-2">MERKLE TREE</div>
+      <div className="text-block-purple text-label font-bold tracking-wide mb-2">MERKLE TREE</div>
 
       <svg
         ref={svgRef}
@@ -205,7 +205,7 @@ function BlockHeaderBar({ blockData, steps }) {
 
   return (
     <div className="mt-3 mb-2">
-      <div className="text-block-purple text-[11px] font-bold tracking-wide mb-1.5">BLOCK HEADER (80 BYTES)</div>
+      <div className="text-block-purple text-label font-bold tracking-wide mb-1.5">BLOCK HEADER (80 BYTES)</div>
       <div className="flex rounded overflow-hidden border border-dark-border h-10">
         {HEADER_SEGMENTS.map((seg) => {
           const widthPercent = (seg.bytes / 80) * 100;
@@ -217,7 +217,7 @@ function BlockHeaderBar({ blockData, steps }) {
           return (
             <div
               key={seg.name}
-              className={`relative flex items-center justify-center text-[11px] font-mono
+              className={`relative flex items-center justify-center text-label font-mono
                          border-r last:border-r-0 cursor-default transition-colors duration-300
                          ${segColor} ${isHovered ? 'bg-block-purple/20' : ''}`}
               style={{ width: `${widthPercent}%`, minWidth: seg.bytes <= 4 ? '36px' : undefined }}
@@ -227,11 +227,11 @@ function BlockHeaderBar({ blockData, steps }) {
               <span className={`${isHovered ? 'text-block-purple' : headerParsed ? 'text-text-secondary' : 'text-text-dim'} truncate px-0.5`}>
                 {headerParsed && seg.bytes <= 4 ? values[seg.field] || seg.name : seg.bytes <= 4 ? seg.name : seg.name.slice(0, 6)}
               </span>
-              <span className="text-[8px] text-muted absolute bottom-0 right-0.5">{seg.bytes}B</span>
+              <span className="text-label-xs text-muted absolute bottom-0 right-0.5">{seg.bytes}B</span>
 
               {isHovered && (
                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-panel-bg-solid border border-block-purple/40
-                               rounded px-2 py-0.5 text-[11px] text-block-purple whitespace-nowrap z-20 pointer-events-none">
+                               rounded px-2 py-0.5 text-label text-block-purple whitespace-nowrap z-20 pointer-events-none">
                   {values[seg.field] || '?'}
                 </div>
               )}
@@ -273,7 +273,7 @@ export default function BlockVerifyPanel({
       height="calc(100vh - 72px)"
       headerRight={
         verifyState && (
-          <span className="text-muted text-[11px] font-mono">
+          <span className="text-muted text-label font-mono">
             {progress}%
           </span>
         )
@@ -289,11 +289,11 @@ export default function BlockVerifyPanel({
               Block #{blockData?.height?.toLocaleString() ?? '?'}
               {blockData?.pool ? ` · ${blockData.pool}` : ''}
               {blockData?.txCount && (
-                <span className="text-muted ml-1 text-[11px]">{blockData.txCount.toLocaleString()} TX</span>
+                <span className="text-muted ml-1 text-label">{blockData.txCount.toLocaleString()} TX</span>
               )}
             </div>
             {blockData?.hash && (
-              <div className="text-text-dim text-[11px] mb-2 font-mono">{blockData.hash.slice(0, 24)}…</div>
+              <div className="text-text-dim text-label mb-2 font-mono">{blockData.hash.slice(0, 24)}…</div>
             )}
 
             {/* 프로그레스 바 */}
@@ -319,7 +319,7 @@ export default function BlockVerifyPanel({
 
             {/* 머클 루트 해시 (완료 시) */}
             {merkle && doneSteps === steps?.length && blockData?.merkleRoot && (
-              <div className="mt-2 text-[11px] font-mono text-success/70 bg-success/5 rounded px-2 py-1">
+              <div className="mt-2 text-label font-mono text-success/70 bg-success/5 rounded px-2 py-1">
                 Merkle Root: {blockData.merkleRoot}
               </div>
             )}

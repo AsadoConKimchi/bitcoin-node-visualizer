@@ -60,12 +60,12 @@ function InlineStepRow({ step }) {
         <span className={`${color} min-w-[12px] text-xs`}>{icon}</span>
         <span className={`flex-1 text-xs ${step.status === 'waiting' ? 'text-text-dim' : 'text-text-primary'}`}>
           {step.name}
-          {detail && <span className="text-muted ml-0.5 text-[9px]">{expanded ? '▾' : '▸'}</span>}
+          {detail && <span className="text-muted ml-0.5 text-label-xs">{expanded ? '▾' : '▸'}</span>}
         </span>
-        <span className="text-muted text-[9px]">{step.detail}</span>
+        <span className="text-muted text-label-xs">{step.detail}</span>
       </div>
       {expanded && detail && (
-        <div className="text-[9px] text-muted ml-4 mr-0.5 mb-0.5 leading-relaxed bg-dark-surface/50 rounded px-1.5 py-1">
+        <div className="text-label-xs text-muted ml-4 mr-0.5 mb-0.5 leading-relaxed bg-dark-surface/50 rounded px-1.5 py-1">
           {detail}
         </div>
       )}
@@ -112,7 +112,7 @@ function TxStreamSection({ txStream, onTxClick }) {
               <span className={`text-xs font-mono ${isDone ? 'text-success/70' : 'text-text-primary'}`}>
                 {short}
               </span>
-              <span className="ml-auto text-text-dim text-[9px] flex items-center">
+              <span className="ml-auto text-text-dim text-label-xs flex items-center">
                 {isAnimating ? '→ 멤풀' : tx.verifySnapshot?.steps
                   ? <MiniProgress steps={tx.verifySnapshot.steps} />
                   : '검증중'}
@@ -122,14 +122,14 @@ function TxStreamSection({ txStream, onTxClick }) {
             {/* 인라인 검증 상세 */}
             {isExpanded && tx.verifySnapshot && (
               <div className="ml-2 mr-0.5 my-1 px-2 py-1.5 bg-dark-surface/60 border border-tx-blue/20 rounded">
-                <div className="text-tx-blue font-bold text-[9px] tracking-wide mb-1">
+                <div className="text-tx-blue font-bold text-label-xs tracking-wide mb-1">
                   ▸ TX 검증 {tx.verifySnapshot.done && <span className="text-success">완료 ✓</span>}
                 </div>
                 {tx.verifySnapshot.short && (
-                  <div className="text-muted text-[9px] mb-0.5">{tx.verifySnapshot.short}</div>
+                  <div className="text-muted text-label-xs mb-0.5">{tx.verifySnapshot.short}</div>
                 )}
                 {(tx.verifySnapshot.size != null || tx.verifySnapshot.weight != null) && (
-                  <div className="text-btc-orange/30 text-[9px] mb-1">
+                  <div className="text-btc-orange/30 text-label-xs mb-1">
                     {tx.verifySnapshot.size != null && `${tx.verifySnapshot.size} B`}
                     {tx.verifySnapshot.size != null && tx.verifySnapshot.weight != null && ' · '}
                     {tx.verifySnapshot.weight != null && `${tx.verifySnapshot.weight} WU`}
@@ -176,12 +176,12 @@ function BlockStepRow({ step }) {
         <span className={`${color} min-w-[12px] text-xs`}>{icon}</span>
         <span className={`flex-1 text-xs ${step.status === 'waiting' ? 'text-text-dim' : 'text-text-primary'}`}>
           {step.name}
-          {detail && <span className="text-muted ml-0.5 text-[9px]">{expanded ? '▾' : '▸'}</span>}
+          {detail && <span className="text-muted ml-0.5 text-label-xs">{expanded ? '▾' : '▸'}</span>}
         </span>
-        <span className="text-muted text-[9px]">{step.detail}</span>
+        <span className="text-muted text-label-xs">{step.detail}</span>
       </div>
       {expanded && detail && (
-        <div className="text-[9px] text-muted ml-4 mr-0.5 mb-0.5 leading-relaxed bg-dark-surface/50 rounded px-1.5 py-1">
+        <div className="text-label-xs text-muted ml-4 mr-0.5 mb-0.5 leading-relaxed bg-dark-surface/50 rounded px-1.5 py-1">
           {detail}
         </div>
       )}
@@ -196,7 +196,7 @@ function MerkleNode({ label, done, active }) {
 
   return (
     <div className={`${bgClass} border ${borderClass} ${textClass} rounded
-                    text-[9px] px-1 py-0.5 text-center min-w-[32px] font-mono`}>
+                    text-label-xs px-1 py-0.5 text-center min-w-[32px] font-mono`}>
       {label}
     </div>
   );
@@ -302,7 +302,7 @@ function MempoolSection({ mempoolTxs, mempoolCount, mempoolInfo, onTxClick }) {
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-1 shrink-0">
         <span className="text-mempool-green font-bold text-xs tracking-wide">▸ MEMPOOL</span>
-        <span className="text-muted text-[9px]">
+        <span className="text-muted text-label-xs">
           {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}
           {totalVB > 0 && ` · ${totalVBStr}`}
         </span>
@@ -363,7 +363,7 @@ function MempoolSection({ mempoolTxs, mempoolCount, mempoolInfo, onTxClick }) {
           return (
             <div
               className="absolute bg-panel-bg-solid rounded px-2 py-1
-                        text-[9px] text-text-primary whitespace-nowrap z-12 pointer-events-none
+                        text-label-xs text-text-primary whitespace-nowrap z-[var(--z-hud-float)] pointer-events-none
                         border border-mempool-green/40"
               style={{
                 left: Math.min(r.x + r.w / 2, dims.w - 100),
@@ -377,7 +377,7 @@ function MempoolSection({ mempoolTxs, mempoolCount, mempoolInfo, onTxClick }) {
       </div>
 
       {/* 범례 */}
-      <div className="flex gap-3 mt-1 text-[8px] shrink-0 justify-end">
+      <div className="flex gap-3 mt-1 text-label-xs shrink-0 justify-end">
         <span className="text-[#ef4444]">● 50+ sat/vB</span>
         <span className="text-[#f59e0b]">● 20+</span>
         <span className="text-[#22c55e]">● 10+</span>
@@ -416,9 +416,9 @@ export default function UnifiedPanel({
 
   return (
     <div
-      className={`absolute right-4 top-[60px] z-10 font-mono
+      className={`absolute right-4 top-[60px] z-[var(--z-hud)] font-mono
                   bg-panel-bg border border-white/10 rounded-xl
-                  backdrop-blur-[20px] overflow-hidden flex flex-col
+                  backdrop-blur-xl overflow-hidden flex flex-col
                   transition-all duration-300
                   max-sm:right-2 max-sm:left-2 max-sm:w-auto
                   ${minimized ? 'h-[40px]' : ''}`}
@@ -429,13 +429,13 @@ export default function UnifiedPanel({
       }}
     >
       {/* ── 헤더 ── */}
-      <div className="flex items-center justify-between px-3 py-2.5 shrink-0 border-b border-white/6">
+      <div className="flex items-center justify-between px-3 py-2.5 shrink-0 border-b border-dark-border">
         <span className="text-text-primary font-bold text-xs tracking-wide">
           ▸ VERIFICATION CENTER
         </span>
         <div className="flex items-center gap-2">
           {minimized && (
-            <span className="text-muted text-[9px]">
+            <span className="text-muted text-label-xs">
               {showTx && `TX ${txCount}건`}
               {showTx && showMempool && ' · '}
               {showMempool && `멤풀 ${poolCount}건`}
@@ -460,8 +460,8 @@ export default function UnifiedPanel({
               {/* TX 검증 */}
               {showTx && (
                 <div className={`flex flex-col min-h-0 px-3 py-2.5 overflow-hidden
-                               ${showBlock ? 'flex-[55] border-r border-white/6' : 'flex-1'}`}>
-                  <div className="text-tx-blue font-bold text-[10px] tracking-wide mb-1 shrink-0 flex justify-between">
+                               ${showBlock ? 'flex-[55] border-r border-dark-border' : 'flex-1'}`}>
+                  <div className="text-tx-blue font-bold text-label-sm tracking-wide mb-1 shrink-0 flex justify-between">
                     <span>▸ TX VERIFICATION</span>
                     <span className="text-muted font-normal">{txCount}건 {verifyingCount > 0 && `(⟳${verifyingCount})`}</span>
                   </div>
@@ -473,7 +473,7 @@ export default function UnifiedPanel({
               {showBlock && (
                 <div className={`flex flex-col min-h-0 px-3 py-2.5 overflow-hidden
                                ${showTx ? 'flex-[45]' : 'flex-1'}`}>
-                  <div className="text-block-purple font-bold text-[10px] tracking-wide mb-1 shrink-0">
+                  <div className="text-block-purple font-bold text-label-sm tracking-wide mb-1 shrink-0">
                     ▸ BLOCK VERIFICATION
                   </div>
                   <BlockVerifySection verifyState={blockVerifyState} />
@@ -484,7 +484,7 @@ export default function UnifiedPanel({
 
           {/* 하단: 멤풀 treemap */}
           {showMempool && (
-            <div className={`flex flex-col min-h-0 px-3 py-2.5 border-t border-white/6
+            <div className={`flex flex-col min-h-0 px-3 py-2.5 border-t border-dark-border
                            ${topVisible ? 'flex-[45]' : 'flex-1'}`}>
               <MempoolSection
                 mempoolTxs={mempoolTxs}

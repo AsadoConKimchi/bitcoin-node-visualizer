@@ -55,7 +55,7 @@ export default function SettingsPanel({ sourceType, serverUrl, onConnect, onClos
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
       <div className="bg-panel-bg-solid border border-white/10 rounded-xl
-                     px-6 py-5 w-[380px] text-text-primary backdrop-blur-[20px]
+                     px-6 py-5 w-[380px] text-text-primary backdrop-blur-xl
                      max-sm:w-[calc(100vw-32px)] max-sm:px-4"
            style={{ boxShadow: 'var(--shadow-modal)' }}>
         {/* 헤더 */}

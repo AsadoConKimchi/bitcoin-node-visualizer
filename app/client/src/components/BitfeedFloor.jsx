@@ -476,7 +476,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
       />
 
       {/* 수수료 범례 */}
-      <div className="absolute bottom-3 right-3 flex gap-2 text-[11px] bg-[rgba(6,10,20,0.8)] rounded px-2 py-1">
+      <div className="absolute bottom-3 right-3 flex gap-2 text-label bg-[rgba(6,10,20,0.8)] rounded px-2 py-1">
         {FEE_LEGEND.map((item) => (
           <span key={item.label} style={{ color: item.color }}>● {item.label}</span>
         ))}

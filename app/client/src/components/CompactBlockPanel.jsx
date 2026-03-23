@@ -62,11 +62,19 @@ export default function CompactBlockPanel({ recentBlocks, mempoolCount, forceRep
   const { step, block, matchPct, steps, done } = animState;
 
   return (
+    <>
+    {/* 백드롭 — 뒤쪽 패널 클릭 차단 */}
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[var(--z-modal-backdrop)]"
+         onClick={() => {
+           timersRef.current.forEach(clearTimeout);
+           timersRef.current = [];
+           setAnimState(null);
+         }} />
     <div
       className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
                   w-[340px] bg-panel-bg-solid border border-white/10
                   rounded-xl px-4 py-3.5 font-mono text-sm text-text-primary
-                  backdrop-blur-md z-[18]
+                  backdrop-blur-md z-[var(--z-modal)]
                   max-sm:w-[calc(100vw-32px)]
                   animate-[fadeScaleIn_0.3s_ease-out]"
       style={{
@@ -80,7 +88,7 @@ export default function CompactBlockPanel({ recentBlocks, mempoolCount, forceRep
             <span>▸ COMPACT BLOCK RELAY</span>
             {done && <span className="text-success">완료 ✓</span>}
           </div>
-          <div className="text-muted-dim text-[9px] mt-0.5">
+          <div className="text-muted-dim text-label-xs mt-0.5">
             새 블록 수신 시 자동 표시
           </div>
         </div>
@@ -91,7 +99,7 @@ export default function CompactBlockPanel({ recentBlocks, mempoolCount, forceRep
             setAnimState(null);
           }}
           className="text-muted hover:text-text-primary text-sm cursor-pointer
-                     w-5 h-5 flex items-center justify-center rounded
+                     w-5 h-5 flex items-center justify-center rounded focus-ring
                      hover:bg-white/10 transition-colors -mt-0.5 -mr-1"
         >
           ✕
@@ -131,10 +139,11 @@ export default function CompactBlockPanel({ recentBlocks, mempoolCount, forceRep
             }}
           />
         </div>
-        <div className="text-muted text-[9px] mt-1">
+        <div className="text-muted text-label-xs mt-1">
           높은 히트율 = 대역폭 절약 (헤더만으로 블록 재구성)
         </div>
       </div>
     </div>
+    </>
   );
 }

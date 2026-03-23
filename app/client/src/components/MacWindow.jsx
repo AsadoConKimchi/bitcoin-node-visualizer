@@ -62,28 +62,40 @@ export default function MacWindow({
     >
       {/* 타이틀바 */}
       <div
-        className="flex items-center px-3 py-2 shrink-0 border-b border-white/6 bg-panel-bg-solid/60 mac-window-drag select-none"
+        className="flex items-center px-3 py-2 shrink-0 border-b border-dark-border bg-panel-bg-solid/60 mac-window-drag select-none"
         {...dragHandleProps}
       >
         <div className="flex items-center gap-1.5 mr-3">
           {onClose && (
             <span
-              className="traffic-light traffic-light--close"
+              className="traffic-light traffic-light--close focus-ring rounded-full"
               title="닫기"
+              tabIndex={0}
+              role="button"
+              aria-label="닫기"
               onClick={(e) => { e.stopPropagation(); onClose(); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onClose(); } }}
             />
           )}
           {onMinimize && (
             <span
-              className="traffic-light traffic-light--minimize"
+              className="traffic-light traffic-light--minimize focus-ring rounded-full"
               title={minimized ? '확장' : '최소화'}
+              tabIndex={0}
+              role="button"
+              aria-label={minimized ? '확장' : '최소화'}
               onClick={(e) => { e.stopPropagation(); onMinimize(); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onMinimize(); } }}
             />
           )}
           <span
-            className="traffic-light traffic-light--expand"
+            className="traffic-light traffic-light--expand focus-ring rounded-full"
             title={isMaximized ? '복원' : '최대화'}
+            tabIndex={0}
+            role="button"
+            aria-label={isMaximized ? '복원' : '최대화'}
             onClick={(e) => { e.stopPropagation(); setIsMaximized(m => !m); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setIsMaximized(m => !m); } }}
           />
         </div>
         <span className={`${titleColor} font-bold text-xs tracking-wide flex-1`}>

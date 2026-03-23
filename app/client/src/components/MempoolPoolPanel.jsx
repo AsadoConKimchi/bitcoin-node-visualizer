@@ -54,13 +54,13 @@ export default function MempoolPoolPanel({ mempoolTxs, mempoolCount, mempoolInfo
     <div className="absolute bottom-[90px] left-4
                     w-[240px] h-[200px]
                     bg-panel-bg border border-white/10
-                    rounded-xl px-3 py-2 font-mono backdrop-blur-[20px] z-10
+                    rounded-xl px-3 py-2 font-mono backdrop-blur-xl z-[var(--z-hud)]
                     flex flex-col
                     max-sm:left-2 max-sm:w-[190px] max-sm:bottom-[80px] max-sm:h-[160px]">
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-1.5 shrink-0">
         <span className="text-mempool-green font-bold text-xs tracking-wide">▸ MEMPOOL</span>
-        <span className="text-muted text-[9px]">
+        <span className="text-muted text-label-xs">
           {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}
           {totalVB > 0 && ` · ${totalVBStr}`}
         </span>
@@ -132,7 +132,7 @@ export default function MempoolPoolPanel({ mempoolTxs, mempoolCount, mempoolInfo
           return (
             <div
               className="absolute bg-panel-bg-solid rounded px-2 py-1
-                        text-[9px] text-text-primary whitespace-nowrap z-12 pointer-events-none
+                        text-label-xs text-text-primary whitespace-nowrap z-[var(--z-hud-float)] pointer-events-none
                         border border-mempool-green/40"
               style={{
                 left: Math.min(r.x + r.w / 2, dims.w - 100),
@@ -146,7 +146,7 @@ export default function MempoolPoolPanel({ mempoolTxs, mempoolCount, mempoolInfo
       </div>
 
       {/* 수수료 색상 범례 */}
-      <div className="flex gap-3 mt-1 text-[8px] shrink-0 justify-end">
+      <div className="flex gap-3 mt-1 text-label-xs shrink-0 justify-end">
         <span className="text-[#ef4444]">● 50+ sat/vB</span>
         <span className="text-[#f59e0b]">● 20+</span>
         <span className="text-[#22c55e]">● 10+</span>

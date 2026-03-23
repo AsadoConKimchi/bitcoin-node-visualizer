@@ -8,9 +8,9 @@ const BUTTONS = [
 
 export default function ToggleBar({ visible, onToggle }) {
   return (
-    <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-0.5 z-20
-                    bg-panel-bg border border-white/8 rounded-xl
-                    p-1 backdrop-blur-[20px]
+    <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-0.5 z-[var(--z-modal)]
+                    bg-panel-bg border border-dark-border rounded-xl
+                    p-1 backdrop-blur-xl
                     md:gap-0.5 md:p-1.5"
          style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
       {BUTTONS.map(({ key, label, icon }) => {
@@ -22,7 +22,7 @@ export default function ToggleBar({ visible, onToggle }) {
             aria-label={`${label} 토글`}
             aria-pressed={active}
             className={`text-xs px-2.5 py-1.5 rounded-lg cursor-pointer
-                       transition-all duration-150 tracking-wide
+                       transition-all duration-150 tracking-wide focus-ring
                        md:px-3.5 md:py-1.5 md:text-sm
                        ${active
                          ? 'bg-white/12 text-white font-medium shadow-sm'

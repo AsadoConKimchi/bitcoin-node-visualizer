@@ -72,12 +72,12 @@ export default function AddressDetailPanel({ address, onClose, onTxClick }) {
 
   return (
     <>
-      <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[19]" />
+      <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[var(--z-modal-backdrop)]" />
 
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
                       w-[420px] max-h-[75vh] overflow-y-auto bg-panel-bg-solid
                       border border-white/10 rounded-xl px-5 py-4
-                      font-mono text-sm text-text-primary backdrop-blur-md z-20
+                      font-mono text-sm text-text-primary backdrop-blur-md z-[var(--z-modal)]
                       max-sm:w-[calc(100vw-24px)] max-sm:max-h-[80vh]"
            style={{ boxShadow: 'var(--shadow-modal)' }}>
         {/* 헤더 */}
@@ -85,7 +85,7 @@ export default function AddressDetailPanel({ address, onClose, onTxClick }) {
           <div className="min-w-0">
             <div className="text-btc-orange font-bold text-base">주소 상세</div>
             <div className="text-xs text-muted mt-0.5 truncate max-w-[320px]">{address}</div>
-            <div className="text-[10px] text-text-dim mt-0.5">{addressType(address)}</div>
+            <div className="text-label-sm text-text-dim mt-0.5">{addressType(address)}</div>
           </div>
           <button
             onClick={onClose}
@@ -165,13 +165,13 @@ export default function AddressDetailPanel({ address, onClose, onTxClick }) {
                                 cursor-pointer hover:bg-btc-orange/5 rounded"
                     >
                       <div className="flex items-center gap-1.5">
-                        <span className={`text-[9px] ${isConfirmed ? 'text-success' : 'text-warning'}`}>
+                        <span className={`text-label-xs ${isConfirmed ? 'text-success' : 'text-warning'}`}>
                           {isConfirmed ? '✓' : '◌'}
                         </span>
                         <span className="font-mono truncate">{tx.txid.slice(0, 16)}…</span>
                       </div>
                       {isConfirmed && tx.status.block_height && (
-                        <div className="text-[9px] text-muted ml-4">
+                        <div className="text-label-xs text-muted ml-4">
                           블록 #{tx.status.block_height.toLocaleString()}
                         </div>
                       )}
@@ -195,14 +195,14 @@ export default function AddressDetailPanel({ address, onClose, onTxClick }) {
                               cursor-pointer hover:bg-btc-orange/5 rounded"
                   >
                     <div className="flex justify-between items-center">
-                      <span className="font-mono text-[10px] truncate max-w-[200px]">
+                      <span className="font-mono text-label-sm truncate max-w-[200px]">
                         {utxo.txid.slice(0, 12)}…:{utxo.vout}
                       </span>
                       <span className="text-btc-orange shrink-0">
                         {(utxo.value / 1e8).toFixed(8)} BTC
                       </span>
                     </div>
-                    <div className="flex justify-between text-[9px] text-muted mt-0.5">
+                    <div className="flex justify-between text-label-xs text-muted mt-0.5">
                       <span>{utxo.status?.confirmed ? `확인됨 (블록 #${utxo.status.block_height?.toLocaleString()})` : '미확인'}</span>
                     </div>
                   </div>

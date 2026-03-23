@@ -8,12 +8,15 @@ function BlockCard({ block, isLatest, onClick, onReplay }) {
   return (
     <div
       onClick={() => onClick?.(block)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(block); }}
+      tabIndex={0}
+      role="button"
       title="클릭하면 블록 상세 정보"
-      className={`shrink-0 rounded-lg cursor-pointer
+      className={`shrink-0 rounded-lg cursor-pointer focus-ring
                  transition-all duration-300 px-3 py-2
                  ${isLatest
                    ? 'w-[150px] border-2 border-btc-orange/40 bg-btc-orange/8'
-                   : 'w-[130px] border border-white/8 bg-white/4 hover:bg-white/6'
+                   : 'w-[130px] border border-dark-border bg-white/4 hover:bg-white/6'
                  }`}
     >
       <div className="flex items-center justify-between">
@@ -23,8 +26,8 @@ function BlockCard({ block, isLatest, onClick, onReplay }) {
         {isLatest && onReplay && (
           <button
             onClick={(e) => { e.stopPropagation(); onReplay(); }}
-            className="text-tx-blue hover:text-tx-blue/80 text-[11px] cursor-pointer
-                       hover:bg-tx-blue/10 rounded px-1"
+            className="text-tx-blue hover:text-tx-blue/80 text-label cursor-pointer
+                       hover:bg-tx-blue/10 rounded px-1 focus-ring"
             title="Compact Block Relay 재생"
           >
             ▶
@@ -33,13 +36,13 @@ function BlockCard({ block, isLatest, onClick, onReplay }) {
       </div>
       <div className="mt-1 space-y-0.5">
         {block.txCount != null && (
-          <div className="text-muted text-[11px] font-mono">{block.txCount.toLocaleString()} TX</div>
+          <div className="text-muted text-label font-mono">{block.txCount.toLocaleString()} TX</div>
         )}
         {block.pool && (
-          <div className="text-text-dim text-[10px] truncate">{block.pool}</div>
+          <div className="text-text-dim text-label-sm truncate">{block.pool}</div>
         )}
         {block.timestamp && (
-          <div className="text-text-dim text-[10px]">{relativeTime(block.timestamp)}</div>
+          <div className="text-text-dim text-label-sm">{relativeTime(block.timestamp)}</div>
         )}
       </div>
     </div>
@@ -48,10 +51,10 @@ function BlockCard({ block, isLatest, onClick, onReplay }) {
 
 function PendingCard() {
   return (
-    <div className="shrink-0 w-[100px] border border-dashed border-white/8 rounded-lg
+    <div className="shrink-0 w-[100px] border border-dashed border-dark-border rounded-lg
                    px-3 py-2 text-center flex flex-col items-center justify-center">
       <div className="text-muted-dim text-sm">?</div>
-      <div className="text-[10px] text-muted-dim">pending</div>
+      <div className="text-label-sm text-muted-dim">pending</div>
     </div>
   );
 }
@@ -209,8 +212,8 @@ export default function ChainStrip({
   }, [recentBlocks.length]);
 
   return (
-    <div className="absolute top-[48px] left-0 right-0 z-[9]
-                    bg-dark-bg/80 backdrop-blur-sm border-b border-white/6">
+    <div className="absolute top-[48px] left-0 right-0 z-[var(--z-strip)]
+                    bg-dark-bg/80 backdrop-blur-sm border-b border-dark-border">
       <div
         ref={scrollRef}
         onScroll={handleScroll}
@@ -220,10 +223,10 @@ export default function ChainStrip({
       >
         {/* 로딩 인디케이터 */}
         {loading && (
-          <div className="shrink-0 text-[11px] text-text-dim px-2">⟳</div>
+          <div className="shrink-0 text-label text-text-dim px-2">⟳</div>
         )}
         {reachedGenesis && (
-          <div className="shrink-0 text-[11px] text-btc-orange px-2">⬡ Genesis</div>
+          <div className="shrink-0 text-label text-btc-orange px-2">⬡ Genesis</div>
         )}
 
         {allBlocks.map((block, i) => (

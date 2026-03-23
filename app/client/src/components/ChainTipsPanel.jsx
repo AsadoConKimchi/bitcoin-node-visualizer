@@ -63,7 +63,7 @@ export default function ChainTipsPanel({ chaintips }) {
   return (
     <div className="absolute top-14 right-4 bg-panel-bg border border-white/10
                     rounded-xl px-3.5 py-2.5 font-mono text-sm text-text-primary
-                    backdrop-blur-[20px] leading-7 min-w-[260px] max-w-[320px] z-8
+                    backdrop-blur-xl leading-7 min-w-[260px] max-w-[320px] z-[var(--z-hud)]
                     max-sm:right-2 max-sm:min-w-[220px]"
          style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
       {/* Reorg 배너 */}
@@ -72,21 +72,21 @@ export default function ChainTipsPanel({ chaintips }) {
                        text-xs text-red-300 text-center"
              style={{ animation: 'pulse 1s infinite alternate' }}>
           ⚠ REORG 감지 — 깊이 {reorgEvent.depth}블록
-          <div className="text-error/50 text-[9px]">
+          <div className="text-error/50 text-label-xs">
             #{reorgEvent.prevHeight} → #{reorgEvent.newHeight}
           </div>
         </div>
       )}
 
       {/* 헤더 */}
-      <div className="flex justify-between items-center mb-1.5 pb-1.5 border-b border-white/6">
+      <div className="flex justify-between items-center mb-1.5 pb-1.5 border-b border-dark-border">
         <span className="font-bold text-xs tracking-wide">▸ CHAIN TIPS</span>
         <span className="text-text-dim text-xs">{chaintips.length} tips</span>
       </div>
 
       {/* Active 팁 */}
       {activeTip && (
-        <div className="mb-1.5 pb-1.5 border-b border-white/6">
+        <div className="mb-1.5 pb-1.5 border-b border-dark-border">
           <div className="flex justify-between gap-2">
             <span className="text-success text-xs">● ACTIVE</span>
             <span className="text-text-primary">#{activeTip.height.toLocaleString()}</span>
@@ -127,7 +127,7 @@ export default function ChainTipsPanel({ chaintips }) {
           {forks.length > 2 && (
             <button
               onClick={() => setTipsExpanded(e => !e)}
-              className="w-full text-center text-[11px] text-text-dim hover:text-text-secondary
+              className="w-full text-center text-label text-text-dim hover:text-text-secondary
                          cursor-pointer bg-transparent border-none mt-1 py-0.5"
             >
               {tipsExpanded ? '접기 ▴' : `${chaintips.length} tips 전체 보기 ▾`}
