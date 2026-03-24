@@ -270,13 +270,13 @@ function SegwitStats({ txids, blockHash, sourceType }) {
 
   return (
     <div className="p-2 bg-dark-surface rounded border border-dark-border">
-      <div className="text-muted text-xs mb-1.5">TX 유형 ({stats.sampleSize} / {txids.length})</div>
+      <div className="text-muted text-sm mb-1.5">TX 유형 ({stats.sampleSize} / {txids.length})</div>
       <div className="flex gap-1 h-3 rounded overflow-hidden mb-1">
         {stats.legacy > 0 && <div className="bg-btc-orange" style={{ width: `${stats.legacy}%` }} />}
         {stats.segwit > 0 && <div className="bg-tx-blue" style={{ width: `${stats.segwit}%` }} />}
         {stats.taproot > 0 && <div className="bg-block-purple" style={{ width: `${stats.taproot}%` }} />}
       </div>
-      <div className="flex justify-between text-label-xs">
+      <div className="flex justify-between text-label-sm">
         <span className="text-btc-orange">Legacy {stats.legacy}%</span>
         <span className="text-tx-blue">SegWit {stats.segwit}%</span>
         <span className="text-block-purple">Taproot {stats.taproot}%</span>
@@ -468,7 +468,7 @@ function FeeBar({ feeRange }) {
   const [min, , , med, , , max] = feeRange;
   return (
     <div>
-      <div className="text-muted text-xs mb-1">수수료 분포 (sat/vB)</div>
+      <div className="text-muted text-sm mb-1">수수료 분포 (sat/vB)</div>
       <div className="flex gap-0.5 items-end h-8">
         {feeRange.map((fee, i) => {
           const pct = Math.round((fee / max) * 100);
@@ -481,7 +481,7 @@ function FeeBar({ feeRange }) {
           );
         })}
       </div>
-      <div className="flex justify-between text-text-dim text-xs mt-0.5">
+      <div className="flex justify-between text-text-dim text-sm mt-0.5">
         <span>min: {Math.round(min)}</span>
         <span>mid: {Math.round(med)}</span>
         <span>max: {Math.round(max)}</span>
@@ -493,11 +493,11 @@ function FeeBar({ feeRange }) {
 // 정보 행
 function InfoRow({ label, value, mono, highlight, copyable }) {
   return (
-    <div className="flex justify-between py-1 gap-2 min-w-0">
-      <span className="text-muted shrink-0 text-xs">{label}</span>
-      <span className={`text-right text-xs flex items-center gap-1 min-w-0
+    <div className="flex justify-between py-1.5 gap-3 min-w-0">
+      <span className="text-muted shrink-0 text-sm">{label}</span>
+      <span className={`text-right text-sm flex items-center gap-1 min-w-0
                        ${highlight ? 'text-btc-orange font-bold' : 'text-text-primary'}
-                       ${mono ? 'text-label' : ''}`}>
+                       ${mono ? 'font-mono text-xs' : ''}`}>
         {mono
           ? <span className="truncate min-w-0" title={value}>{value ?? '—'}</span>
           : (value ?? '—')
@@ -637,7 +637,7 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
       <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[var(--z-modal-backdrop)]" />
 
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                      w-[95vw] max-w-[1200px] max-h-[90vh] overflow-y-auto bg-panel-bg-solid
+                      w-[95vw] max-w-[1400px] max-h-[90vh] overflow-y-auto bg-panel-bg-solid
                       border border-white/10 rounded-xl px-5 py-4
                       font-mono text-sm text-text-primary backdrop-blur-md z-[var(--z-modal)]
                       max-sm:w-[calc(100vw-16px)] max-sm:max-h-[90vh]"
@@ -694,33 +694,34 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
         {/* Pending 모드 */}
         {isPending && (
           <>
-            {/* TX FEE RATE MAP — 실시간 진동 */}
-            <div className="bg-dark-surface/60 border border-mempool-green/20 rounded-lg p-2 mb-3">
-              <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP (실시간)</div>
-              <div className="h-[250px] max-sm:h-[180px]">
-                <PendingBlockTreemap mempoolBlock={pendingBlock} />
+            {/* Treemap(좌) + Pending 정보(우) 사이드바이사이드 */}
+            <div className="flex gap-3 mb-3 max-sm:flex-col">
+              {/* 좌측 — TX FEE RATE MAP (정사각형, 실시간 진동) */}
+              <div className="flex-1 min-w-0 bg-dark-surface/60 border border-mempool-green/20 rounded-lg p-2">
+                <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP (실시간)</div>
+                <div className="h-[420px] max-sm:h-[300px]">
+                  <PendingBlockTreemap mempoolBlock={pendingBlock} />
+                </div>
+                {/* Fee 색상 범례 */}
+                <div className="flex gap-1.5 mt-2 flex-wrap">
+                  {FEE_LEGEND.map(l => (
+                    <div key={l.label} className="flex items-center gap-0.5">
+                      <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: l.color }} />
+                      <span className="text-label-xs text-muted">{l.label}</span>
+                    </div>
+                  ))}
+                  <span className="text-label-xs text-muted ml-1">sat/vB</span>
+                </div>
               </div>
-              {/* Fee 색상 범례 */}
-              <div className="flex gap-1.5 mt-2 flex-wrap">
-                {FEE_LEGEND.map(l => (
-                  <div key={l.label} className="flex items-center gap-0.5">
-                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: l.color }} />
-                    <span className="text-label-xs text-muted">{l.label}</span>
-                  </div>
-                ))}
-                <span className="text-label-xs text-muted ml-1">sat/vB</span>
-              </div>
-            </div>
 
-            {/* Pending 블록 정보 */}
-            <div className="grid grid-cols-2 gap-3 mb-3 max-sm:grid-cols-1">
-              <div className="space-y-0.5">
-                {pendingNTx != null && <InfoRow label="TX Count" value={`~${pendingNTx.toLocaleString()}`} />}
-                {pendingVSize != null && <InfoRow label="Block vSize" value={`${(pendingVSize / 1_000_000).toFixed(3)} MvB`} />}
-                {pendingTotalFees != null && <InfoRow label="Total Fees" value={`${formatBtc(pendingTotalFees)} BTC`} highlight />}
-                {pendingMedianFee != null && <InfoRow label="Median Fee" value={`${Math.round(pendingMedianFee)} sat/vB`} />}
-              </div>
-              <div className="space-y-2">
+              {/* 우측 — Pending 블록 정보 */}
+              <div className="w-[400px] max-sm:w-full shrink-0 space-y-3">
+                <div className="space-y-0.5">
+                  {pendingNTx != null && <InfoRow label="TX Count" value={`~${pendingNTx.toLocaleString()}`} />}
+                  {pendingVSize != null && <InfoRow label="Block vSize" value={`${(pendingVSize / 1_000_000).toFixed(3)} MvB`} />}
+                  {pendingTotalFees != null && <InfoRow label="Total Fees" value={`${formatBtc(pendingTotalFees)} BTC`} highlight />}
+                  {pendingMedianFee != null && <InfoRow label="Median Fee" value={`${Math.round(pendingMedianFee)} sat/vB`} />}
+                </div>
                 {pendingFeeRange && (
                   <div className="p-2 bg-dark-surface rounded border border-dark-border">
                     <FeeBar feeRange={pendingFeeRange} />
@@ -748,54 +749,54 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
 
             {detail && (
               <>
-                {/* 2. TX FEE RATE MAP — 전체 너비 */}
-                <div className="bg-dark-surface/60 border border-dark-border rounded-lg p-2 mb-3">
-                  <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP</div>
-                  <div className="h-[250px] max-sm:h-[180px]">
-                    <BlockTreemap
-                      txids={txids.length > 0 ? txids : (detail._txids || [])}
-                      blockHash={navHash || block?.hash}
-                      sourceType={sourceType}
-                    />
-                  </div>
-                  {/* Fee 색상 범례 */}
-                  <div className="flex gap-1.5 mt-2 flex-wrap">
-                    {FEE_LEGEND.map(l => (
-                      <div key={l.label} className="flex items-center gap-0.5">
-                        <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: l.color }} />
-                        <span className="text-label-xs text-muted">{l.label}</span>
-                      </div>
-                    ))}
-                    <span className="text-label-xs text-muted ml-1">sat/vB</span>
-                  </div>
-                </div>
-
-                {/* 3. 2열 Info Grid — 블록 정보 + 통계 */}
-                <div className="grid grid-cols-2 gap-3 mb-3 max-sm:grid-cols-1">
-                  {/* 좌측 — 블록 메타정보 */}
-                  <div className="space-y-0.5">
-                    <InfoRow label="Hash" value={detail.id || block?.hash} mono copyable />
-                    {ts && <InfoRow label="Timestamp" value={`${ts} (${relativeTime(detail.timestamp)})`} />}
-                    <InfoRow label="TX Count" value={txCount?.toLocaleString()} />
-                    {sizeKB && <InfoRow label="Size" value={sizeKB} />}
-                    {weightMWU && <InfoRow label="Weight" value={weightMWU} />}
-                    {feeRange && (
-                      <InfoRow label="Fee Span" value={`${Math.round(feeRange[0])} – ${Math.round(feeRange[feeRange.length - 1])} sat/vB`} />
-                    )}
-                    {medianFee != null && (
-                      <InfoRow label="Median Fee" value={`${medianFee.toFixed(1)} sat/vB`} />
-                    )}
-                    {totalFees != null && (
-                      <InfoRow label="Total Fees" value={`${formatBtc(totalFees)} BTC`} highlight />
-                    )}
-                    <InfoRow label="Subsidy" value={`${formatBtc(subsidy)} BTC`} />
-                    {rewardSats != null && (
-                      <InfoRow label="Subsidy + Fees" value={`${formatBtc(rewardSats)} BTC`} highlight />
-                    )}
+                {/* 2. Treemap(좌) + 블록 정보(우) 사이드바이사이드 */}
+                <div className="flex gap-3 mb-3 max-sm:flex-col">
+                  {/* 좌측 — TX FEE RATE MAP (정사각형) */}
+                  <div className="flex-1 min-w-0 bg-dark-surface/60 border border-dark-border rounded-lg p-2">
+                    <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP</div>
+                    <div className="h-[420px] max-sm:h-[300px]">
+                      <BlockTreemap
+                        txids={txids.length > 0 ? txids : (detail._txids || [])}
+                        blockHash={navHash || block?.hash}
+                        sourceType={sourceType}
+                      />
+                    </div>
+                    {/* Fee 색상 범례 */}
+                    <div className="flex gap-1.5 mt-2 flex-wrap">
+                      {FEE_LEGEND.map(l => (
+                        <div key={l.label} className="flex items-center gap-0.5">
+                          <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: l.color }} />
+                          <span className="text-label-xs text-muted">{l.label}</span>
+                        </div>
+                      ))}
+                      <span className="text-label-xs text-muted ml-1">sat/vB</span>
+                    </div>
                   </div>
 
-                  {/* 우측 — TX 유형 + Fee 분포 */}
-                  <div className="space-y-2">
+                  {/* 우측 — 블록 정보 + 통계 */}
+                  <div className="w-[400px] max-sm:w-full shrink-0 space-y-3">
+                    {/* 블록 메타정보 */}
+                    <div className="space-y-0.5">
+                      <InfoRow label="Hash" value={detail.id || block?.hash} mono copyable />
+                      {ts && <InfoRow label="Timestamp" value={`${ts} (${relativeTime(detail.timestamp)})`} />}
+                      <InfoRow label="TX Count" value={txCount?.toLocaleString()} />
+                      {sizeKB && <InfoRow label="Size" value={sizeKB} />}
+                      {weightMWU && <InfoRow label="Weight" value={weightMWU} />}
+                      {feeRange && (
+                        <InfoRow label="Fee Span" value={`${Math.round(feeRange[0])} – ${Math.round(feeRange[feeRange.length - 1])} sat/vB`} />
+                      )}
+                      {medianFee != null && (
+                        <InfoRow label="Median Fee" value={`${medianFee.toFixed(1)} sat/vB`} />
+                      )}
+                      {totalFees != null && (
+                        <InfoRow label="Total Fees" value={`${formatBtc(totalFees)} BTC`} highlight />
+                      )}
+                      <InfoRow label="Subsidy" value={`${formatBtc(subsidy)} BTC`} />
+                      {rewardSats != null && (
+                        <InfoRow label="Subsidy + Fees" value={`${formatBtc(rewardSats)} BTC`} highlight />
+                      )}
+                    </div>
+                    {/* TX 유형 + Fee 분포 */}
                     {txids.length > 0 && (
                       <SegwitStats txids={txids} blockHash={navHash || block?.hash} sourceType={sourceType} />
                     )}
@@ -804,87 +805,88 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
                         <FeeBar feeRange={feeRange} />
                       </div>
                     )}
-                  </div>
-                </div>
 
-                {/* 4. Details (접이식) */}
-                <div className="border-t border-dark-border pt-2 mb-2">
-                  <button
-                    onClick={() => setShowDetails(!showDetails)}
-                    className="text-muted text-xs font-bold cursor-pointer bg-transparent border-none
-                               hover:text-text-secondary w-full text-left py-1"
-                  >
-                    {showDetails ? '▾' : '▸'} DETAILS
-                  </button>
-                  {showDetails && (
-                    <div className="mt-1 space-y-0.5 text-xs">
-                      <InfoRow label="Difficulty" value={detail.difficulty?.toLocaleString()} />
-                      <InfoRow label="Nonce" value={detail.nonce?.toLocaleString()} />
-                      <InfoRow label="Bits" value={detail.bits} />
-                      <InfoRow label="Version" value={detail.version != null ? `0x${detail.version.toString(16)}` : null} />
-                      <InfoRow label="Merkle Root" value={detail.merkle_root} mono copyable />
-                      <InfoRow label="Previous Block" value={detail.previousblockhash} mono copyable />
-                    </div>
-                  )}
-                </div>
-
-                {/* 5. TX 목록 */}
-                {txCount > 0 && (
-                  <div className="border-t border-dark-border pt-2">
-                    <div
-                      onClick={loadTxids}
-                      className="text-btc-orange text-xs font-bold cursor-pointer py-1 select-none hover:text-btc-orange/80"
-                    >
-                      {showTxList ? '▾' : '▸'} TRANSACTIONS ({txCount?.toLocaleString()})
+                    {/* 4. Details (접이식) */}
+                    <div className="bg-dark-surface/40 rounded border border-dark-border">
+                      <button
+                        onClick={() => setShowDetails(!showDetails)}
+                        className="w-full text-left px-2 py-1.5 text-sm font-bold text-text-secondary
+                                   hover:text-text-primary transition-colors cursor-pointer bg-transparent border-none"
+                      >
+                        {showDetails ? '▾' : '▸'} DETAILS
+                      </button>
+                      {showDetails && (
+                        <div className="px-2 pb-2 space-y-0.5 text-xs">
+                          <InfoRow label="Difficulty" value={detail.difficulty?.toLocaleString()} />
+                          <InfoRow label="Nonce" value={detail.nonce?.toLocaleString()} />
+                          <InfoRow label="Bits" value={detail.bits} />
+                          <InfoRow label="Version" value={detail.version != null ? `0x${detail.version.toString(16)}` : null} />
+                          <InfoRow label="Merkle Root" value={detail.merkle_root} mono copyable />
+                          <InfoRow label="Previous Block" value={detail.previousblockhash} mono copyable />
+                        </div>
+                      )}
                     </div>
 
-                    {showTxList && (
-                      <div className="mt-1">
-                        {txLoading && (
-                          <div className="text-text-dim text-xs py-2 text-center">TX 목록 로딩 중…</div>
-                        )}
-                        {visibleTxids.map((txid, i) => (
-                          <div
-                            key={txid}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onTxClick?.({ txid, data: {} });
-                            }}
-                            className="text-xs text-text-secondary py-1 px-2 border-b border-dark-surface
-                                      cursor-pointer flex items-center gap-2 hover:bg-btc-orange/5 rounded"
-                          >
-                            <span className={`text-text-dim min-w-[24px] ${i === 0 ? 'text-btc-orange font-bold' : ''}`}>
-                              {i === 0 ? 'CB' : i}
-                            </span>
-                            <span className="font-mono flex-1 truncate">{txid}</span>
+                    {/* 5. TX 목록 */}
+                    {txCount > 0 && (
+                      <div className="bg-dark-surface/40 rounded border border-dark-border">
+                        <div
+                          onClick={loadTxids}
+                          className="px-2 py-1.5 text-sm font-bold text-btc-orange cursor-pointer
+                                     select-none hover:text-btc-orange/80 transition-colors"
+                        >
+                          {showTxList ? '▾' : '▸'} TRANSACTIONS ({txCount?.toLocaleString()})
+                        </div>
+
+                        {showTxList && (
+                          <div className="px-2 pb-2 max-h-[300px] overflow-y-auto">
+                            {txLoading && (
+                              <div className="text-text-dim text-xs py-2 text-center">TX 목록 로딩 중…</div>
+                            )}
+                            {visibleTxids.map((txid, i) => (
+                              <div
+                                key={txid}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onTxClick?.({ txid, data: {} });
+                                }}
+                                className="text-xs text-text-secondary py-1 px-2 border-b border-dark-surface
+                                          cursor-pointer flex items-center gap-2 hover:bg-btc-orange/5 rounded"
+                              >
+                                <span className={`text-text-dim min-w-[24px] ${i === 0 ? 'text-btc-orange font-bold' : ''}`}>
+                                  {i === 0 ? 'CB' : i}
+                                </span>
+                                <span className="font-mono flex-1 truncate">{txid}</span>
+                              </div>
+                            ))}
+                            {hasMore && (
+                              <button
+                                onClick={() => setTxPage(p => p + 1)}
+                                className="w-full text-center text-btc-orange text-xs py-2 cursor-pointer
+                                          bg-transparent border border-white/10 rounded mt-1.5
+                                          hover:bg-white/5"
+                              >
+                                더 보기 ({(txids.length - visibleTxids.length).toLocaleString()}개 남음)
+                              </button>
+                            )}
                           </div>
-                        ))}
-                        {hasMore && (
-                          <button
-                            onClick={() => setTxPage(p => p + 1)}
-                            className="w-full text-center text-btc-orange text-xs py-2 cursor-pointer
-                                      bg-transparent border border-white/10 rounded mt-1.5
-                                      hover:bg-white/5"
-                          >
-                            더 보기 ({(txids.length - visibleTxids.length).toLocaleString()}개 남음)
-                          </button>
                         )}
                       </div>
                     )}
-                  </div>
-                )}
 
-                {/* mempool.space 링크 */}
-                <div className="mt-3 text-center">
-                  <a
-                    href={`https://mempool.space/block/${navHash || block?.hash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-text-secondary text-xs no-underline border border-white/10
-                              px-3 py-1 rounded hover:bg-white/5 hover:text-text-primary"
-                  >
-                    mempool.space에서 보기 ↗
-                  </a>
+                    {/* mempool.space 링크 */}
+                    <div className="text-left">
+                      <a
+                        href={`https://mempool.space/block/${navHash || block?.hash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-text-secondary text-xs no-underline border border-white/10
+                                  px-3 py-1 rounded hover:bg-white/5 hover:text-text-primary"
+                      >
+                        mempool.space에서 보기 ↗
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </>
             )}
