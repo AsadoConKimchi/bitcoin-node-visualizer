@@ -12,22 +12,49 @@ async function fetchBlockRange(minHeight, maxHeight, sourceType) {
   if (minHeight < 0) minHeight = 0;
   if (maxHeight < minHeight) return [];
 
-  const batches = [];
-  for (let h = minHeight; h <= maxHeight; h += BULK_BATCH) {
-    const batchEnd = Math.min(h + BULK_BATCH - 1, maxHeight);
-    const url = sourceType === 'server'
-      ? `/api/blocks-bulk/${h}/${batchEnd}`
-      : `${MEMPOOL_BASE}/v1/blocks-bulk/${h}/${batchEnd}`;
-    batches.push(fetch(url).then(r => r.ok ? r.json() : []).catch(() => []));
+  // server 모드: bulk API 사용
+  if (sourceType === 'server') {
+    const batches = [];
+    for (let h = minHeight; h <= maxHeight; h += BULK_BATCH) {
+      const batchEnd = Math.min(h + BULK_BATCH - 1, maxHeight);
+      batches.push(fetch(`/api/blocks-bulk/${h}/${batchEnd}`).then(r => r.ok ? r.json() : []).catch(() => []));
+    }
+    const results = await Promise.all(batches);
+    return results.flat().map(b => ({
+      height: b.height,
+      hash: b.id ?? b.hash,
+      txCount: b.tx_count ?? b.nTx,
+      pool: b.extras?.pool?.name ?? null,
+      timestamp: b.timestamp ?? b.time,
+    })).sort((a, b) => a.height - b.height);
   }
-  const results = await Promise.all(batches);
-  return results.flat().map(b => ({
-    height: b.height,
-    hash: b.id ?? b.hash,
-    txCount: b.tx_count ?? b.nTx,
-    pool: b.extras?.pool?.name ?? null,
-    timestamp: b.timestamp ?? b.time,
-  })).sort((a, b) => a.height - b.height);
+
+  // mempool.space: /v1/blocks/{startHeight} — 15개씩 내림차순 반환
+  const all = [];
+  let cursor = maxHeight;
+  while (cursor >= minHeight) {
+    try {
+      const res = await fetch(`${MEMPOOL_BASE}/v1/blocks/${cursor}`);
+      if (!res.ok) break;
+      const batch = await res.json();
+      if (!batch.length) break;
+      for (const b of batch) {
+        if (b.height < minHeight) continue;
+        if (b.height > maxHeight) continue;
+        all.push({
+          height: b.height,
+          hash: b.id ?? b.hash,
+          txCount: b.tx_count ?? b.nTx,
+          pool: b.extras?.pool?.name ?? null,
+          timestamp: b.timestamp ?? b.time,
+        });
+      }
+      const lowest = batch[batch.length - 1].height;
+      if (lowest <= minHeight) break;
+      cursor = lowest - 1;
+    } catch { break; }
+  }
+  return all.sort((a, b) => a.height - b.height);
 }
 
 // ── BlockCard ────────────────────────────────────────────────────────────────
@@ -246,6 +273,7 @@ const ChainStrip = forwardRef(function ChainStrip({
   }, [recentBlocks?.length, viewMode]);
 
   // 트랙패드 wheel 이벤트 → 가로 스크롤 변환 + 브라우저 네비게이션 차단
+  // visible/recentBlocks 변경 시 DOM이 생성/소멸되므로 재등록 필요
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -258,7 +286,7 @@ const ChainStrip = forwardRef(function ChainStrip({
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+  }, [visible, recentBlocks]);
 
   // ── scrollToHeight (imperative) ──
   useImperativeHandle(ref, () => ({
