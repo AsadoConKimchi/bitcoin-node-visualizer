@@ -4,6 +4,35 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ---
 
+## [1.6.1] — 2026-03-24
+
+### Changed — BlockDetailPanel: 너비 확장 + 폰트 확대 + 빈 공간 제거
+
+v1.6.0에서 우측 컬럼(320px)이 너무 좁아 BTC/MWU/KB 등 값이 잘리고, aspect-square Treemap이 과도한 하단 빈 공간을 만들던 문제 해결.
+
+#### 모달 & 컬럼 확장
+- 모달: `max-w-[1200px]` → `max-w-[1400px]`
+- 우측 컬럼: `w-[320px]` → `w-[400px]` — 값 잘림 해소 (3.12500000 BTC, 1512.5 KB 등 완전 표시)
+
+#### Treemap 높이 고정
+- `aspect-square` (~840px 정사각형) → `h-[420px]` 고정 높이
+- 하단 빈 공간 ~400px → ~100px로 대폭 감소
+
+#### 폰트 확대 (12px → 14px)
+- InfoRow: label/value `text-xs` → `text-sm`, mono value `text-label` → `font-mono text-xs`
+- SegwitStats: 타이틀/범례 `text-xs` → `text-sm`
+- FeeBar: 타이틀/min·mid·max `text-xs` → `text-sm`
+- DETAILS/TRANSACTIONS 아코디언 버튼: `text-xs` → `text-sm`
+
+#### 변경하지 않은 것
+- TX 목록 아이템 (`text-xs` 유지), FeeBar 바 라벨 (`text-label-xs` 유지)
+- 모바일 breakpoint, 색상/아이콘/다크 사이버펑크 미학
+
+### Files Modified
+- `client/src/components/BlockDetailPanel.jsx`
+
+---
+
 ## [1.6.0] — 2026-03-24
 
 ### Changed — BlockDetailPanel: 전체 화면 블록 탐색기 리디자인
