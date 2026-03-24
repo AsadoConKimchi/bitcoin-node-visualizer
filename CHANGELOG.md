@@ -4,6 +4,35 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ---
 
+## [1.6.0] — 2026-03-24
+
+### Changed — BlockDetailPanel: 전체 화면 블록 탐색기 리디자인
+
+기존 780px 모달에서 Treemap이 우측 ~280px에 갇혀 3,000+ TX 시각화가 불가능했던 문제 해결.
+
+#### 모달 크기 확대
+- `w-[780px]` → `w-[95vw] max-w-[1200px]` — 전체 화면급 블록 탐색기
+
+#### TX Fee Rate Map — 전체 너비 배치
+- 기존: 우측 col-span-2 안 280px × 200px (3,000 TX 시 대부분 미표시)
+- 변경: 모달 상단 **전체 너비 × 250px** (모바일 180px)
+- 셀 크기 자동 계산: `Math.sqrt(area / total)` — TX 수에 관계없이 빈 공간 최소화
+- gap: 0으로 밀집 표현
+
+#### Canvas 렌더링 안정화
+- `requestAnimationFrame`으로 한 프레임 지연 (부모 레이아웃 완료 후 측정)
+- `containerRef.offsetWidth` 기준 정확한 크기 측정 (기존 `clientWidth` 불안정)
+- Canvas className `w-full h-full` → `block` (CSS 충돌 방지)
+
+#### 레이아웃 재구성
+- 기존: 5열 그리드 (좌 3열 정보 + 우 2열 Treemap)
+- 변경: Treemap(상단 풀 블리드) → 2열 그리드(좌: 블록 메타 / 우: TX 유형 + Fee 분포)
+
+### Files Modified
+- `client/src/components/BlockDetailPanel.jsx` — 모달 크기, 레이아웃, Canvas 로직 전면 수정
+
+---
+
 ## [1.3.0] — 2026-03-21
 
 ### Changed — UI Overhaul: mempool.space 수준의 상세 패널 + 검증 시각화 개선
