@@ -418,6 +418,40 @@ app.get('/api/block/:hash', async (req, res) => {
   }
 });
 
+/** Bulk 블록 조회 — Electrs 프록시 또는 RPC 폴백 */
+const ELECTRS_URL = process.env.ELECTRS_URL || null;
+const BULK_MAX = 10;
+
+app.get('/api/blocks-bulk/:startHeight/:endHeight', async (req, res) => {
+  const start = parseInt(req.params.startHeight);
+  const end = parseInt(req.params.endHeight);
+  if (isNaN(start) || isNaN(end) || end < start || end - start >= BULK_MAX) {
+    return res.status(400).json({ error: `Range must be < ${BULK_MAX} blocks` });
+  }
+
+  try {
+    if (ELECTRS_URL) {
+      // Electrs Esplora HTTP API 프록시
+      const resp = await fetch(`${ELECTRS_URL}/api/v1/blocks-bulk/${start}/${end}`);
+      if (!resp.ok) throw new Error(`Electrs ${resp.status}`);
+      const data = await resp.json();
+      res.json(data);
+    } else {
+      // Bitcoin Core RPC 폴백 — 병렬 조회
+      const heights = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+      const blocks = await Promise.all(heights.map(h => rpc.getBlock(h, 1)));
+      res.json(blocks.map(b => ({
+        id: b.hash, height: b.height, timestamp: b.time,
+        tx_count: b.nTx, previousblockhash: b.previousblockhash,
+        extras: { pool: { name: null } },
+      })));
+    }
+  } catch (err) {
+    console.error('[api/blocks-bulk]', err.message);
+    res.status(503).json({ error: err.message });
+  }
+});
+
 // SPA 폴백 (React Router 지원)
 app.get('*', (req, res) => {
   res.sendFile(path.join(CLIENT_DIST, 'index.html'));

@@ -95,6 +95,7 @@ export default function App() {
 
   // ── BitfeedFloor ref ──
   const bitfeedRef = useRef(null);
+  const chainStripRef = useRef(null);
 
   // ── 마운트 시 자동 감지 ──
   useEffect(() => {
@@ -428,6 +429,7 @@ export default function App() {
   // ── 검색 핸들러 ──
   const handleSearchBlock = useCallback((query) => {
     if (query.height != null) {
+      chainStripRef.current?.scrollToHeight(query.height);
       fetch(`${REST_BASE}/block-height/${query.height}`)
         .then(r => r.ok ? r.text() : Promise.reject())
         .then(hash => setSelectedBlock({ height: query.height, hash }))
@@ -852,6 +854,7 @@ export default function App() {
 
       {/* 체인 스트립 — 가로 상단 바 */}
       <ChainStrip
+        ref={chainStripRef}
         recentBlocks={recentBlocks}
         mempoolBlocks={mempoolBlocks}
         onBlockClick={handleBlockClick}
