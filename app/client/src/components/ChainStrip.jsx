@@ -245,6 +245,21 @@ const ChainStrip = forwardRef(function ChainStrip({
     prevBlockCountRef.current = newCount;
   }, [recentBlocks?.length, viewMode]);
 
+  // 트랙패드 wheel 이벤트 → 가로 스크롤 변환 + 브라우저 네비게이션 차단
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (delta !== 0) {
+        e.preventDefault();
+        el.scrollLeft += delta;
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
   // ── scrollToHeight (imperative) ──
   useImperativeHandle(ref, () => ({
     scrollToHeight: async (height) => {
