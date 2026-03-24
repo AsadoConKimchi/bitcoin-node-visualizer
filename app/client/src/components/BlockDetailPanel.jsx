@@ -167,16 +167,18 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
       // 셀 크기: 컨테이너 면적 / TX 수 기반 자동 계산
       const area = w * h;
       const cellSize = Math.max(2, Math.floor(Math.sqrt(area / total)));
-      const cols = Math.floor(w / cellSize) || 1;
-      const defaultColor = '#1e2328';
+      // 셀 간 1px 간격으로 그리드 구분
+      const gap = 1;
+      const step = cellSize + gap;
+      const cols = Math.floor(w / step) || 1;
 
       ctx.clearRect(0, 0, w, h);
 
       for (let i = 0; i < total; i++) {
         const col = i % cols;
         const row = Math.floor(i / cols);
-        const x = col * cellSize;
-        const y = row * cellSize;
+        const x = col * step;
+        const y = row * step;
 
         if (y + cellSize > h) break;
 
@@ -187,8 +189,9 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
           ctx.globalAlpha = 0.9;
           ctx.fillStyle = feeColor(fr);
         } else {
-          ctx.globalAlpha = 0.3;
-          ctx.fillStyle = defaultColor;
+          // 미확인 TX — 배경과 구분되는 밝은 회색
+          ctx.globalAlpha = 0.6;
+          ctx.fillStyle = '#334155';
         }
 
         ctx.fillRect(x, y, cellSize, cellSize);
