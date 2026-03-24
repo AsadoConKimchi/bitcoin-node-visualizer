@@ -89,14 +89,17 @@ function SegwitStats({ txids, blockHash, sourceType }) {
 function BlockTreemap({ txids, blockHash, sourceType }) {
   const [feeMap, setFeeMap] = useState(new Map());
   const [loading, setLoading] = useState(true);
+  const canvasRef = useRef(null);
+
+  const total = txids?.length || 0;
 
   // 균등 간격으로 100개 샘플 fetch → fee rate 정보 수집
   useEffect(() => {
-    if (!txids?.length) return;
+    if (!total) return;
     setLoading(true);
 
-    const sampleSize = Math.min(txids.length, 100);
-    const step = txids.length / sampleSize;
+    const sampleSize = Math.min(total, 100);
+    const step = total / sampleSize;
     const sampleIndices = Array.from({ length: sampleSize }, (_, i) => Math.floor(i * step));
     const sampleTxids = sampleIndices.map(i => txids[i]);
 
@@ -109,9 +112,11 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
       batches.push(sampleTxids.slice(i, i + batchSize));
     }
 
+    let cancelled = false;
     (async () => {
       const map = new Map();
       for (const batch of batches) {
+        if (cancelled) return;
         const results = await Promise.all(batch.map(txid =>
           fetch(txUrl(txid)).then(r => r.ok ? r.json() : null).catch(() => null)
         ));
@@ -127,31 +132,26 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
           map.set(tx.txid, feeRate);
         });
       }
-      setFeeMap(map);
-      setLoading(false);
+      if (!cancelled) {
+        setFeeMap(map);
+        setLoading(false);
+      }
     })();
-  }, [txids?.length, blockHash]);
 
-  if (!txids?.length) {
-    return (
-      <div className="w-full h-full flex items-center justify-center text-muted text-label">
-        TX 데이터 없음
-      </div>
-    );
-  }
+    return () => { cancelled = true; };
+  }, [total, blockHash]);
 
-  // Canvas 기반 treemap — 수천 개 TX도 성능 문제 없이 렌더링
-  const canvasRef = React.useRef(null);
-  const total = txids.length;
-  const defaultColor = '#1e2328';
-
+  // Canvas 렌더링
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !total) return;
 
     const container = canvas.parentElement;
+    if (!container) return;
     const w = container.clientWidth;
     const h = container.clientHeight;
+    if (w === 0 || h === 0) return;
+
     const dpr = window.devicePixelRatio || 1;
     canvas.width = w * dpr;
     canvas.height = h * dpr;
@@ -164,8 +164,8 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
     // 셀 크기 동적 계산
     const cellSize = total > 3000 ? 3 : total > 2000 ? 4 : total > 1000 ? 5 : total > 500 ? 6 : total > 200 ? 7 : 9;
     const gap = 1;
-    const cols = Math.floor(w / (cellSize + gap));
-    const rows = Math.ceil(total / cols);
+    const cols = Math.floor(w / (cellSize + gap)) || 1;
+    const defaultColor = '#1e2328';
 
     ctx.clearRect(0, 0, w, h);
 
@@ -192,11 +192,19 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
     }
 
     ctx.globalAlpha = 1;
-  }, [txids, feeMap, loading]);
+  }, [txids, feeMap, total]);
+
+  if (!total) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-muted text-label">
+        TX 데이터 없음
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full relative overflow-hidden rounded">
-      {loading && total > 0 && (
+      {loading && (
         <div className="absolute inset-0 flex items-center justify-center text-muted text-label-xs z-10 pointer-events-none">
           {total.toLocaleString()}개 TX 로딩 중…
         </div>
