@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { CopyButton, relativeTime, formatBtc, calculateSubsidy } from '../utils/format.jsx';
 import { feeColor, FEE_LEGEND } from '../utils/colors.js';
 import { normalizeRpcBlock } from '../utils/normalize.js';
+import { squarify } from '../utils/treemap.js';
 
 const REST_BASE = 'https://mempool.space/api';
 const PAGE_SIZE = 25;
@@ -27,11 +28,14 @@ function generateSyntheticCells(mempoolBlock) {
     const count = s === 0 ? nTx - cells.length : perSeg;
     for (let j = 0; j < count && cells.length < nTx; j++) {
       const feeRate = lo + Math.random() * (hi - lo);
+      // 비트코인 TX vsize 분포: 중위 ~140, 범위 100~5000
+      const vsize = 100 + Math.random() * Math.random() * 2000;
       cells.push({
         id: id++,
         feeRate,
         targetFeeRate: feeRate,
         currentFeeRate: feeRate,
+        vsize,
         alpha: 1,
       });
     }
@@ -47,6 +51,8 @@ function PendingBlockTreemap({ mempoolBlock }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const cellsRef = useRef([]);
+  const rectsRef = useRef([]);
+  const prevCellsLenRef = useRef('');
   const rafRef = useRef(null);
   const prevNTxRef = useRef(0);
 
@@ -76,11 +82,13 @@ function PendingBlockTreemap({ mempoolBlock }) {
       for (let i = 0; i < diff; i++) {
         const seg = segments[Math.floor(Math.random() * segments.length)];
         const feeRate = seg.lo + Math.random() * (seg.hi - seg.lo);
+        const vsize = 100 + Math.random() * Math.random() * 2000;
         prev.push({
           id: prev.length,
           feeRate,
           targetFeeRate: feeRate,
           currentFeeRate: feeRate,
+          vsize,
           alpha: 0, // fade-in 시작
         });
       }
@@ -135,23 +143,23 @@ function PendingBlockTreemap({ mempoolBlock }) {
       const ctx = canvas.getContext('2d');
       ctx.scale(dpr, dpr);
 
-      const total = cells.length;
-      const area = w * h;
-      const cellSize = Math.max(2, Math.floor(Math.sqrt(area / total)));
-      const gap = 1;
-      const step = cellSize + gap;
-      const cols = Math.floor(w / step) || 1;
+      // cellsRef 변경 또는 컨테이너 크기 변경 시 squarify 재계산
+      const sizeKey = `${cells.length}-${w}-${h}`;
+      if (sizeKey !== prevCellsLenRef.current) {
+        prevCellsLenRef.current = sizeKey;
+        rectsRef.current = squarify(
+          cells.map(c => ({ ...c, weight: c.vsize || 140 })),
+          w, h
+        );
+      }
 
       ctx.clearRect(0, 0, w, h);
 
-      for (let i = 0; i < total; i++) {
+      const rects = rectsRef.current;
+      for (let i = 0; i < rects.length; i++) {
+        const rect = rects[i];
         const cell = cells[i];
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        const baseX = col * step;
-        const baseY = row * step;
-
-        if (baseY + cellSize > h) break;
+        if (!cell) continue;
 
         // ±1px 랜덤 진동
         const jitterX = (Math.random() - 0.5) * 2;
@@ -162,12 +170,12 @@ function PendingBlockTreemap({ mempoolBlock }) {
 
         // alpha fade-in
         if (cell.alpha < 1) {
-          cell.alpha = Math.min(1, cell.alpha + 1 / 30); // ~30프레임 = 500ms
+          cell.alpha = Math.min(1, cell.alpha + 1 / 30);
         }
 
         ctx.globalAlpha = cell.alpha * 0.9;
         ctx.fillStyle = feeColor(cell.currentFeeRate);
-        ctx.fillRect(baseX + jitterX, baseY + jitterY, cellSize, cellSize);
+        ctx.fillRect(rect.x + jitterX, rect.y + jitterY, rect.w - 0.5, rect.h - 0.5);
       }
 
       ctx.globalAlpha = 1;
@@ -277,66 +285,118 @@ function SegwitStats({ txids, blockHash, sourceType }) {
   );
 }
 
-// Block Treemap — 모든 TX를 밀집 그리드로 시각화, 샘플에 fee 색상 적용
+// Block Treemap — weight 비례 사각형 + fee rate 색상
 function BlockTreemap({ txids, blockHash, sourceType }) {
-  const [feeMap, setFeeMap] = useState(new Map());
+  const [txData, setTxData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadedCount, setLoadedCount] = useState(0);
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
 
   const total = txids?.length || 0;
 
-  // 균등 간격으로 100개 샘플 fetch → fee rate 정보 수집
+  // 전체 TX fetch (mempool: 25개씩 배치, server: 개별 fetch)
   useEffect(() => {
-    if (!total) return;
+    if (!total || !blockHash) return;
     setLoading(true);
-
-    const sampleSize = Math.min(total, 100);
-    const step = total / sampleSize;
-    const sampleIndices = Array.from({ length: sampleSize }, (_, i) => Math.floor(i * step));
-    const sampleTxids = sampleIndices.map(i => txids[i]);
-
-    const txUrl = (txid) => sourceType === 'server' ? `/api/tx/${txid}` : `${REST_BASE}/tx/${txid}`;
-
-    // 동시 요청 제한: 20개씩 배치
-    const batchSize = 20;
-    const batches = [];
-    for (let i = 0; i < sampleTxids.length; i += batchSize) {
-      batches.push(sampleTxids.slice(i, i + batchSize));
-    }
+    setTxData([]);
+    setLoadedCount(0);
 
     let cancelled = false;
-    (async () => {
-      const map = new Map();
-      for (const batch of batches) {
-        if (cancelled) return;
-        const results = await Promise.all(batch.map(txid =>
-          fetch(txUrl(txid)).then(r => r.ok ? r.json() : null).catch(() => null)
-        ));
-        results.forEach(tx => {
-          if (!tx) return;
-          const w = tx.weight || (tx.size ? tx.size * 4 : 400);
-          const vs = w / 4;
-          let fee = tx.fee;
-          if (fee == null && sourceType === 'server' && tx.fee != null) {
-            fee = Math.round(tx.fee * 1e8);
+
+    if (sourceType === 'server') {
+      // self-hosted: 개별 TX fetch (기존 방식 유지, vsize 추출 추가)
+      const sampleSize = Math.min(total, 500);
+      const step = total / sampleSize;
+      const sampleTxids = Array.from({ length: sampleSize }, (_, i) => txids[Math.floor(i * step)]);
+
+      const batchSize = 20;
+      const batches = [];
+      for (let i = 0; i < sampleTxids.length; i += batchSize) {
+        batches.push(sampleTxids.slice(i, i + batchSize));
+      }
+
+      (async () => {
+        const collected = [];
+        for (const batch of batches) {
+          if (cancelled) return;
+          const results = await Promise.all(batch.map(txid =>
+            fetch(`/api/tx/${txid}`).then(r => r.ok ? r.json() : null).catch(() => null)
+          ));
+          results.forEach(tx => {
+            if (!tx) return;
+            const w = tx.weight || (tx.size ? tx.size * 4 : 400);
+            const vsize = w / 4;
+            let fee = tx.fee;
+            if (fee == null) fee = 0;
+            const feeRate = fee != null && vsize > 0 ? fee / vsize : 1;
+            collected.push({ txid: tx.txid, vsize, feeRate });
+          });
+          if (!cancelled) {
+            setTxData([...collected]);
+            setLoadedCount(collected.length);
           }
-          const feeRate = fee != null && vs > 0 ? fee / vs : 1;
-          map.set(tx.txid, feeRate);
-        });
-      }
-      if (!cancelled) {
-        setFeeMap(map);
-        setLoading(false);
-      }
-    })();
+        }
+        if (!cancelled) setLoading(false);
+      })();
+    } else {
+      // mempool.space: /api/block/{hash}/txs/{startIndex} — 25개씩 전체 fetch
+      const maxTx = Math.min(total, 5000);
+      const totalPages = Math.ceil(maxTx / 25);
+      const concurrency = 10;
+
+      (async () => {
+        const collected = [];
+        for (let batch = 0; batch < totalPages; batch += concurrency) {
+          if (cancelled) return;
+          const pageIndices = [];
+          for (let p = batch; p < Math.min(batch + concurrency, totalPages); p++) {
+            pageIndices.push(p * 25);
+          }
+          const results = await Promise.all(pageIndices.map(startIdx =>
+            fetch(`${REST_BASE}/block/${blockHash}/txs/${startIdx}`)
+              .then(r => r.ok ? r.json() : [])
+              .catch(() => [])
+          ));
+          for (const txs of results) {
+            for (const tx of txs) {
+              const w = tx.weight || (tx.size ? tx.size * 4 : 400);
+              const vsize = w / 4;
+              const fee = tx.fee ?? 0;
+              const feeRate = vsize > 0 ? fee / vsize : 1;
+              collected.push({ txid: tx.txid, vsize, feeRate });
+            }
+          }
+          if (!cancelled) {
+            setTxData([...collected]);
+            setLoadedCount(collected.length);
+          }
+        }
+
+        // TX 5000개 초과 시: 나머지는 평균 vsize/feeRate로 보간
+        if (!cancelled && total > 5000) {
+          const avgVsize = collected.reduce((s, t) => s + t.vsize, 0) / collected.length || 140;
+          const avgFeeRate = collected.reduce((s, t) => s + t.feeRate, 0) / collected.length || 1;
+          for (let i = collected.length; i < total; i++) {
+            collected.push({
+              txid: txids[i] || `interp-${i}`,
+              vsize: avgVsize * (0.5 + Math.random()),
+              feeRate: avgFeeRate * (0.5 + Math.random()),
+            });
+          }
+          setTxData([...collected]);
+        }
+
+        if (!cancelled) setLoading(false);
+      })();
+    }
 
     return () => { cancelled = true; };
-  }, [total, blockHash]);
+  }, [total, blockHash, sourceType]);
 
-  // Canvas 렌더링 — rAF로 레이아웃 완료 후 실행
+  // Canvas 렌더링 — squarify 레이아웃
   useEffect(() => {
-    if (!total) return;
+    if (!txData.length) return;
 
     const render = () => {
       const canvas = canvasRef.current;
@@ -356,46 +416,25 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
       const ctx = canvas.getContext('2d');
       ctx.scale(dpr, dpr);
 
-      // 셀 크기: 컨테이너 면적 / TX 수 기반 자동 계산
-      const area = w * h;
-      const cellSize = Math.max(2, Math.floor(Math.sqrt(area / total)));
-      // 셀 간 1px 간격으로 그리드 구분
-      const gap = 1;
-      const step = cellSize + gap;
-      const cols = Math.floor(w / step) || 1;
+      // fee rate 내림차순 정렬 후 squarify
+      const items = txData.map(tx => ({ ...tx, weight: tx.vsize }));
+      items.sort((a, b) => b.feeRate - a.feeRate);
+      const rects = squarify(items, w, h);
 
       ctx.clearRect(0, 0, w, h);
 
-      for (let i = 0; i < total; i++) {
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        const x = col * step;
-        const y = row * step;
-
-        if (y + cellSize > h) break;
-
-        const txid = txids[i];
-        const fr = feeMap.get(txid);
-
-        if (fr != null) {
-          ctx.globalAlpha = 0.9;
-          ctx.fillStyle = feeColor(fr);
-        } else {
-          // 미확인 TX — 배경과 구분되는 밝은 회색
-          ctx.globalAlpha = 0.6;
-          ctx.fillStyle = '#334155';
-        }
-
-        ctx.fillRect(x, y, cellSize, cellSize);
+      for (const rect of rects) {
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = feeColor(rect.feeRate);
+        ctx.fillRect(rect.x, rect.y, rect.w - 0.5, rect.h - 0.5);
       }
 
       ctx.globalAlpha = 1;
     };
 
-    // rAF로 한 프레임 지연 — 부모 레이아웃 완료 보장
     const rafId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(rafId);
-  }, [txids, feeMap, total]);
+  }, [txData]);
 
   if (!total) {
     return (
@@ -409,11 +448,13 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
     <div ref={containerRef} className="w-full h-full relative overflow-hidden rounded">
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center text-muted text-label-xs z-10 pointer-events-none">
-          {total.toLocaleString()}개 TX 로딩 중…
+          {loadedCount > 0
+            ? `${loadedCount.toLocaleString()} / ${total.toLocaleString()} TX 로딩 중…`
+            : `${total.toLocaleString()}개 TX 로딩 중…`
+          }
         </div>
       )}
       <canvas ref={canvasRef} className="block" />
-      {/* TX 수 오버레이 */}
       <div className="absolute bottom-1 right-1.5 text-label-xs text-white/40 pointer-events-none">
         {total.toLocaleString()} TX
       </div>
@@ -726,10 +767,6 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
                       </div>
                     ))}
                     <span className="text-label-xs text-muted ml-1">sat/vB</span>
-                    <div className="flex items-center gap-0.5 ml-1.5 border-l border-dark-border pl-1.5">
-                      <div className="w-2.5 h-2.5 rounded-sm bg-dark-surface opacity-35" />
-                      <span className="text-label-xs text-muted">미확인</span>
-                    </div>
                   </div>
                 </div>
 
