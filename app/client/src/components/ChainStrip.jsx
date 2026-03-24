@@ -309,7 +309,7 @@ const ChainStrip = forwardRef(function ChainStrip({
         onScroll={handleScroll}
         className="flex items-center gap-0 px-3 py-2 overflow-x-auto
                    scrollbar-thin"
-        style={{ scrollBehavior: 'smooth' }}
+        style={{ scrollBehavior: 'smooth', overscrollBehaviorX: 'contain' }}
       >
         {/* 로딩 인디케이터 */}
         {loading && (
