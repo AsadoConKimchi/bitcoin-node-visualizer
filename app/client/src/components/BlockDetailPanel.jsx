@@ -90,6 +90,7 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
   const [feeMap, setFeeMap] = useState(new Map());
   const [loading, setLoading] = useState(true);
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
 
   const total = txids?.length || 0;
 
@@ -141,57 +142,64 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
     return () => { cancelled = true; };
   }, [total, blockHash]);
 
-  // Canvas 렌더링
+  // Canvas 렌더링 — rAF로 레이아웃 완료 후 실행
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !total) return;
+    if (!total) return;
 
-    const container = canvas.parentElement;
-    if (!container) return;
-    const w = container.clientWidth;
-    const h = container.clientHeight;
-    if (w === 0 || h === 0) return;
+    const render = () => {
+      const canvas = canvasRef.current;
+      const container = containerRef.current;
+      if (!canvas || !container) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width = `${w}px`;
-    canvas.style.height = `${h}px`;
+      const w = container.offsetWidth;
+      const h = container.offsetHeight;
+      if (w === 0 || h === 0) return;
 
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
 
-    // 셀 크기 동적 계산
-    const cellSize = total > 3000 ? 3 : total > 2000 ? 4 : total > 1000 ? 5 : total > 500 ? 6 : total > 200 ? 7 : 9;
-    const gap = 1;
-    const cols = Math.floor(w / (cellSize + gap)) || 1;
-    const defaultColor = '#1e2328';
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
 
-    ctx.clearRect(0, 0, w, h);
+      // 셀 크기: 컨테이너 면적 / TX 수 기반 자동 계산
+      const area = w * h;
+      const cellSize = Math.max(2, Math.floor(Math.sqrt(area / total)));
+      const cols = Math.floor(w / cellSize) || 1;
+      const defaultColor = '#1e2328';
 
-    for (let i = 0; i < total; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = col * (cellSize + gap);
-      const y = row * (cellSize + gap);
+      ctx.clearRect(0, 0, w, h);
 
-      if (y > h) break;
+      for (let i = 0; i < total; i++) {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = col * cellSize;
+        const y = row * cellSize;
 
-      const txid = txids[i];
-      const fr = feeMap.get(txid);
+        if (y + cellSize > h) break;
 
-      if (fr != null) {
-        ctx.globalAlpha = 0.9;
-        ctx.fillStyle = feeColor(fr);
-      } else {
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = defaultColor;
+        const txid = txids[i];
+        const fr = feeMap.get(txid);
+
+        if (fr != null) {
+          ctx.globalAlpha = 0.9;
+          ctx.fillStyle = feeColor(fr);
+        } else {
+          ctx.globalAlpha = 0.3;
+          ctx.fillStyle = defaultColor;
+        }
+
+        ctx.fillRect(x, y, cellSize, cellSize);
       }
 
-      ctx.fillRect(x, y, cellSize, cellSize);
-    }
+      ctx.globalAlpha = 1;
+    };
 
-    ctx.globalAlpha = 1;
+    // rAF로 한 프레임 지연 — 부모 레이아웃 완료 보장
+    const rafId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(rafId);
   }, [txids, feeMap, total]);
 
   if (!total) {
@@ -203,15 +211,13 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
   }
 
   return (
-    <div className="w-full h-full relative overflow-hidden rounded">
+    <div ref={containerRef} className="w-full h-full relative overflow-hidden rounded">
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center text-muted text-label-xs z-10 pointer-events-none">
           {total.toLocaleString()}개 TX 로딩 중…
         </div>
       )}
-      <div className="w-full h-full">
-        <canvas ref={canvasRef} className="w-full h-full" />
-      </div>
+      <canvas ref={canvasRef} className="block" />
       {/* TX 수 오버레이 */}
       <div className="absolute bottom-1 right-1.5 text-label-xs text-white/40 pointer-events-none">
         {total.toLocaleString()} TX
@@ -385,7 +391,7 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
       <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[var(--z-modal-backdrop)]" />
 
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                      w-[780px] max-h-[85vh] overflow-y-auto bg-panel-bg-solid
+                      w-[95vw] max-w-[1200px] max-h-[90vh] overflow-y-auto bg-panel-bg-solid
                       border border-white/10 rounded-xl px-5 py-4
                       font-mono text-sm text-text-primary backdrop-blur-md z-[var(--z-modal)]
                       max-sm:w-[calc(100vw-16px)] max-sm:max-h-[90vh]"
@@ -436,17 +442,41 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
 
         {detail && (
           <>
-            {/* 2. 2열 Info Layout */}
-            <div className="grid grid-cols-5 gap-3 mb-3 max-sm:grid-cols-1">
-              {/* 좌측 (~45%) — 정보 목록 */}
-              <div className="col-span-3 space-y-0.5 max-sm:col-span-1">
+            {/* 2. TX FEE RATE MAP — 전체 너비 */}
+            <div className="bg-dark-surface/60 border border-dark-border rounded-lg p-2 mb-3">
+              <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP</div>
+              <div className="h-[250px] max-sm:h-[180px]">
+                <BlockTreemap
+                  txids={txids.length > 0 ? txids : (detail._txids || [])}
+                  blockHash={navHash || block?.hash}
+                  sourceType={sourceType}
+                />
+              </div>
+              {/* Fee 색상 범례 */}
+              <div className="flex gap-1.5 mt-2 flex-wrap">
+                {FEE_LEGEND.map(l => (
+                  <div key={l.label} className="flex items-center gap-0.5">
+                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: l.color }} />
+                    <span className="text-label-xs text-muted">{l.label}</span>
+                  </div>
+                ))}
+                <span className="text-label-xs text-muted ml-1">sat/vB</span>
+                <div className="flex items-center gap-0.5 ml-1.5 border-l border-dark-border pl-1.5">
+                  <div className="w-2.5 h-2.5 rounded-sm bg-dark-surface opacity-35" />
+                  <span className="text-label-xs text-muted">미확인</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. 2열 Info Grid — 블록 정보 + 통계 */}
+            <div className="grid grid-cols-2 gap-3 mb-3 max-sm:grid-cols-1">
+              {/* 좌측 — 블록 메타정보 */}
+              <div className="space-y-0.5">
                 <InfoRow label="Hash" value={detail.id || block?.hash} mono copyable />
                 {ts && <InfoRow label="Timestamp" value={`${ts} (${relativeTime(detail.timestamp)})`} />}
                 <InfoRow label="TX Count" value={txCount?.toLocaleString()} />
                 {sizeKB && <InfoRow label="Size" value={sizeKB} />}
                 {weightMWU && <InfoRow label="Weight" value={weightMWU} />}
-
-                {/* Fee 관련 */}
                 {feeRange && (
                   <InfoRow label="Fee Span" value={`${Math.round(feeRange[0])} – ${Math.round(feeRange[feeRange.length - 1])} sat/vB`} />
                 )}
@@ -456,59 +486,26 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
                 {totalFees != null && (
                   <InfoRow label="Total Fees" value={`${formatBtc(totalFees)} BTC`} highlight />
                 )}
-
-                {/* 보상 */}
                 <InfoRow label="Subsidy" value={`${formatBtc(subsidy)} BTC`} />
                 {rewardSats != null && (
                   <InfoRow label="Subsidy + Fees" value={`${formatBtc(rewardSats)} BTC`} highlight />
                 )}
-
-                {/* SegWit 통계 */}
-                {txids.length > 0 && (
-                  <div className="mt-2">
-                    <SegwitStats txids={txids} blockHash={navHash || block?.hash} sourceType={sourceType} />
-                  </div>
-                )}
               </div>
 
-              {/* 우측 (~55%) — Block Treemap + Fee 분포 */}
-              <div className="col-span-2 space-y-2 max-sm:col-span-1">
-                {/* Treemap */}
-                <div className="bg-dark-surface/60 border border-dark-border rounded-lg p-2">
-                  <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP</div>
-                  <div className="h-[200px]">
-                    <BlockTreemap
-                      txids={txids.length > 0 ? txids : (detail._txids || [])}
-                      blockHash={navHash || block?.hash}
-                      sourceType={sourceType}
-                    />
-                  </div>
-                  {/* Fee 색상 범례 */}
-                  <div className="flex gap-1 mt-1.5 flex-wrap">
-                    {FEE_LEGEND.map(l => (
-                      <div key={l.label} className="flex items-center gap-0.5">
-                        <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: l.color }} />
-                        <span className="text-label-xs text-muted">{l.label}</span>
-                      </div>
-                    ))}
-                    <span className="text-label-xs text-muted ml-1">sat/vB</span>
-                    <div className="flex items-center gap-0.5 ml-1.5 border-l border-dark-border pl-1.5">
-                      <div className="w-2 h-2 rounded-sm bg-dark-surface opacity-35" />
-                      <span className="text-label-xs text-muted">미확인</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Fee 분포 바 차트 */}
+              {/* 우측 — TX 유형 + Fee 분포 */}
+              <div className="space-y-2">
+                {txids.length > 0 && (
+                  <SegwitStats txids={txids} blockHash={navHash || block?.hash} sourceType={sourceType} />
+                )}
                 {feeRange && (
-                  <div className="bg-dark-surface/60 border border-dark-border rounded-lg p-2">
+                  <div className="p-2 bg-dark-surface rounded border border-dark-border">
                     <FeeBar feeRange={feeRange} />
                   </div>
                 )}
               </div>
             </div>
 
-            {/* 3. Details (접이식) */}
+            {/* 4. Details (접이식) */}
             <div className="border-t border-dark-border pt-2 mb-2">
               <button
                 onClick={() => setShowDetails(!showDetails)}
@@ -529,7 +526,7 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
               )}
             </div>
 
-            {/* 4. TX 목록 */}
+            {/* 5. TX 목록 */}
             {txCount > 0 && (
               <div className="border-t border-dark-border pt-2">
                 <div
