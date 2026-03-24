@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { CopyButton, relativeTime, formatBtc, calculateSubsidy } from '../utils/format.jsx';
-import { feeColor } from '../utils/colors.js';
+import { feeColor, FEE_LEGEND } from '../utils/colors.js';
 import { normalizeRpcBlock } from '../utils/normalize.js';
 
 const REST_BASE = 'https://mempool.space/api';
@@ -72,54 +72,67 @@ function SegwitStats({ txids, blockHash, sourceType }) {
     <div className="p-2 bg-dark-surface rounded border border-dark-border">
       <div className="text-muted text-xs mb-1.5">TX 유형 ({stats.sampleSize} / {txids.length})</div>
       <div className="flex gap-1 h-3 rounded overflow-hidden mb-1">
-        {stats.legacy > 0 && <div className="bg-orange-500" style={{ width: `${stats.legacy}%` }} />}
-        {stats.segwit > 0 && <div className="bg-blue-400" style={{ width: `${stats.segwit}%` }} />}
-        {stats.taproot > 0 && <div className="bg-purple-400" style={{ width: `${stats.taproot}%` }} />}
+        {stats.legacy > 0 && <div className="bg-btc-orange" style={{ width: `${stats.legacy}%` }} />}
+        {stats.segwit > 0 && <div className="bg-tx-blue" style={{ width: `${stats.segwit}%` }} />}
+        {stats.taproot > 0 && <div className="bg-block-purple" style={{ width: `${stats.taproot}%` }} />}
       </div>
       <div className="flex justify-between text-label-xs">
-        <span className="text-orange-500">Legacy {stats.legacy}%</span>
-        <span className="text-blue-400">SegWit {stats.segwit}%</span>
-        <span className="text-purple-400">Taproot {stats.taproot}%</span>
+        <span className="text-btc-orange">Legacy {stats.legacy}%</span>
+        <span className="text-tx-blue">SegWit {stats.segwit}%</span>
+        <span className="text-block-purple">Taproot {stats.taproot}%</span>
       </div>
     </div>
   );
 }
 
-// Block Treemap — TX를 fee rate별 색상 사각형으로 시각화
+// Block Treemap — 모든 TX를 밀집 그리드로 시각화, 샘플에 fee 색상 적용
 function BlockTreemap({ txids, blockHash, sourceType }) {
-  const [txSamples, setTxSamples] = useState([]);
+  const [feeMap, setFeeMap] = useState(new Map());
+  const [loading, setLoading] = useState(true);
 
-  const [noData, setNoData] = useState(false);
-
+  // 균등 간격으로 100개 샘플 fetch → fee rate 정보 수집
   useEffect(() => {
     if (!txids?.length) return;
-    setNoData(false);
-    const sample = txids.slice(0, Math.min(txids.length, 100));
+    setLoading(true);
+
+    const sampleSize = Math.min(txids.length, 100);
+    const step = txids.length / sampleSize;
+    const sampleIndices = Array.from({ length: sampleSize }, (_, i) => Math.floor(i * step));
+    const sampleTxids = sampleIndices.map(i => txids[i]);
+
     const txUrl = (txid) => sourceType === 'server' ? `/api/tx/${txid}` : `${REST_BASE}/tx/${txid}`;
 
-    // 처음 100개 중 25개만 실제 fetch (성능)
-    const fetchSample = sample.slice(0, 25);
-    Promise.all(fetchSample.map(txid =>
-      fetch(txUrl(txid)).then(r => r.ok ? r.json() : null).catch(() => null)
-    )).then(results => {
-      const valid = results.filter(Boolean).map(tx => {
-        const w = tx.weight || (tx.size ? tx.size * 4 : 400);
-        const vs = w / 4;
-        let fee = tx.fee;
-        if (fee == null && sourceType === 'server' && tx.fee != null) {
-          fee = Math.round(tx.fee * 1e8);
-        }
-        const feeRate = fee != null && vs > 0 ? fee / vs : 1;
-        return { txid: tx.txid, feeRate, weight: w };
-      });
-      // weight 순 내림차순
-      valid.sort((a, b) => b.weight - a.weight);
-      setTxSamples(valid);
-      if (valid.length === 0) setNoData(true);
-    }).catch(() => setNoData(true));
+    // 동시 요청 제한: 20개씩 배치
+    const batchSize = 20;
+    const batches = [];
+    for (let i = 0; i < sampleTxids.length; i += batchSize) {
+      batches.push(sampleTxids.slice(i, i + batchSize));
+    }
+
+    (async () => {
+      const map = new Map();
+      for (const batch of batches) {
+        const results = await Promise.all(batch.map(txid =>
+          fetch(txUrl(txid)).then(r => r.ok ? r.json() : null).catch(() => null)
+        ));
+        results.forEach(tx => {
+          if (!tx) return;
+          const w = tx.weight || (tx.size ? tx.size * 4 : 400);
+          const vs = w / 4;
+          let fee = tx.fee;
+          if (fee == null && sourceType === 'server' && tx.fee != null) {
+            fee = Math.round(tx.fee * 1e8);
+          }
+          const feeRate = fee != null && vs > 0 ? fee / vs : 1;
+          map.set(tx.txid, feeRate);
+        });
+      }
+      setFeeMap(map);
+      setLoading(false);
+    })();
   }, [txids?.length, blockHash]);
 
-  if (noData) {
+  if (!txids?.length) {
     return (
       <div className="w-full h-full flex items-center justify-center text-muted text-label">
         TX 데이터 없음
@@ -127,40 +140,74 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
     );
   }
 
-  if (!txSamples.length) {
-    return (
-      <div className="w-full h-full flex items-center justify-center text-muted text-label">
-        로딩 중…
-      </div>
-    );
-  }
+  // Canvas 기반 treemap — 수천 개 TX도 성능 문제 없이 렌더링
+  const canvasRef = React.useRef(null);
+  const total = txids.length;
+  const defaultColor = '#1e2328';
 
-  // 단순 squarified grid — CSS grid 기반
-  const totalWeight = txSamples.reduce((s, t) => s + t.weight, 0);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !total) return;
+
+    const container = canvas.parentElement;
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    // 셀 크기 동적 계산
+    const cellSize = total > 3000 ? 3 : total > 2000 ? 4 : total > 1000 ? 5 : total > 500 ? 6 : total > 200 ? 7 : 9;
+    const gap = 1;
+    const cols = Math.floor(w / (cellSize + gap));
+    const rows = Math.ceil(total / cols);
+
+    ctx.clearRect(0, 0, w, h);
+
+    for (let i = 0; i < total; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = col * (cellSize + gap);
+      const y = row * (cellSize + gap);
+
+      if (y > h) break;
+
+      const txid = txids[i];
+      const fr = feeMap.get(txid);
+
+      if (fr != null) {
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = feeColor(fr);
+      } else {
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = defaultColor;
+      }
+
+      ctx.fillRect(x, y, cellSize, cellSize);
+    }
+
+    ctx.globalAlpha = 1;
+  }, [txids, feeMap, loading]);
 
   return (
-    <div className="w-full h-full grid gap-[1px] overflow-hidden rounded"
-         style={{
-           gridTemplateColumns: `repeat(auto-fill, minmax(16px, 1fr))`,
-           gridAutoRows: '16px',
-         }}>
-      {txSamples.map((tx, i) => {
-        const pct = tx.weight / totalWeight;
-        const span = Math.max(1, Math.round(pct * 25));
-        return (
-          <div
-            key={tx.txid || i}
-            className="rounded-sm"
-            style={{
-              backgroundColor: feeColor(tx.feeRate),
-              gridColumn: `span ${Math.min(span, 3)}`,
-              gridRow: `span ${Math.min(span, 2)}`,
-              opacity: 0.85,
-            }}
-            title={`${tx.feeRate.toFixed(1)} sat/vB`}
-          />
-        );
-      })}
+    <div className="w-full h-full relative overflow-hidden rounded">
+      {loading && total > 0 && (
+        <div className="absolute inset-0 flex items-center justify-center text-muted text-label-xs z-10 pointer-events-none">
+          {total.toLocaleString()}개 TX 로딩 중…
+        </div>
+      )}
+      <div className="w-full h-full">
+        <canvas ref={canvasRef} className="w-full h-full" />
+      </div>
+      {/* TX 수 오버레이 */}
+      <div className="absolute bottom-1 right-1.5 text-label-xs text-white/40 pointer-events-none">
+        {total.toLocaleString()} TX
+      </div>
     </div>
   );
 }
@@ -421,7 +468,7 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
                 {/* Treemap */}
                 <div className="bg-dark-surface/60 border border-dark-border rounded-lg p-2">
                   <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP</div>
-                  <div className="h-[140px]">
+                  <div className="h-[200px]">
                     <BlockTreemap
                       txids={txids.length > 0 ? txids : (detail._txids || [])}
                       blockHash={navHash || block?.hash}
@@ -430,20 +477,17 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
                   </div>
                   {/* Fee 색상 범례 */}
                   <div className="flex gap-1 mt-1.5 flex-wrap">
-                    {[
-                      { label: '50+', color: '#ef4444' },
-                      { label: '20+', color: '#f59e0b' },
-                      { label: '10+', color: '#eab308' },
-                      { label: '5+', color: '#22c55e' },
-                      { label: '2+', color: '#2dd4bf' },
-                      { label: '<2', color: '#60a5fa' },
-                    ].map(l => (
+                    {FEE_LEGEND.map(l => (
                       <div key={l.label} className="flex items-center gap-0.5">
                         <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: l.color }} />
                         <span className="text-label-xs text-muted">{l.label}</span>
                       </div>
                     ))}
                     <span className="text-label-xs text-muted ml-1">sat/vB</span>
+                    <div className="flex items-center gap-0.5 ml-1.5 border-l border-dark-border pl-1.5">
+                      <div className="w-2 h-2 rounded-sm bg-dark-surface opacity-35" />
+                      <span className="text-label-xs text-muted">미확인</span>
+                    </div>
                   </div>
                 </div>
 
