@@ -386,6 +386,8 @@ export default function App() {
   // ── TX/블록/주소 상세 패널 ──
   const [selectedTx, setSelectedTx] = useState(null);
   const [selectedBlock, setSelectedBlock] = useState(null);
+  const selectedBlockRef = useRef(null);
+  useEffect(() => { selectedBlockRef.current = selectedBlock; }, [selectedBlock]);
   const [selectedAddress, setSelectedAddress] = useState(null);
 
   // verifyCenter 토글 → 검증 패널 ON/OFF + 블록 검증 시작
@@ -625,6 +627,11 @@ export default function App() {
         }
       }
 
+      // pending 블록 → 확정 블록 전환
+      if (selectedBlockRef.current?.isPending && data.hash) {
+        setSelectedBlock({ height: data.height, hash: data.hash, isPending: false });
+      }
+
       startBlockVerification(data);
       // 라디오 모드: 블록 수신 시 검증센터로 전환
       setVisible({ p2p: false, verifyCenter: true, internals: false });
@@ -846,6 +853,7 @@ export default function App() {
       {/* 체인 스트립 — 가로 상단 바 */}
       <ChainStrip
         recentBlocks={recentBlocks}
+        mempoolBlocks={mempoolBlocks}
         onBlockClick={handleBlockClick}
         onReplayCompactBlock={handleReplayCompactBlock}
         sourceType={sourceType}
@@ -856,6 +864,7 @@ export default function App() {
       {selectedBlock && (
         <BlockDetailPanel
           block={selectedBlock}
+          mempoolBlocks={mempoolBlocks}
           onClose={() => setSelectedBlock(null)}
           onTxClick={handleTxClick}
           sourceType={sourceType}

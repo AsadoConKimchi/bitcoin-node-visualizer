@@ -1,10 +1,202 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { CopyButton, relativeTime, formatBtc, calculateSubsidy } from '../utils/format.jsx';
 import { feeColor, FEE_LEGEND } from '../utils/colors.js';
 import { normalizeRpcBlock } from '../utils/normalize.js';
 
 const REST_BASE = 'https://mempool.space/api';
 const PAGE_SIZE = 25;
+
+// feeRange 7-percentile 기반 synthetic cell 생성
+function generateSyntheticCells(mempoolBlock) {
+  if (!mempoolBlock) return [];
+  const { nTx, feeRange } = mempoolBlock;
+  if (!nTx || !feeRange?.length) return [];
+
+  // feeRange: [min, 10th, 25th, median, 75th, 90th, max] — 6구간
+  const segments = [];
+  for (let i = 0; i < feeRange.length - 1; i++) {
+    segments.push({ lo: feeRange[i], hi: feeRange[i + 1] });
+  }
+
+  const perSeg = Math.ceil(nTx / segments.length);
+  const cells = [];
+  let id = 0;
+
+  for (let s = segments.length - 1; s >= 0; s--) {
+    const { lo, hi } = segments[s];
+    const count = s === 0 ? nTx - cells.length : perSeg;
+    for (let j = 0; j < count && cells.length < nTx; j++) {
+      const feeRate = lo + Math.random() * (hi - lo);
+      cells.push({
+        id: id++,
+        feeRate,
+        targetFeeRate: feeRate,
+        currentFeeRate: feeRate,
+        alpha: 1,
+      });
+    }
+  }
+
+  // 고수수료 우선 정렬
+  cells.sort((a, b) => b.feeRate - a.feeRate);
+  return cells;
+}
+
+// Pending Block Treemap — 실시간 진동 애니메이션
+function PendingBlockTreemap({ mempoolBlock }) {
+  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const cellsRef = useRef([]);
+  const rafRef = useRef(null);
+  const prevNTxRef = useRef(0);
+
+  // mempoolBlock 변경 → 셀 업데이트
+  useEffect(() => {
+    if (!mempoolBlock) return;
+    const { nTx, feeRange } = mempoolBlock;
+    if (!nTx) return;
+
+    const prev = cellsRef.current;
+    const prevNTx = prevNTxRef.current;
+    prevNTxRef.current = nTx;
+
+    if (prev.length === 0) {
+      // 초기 생성
+      cellsRef.current = generateSyntheticCells(mempoolBlock);
+      return;
+    }
+
+    // nTx 증가 → 새 셀 추가 (alpha=0으로 fade-in)
+    if (nTx > prev.length) {
+      const diff = nTx - prev.length;
+      const segments = [];
+      for (let i = 0; i < feeRange.length - 1; i++) {
+        segments.push({ lo: feeRange[i], hi: feeRange[i + 1] });
+      }
+      for (let i = 0; i < diff; i++) {
+        const seg = segments[Math.floor(Math.random() * segments.length)];
+        const feeRate = seg.lo + Math.random() * (seg.hi - seg.lo);
+        prev.push({
+          id: prev.length,
+          feeRate,
+          targetFeeRate: feeRate,
+          currentFeeRate: feeRate,
+          alpha: 0, // fade-in 시작
+        });
+      }
+      prev.sort((a, b) => b.feeRate - a.feeRate);
+    }
+
+    // nTx 감소 → 저수수료 셀 제거
+    if (nTx < prev.length) {
+      prev.sort((a, b) => b.feeRate - a.feeRate);
+      cellsRef.current = prev.slice(0, nTx);
+    }
+
+    // feeRange 변경 → targetFeeRate 업데이트
+    if (feeRange?.length) {
+      const segments = [];
+      for (let i = 0; i < feeRange.length - 1; i++) {
+        segments.push({ lo: feeRange[i], hi: feeRange[i + 1] });
+      }
+      const perSeg = Math.ceil(cellsRef.current.length / segments.length);
+      cellsRef.current.forEach((cell, idx) => {
+        const segIdx = Math.min(Math.floor(idx / perSeg), segments.length - 1);
+        const seg = segments[segments.length - 1 - segIdx];
+        cell.targetFeeRate = seg.lo + Math.random() * (seg.hi - seg.lo);
+      });
+    }
+  }, [mempoolBlock?.nTx, mempoolBlock?.feeRange]);
+
+  // rAF 애니메이션 루프
+  useEffect(() => {
+    const animate = () => {
+      const canvas = canvasRef.current;
+      const container = containerRef.current;
+      const cells = cellsRef.current;
+      if (!canvas || !container || !cells.length) {
+        rafRef.current = requestAnimationFrame(animate);
+        return;
+      }
+
+      const w = container.offsetWidth;
+      const h = container.offsetHeight;
+      if (w === 0 || h === 0) {
+        rafRef.current = requestAnimationFrame(animate);
+        return;
+      }
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      const total = cells.length;
+      const area = w * h;
+      const cellSize = Math.max(2, Math.floor(Math.sqrt(area / total)));
+      const gap = 1;
+      const step = cellSize + gap;
+      const cols = Math.floor(w / step) || 1;
+
+      ctx.clearRect(0, 0, w, h);
+
+      for (let i = 0; i < total; i++) {
+        const cell = cells[i];
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const baseX = col * step;
+        const baseY = row * step;
+
+        if (baseY + cellSize > h) break;
+
+        // ±1px 랜덤 진동
+        const jitterX = (Math.random() - 0.5) * 2;
+        const jitterY = (Math.random() - 0.5) * 2;
+
+        // fee 색상 lerp
+        cell.currentFeeRate += (cell.targetFeeRate - cell.currentFeeRate) * 0.05;
+
+        // alpha fade-in
+        if (cell.alpha < 1) {
+          cell.alpha = Math.min(1, cell.alpha + 1 / 30); // ~30프레임 = 500ms
+        }
+
+        ctx.globalAlpha = cell.alpha * 0.9;
+        ctx.fillStyle = feeColor(cell.currentFeeRate);
+        ctx.fillRect(baseX + jitterX, baseY + jitterY, cellSize, cellSize);
+      }
+
+      ctx.globalAlpha = 1;
+      rafRef.current = requestAnimationFrame(animate);
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  if (!mempoolBlock?.nTx) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-muted text-label">
+        대기 중인 TX 없음
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="w-full h-full relative overflow-hidden rounded">
+      <canvas ref={canvasRef} className="block" />
+      <div className="absolute bottom-1 right-1.5 text-label-xs text-white/40 pointer-events-none">
+        ~{mempoolBlock.nTx.toLocaleString()} TX
+      </div>
+    </div>
+  );
+}
 
 // SegWit/Taproot 비율 계산
 function SegwitStats({ txids, blockHash, sourceType }) {
@@ -275,7 +467,8 @@ function InfoRow({ label, value, mono, highlight, copyable }) {
   );
 }
 
-export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType, onAddressClick }) {
+export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxClick, sourceType, onAddressClick }) {
+  const isPending = block?.isPending === true;
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -290,6 +483,7 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
   const [navHash, setNavHash] = useState(block?.hash ?? null);
 
   useEffect(() => {
+    if (isPending) { setLoading(false); return; }
     const hash = navHash || block?.hash;
     if (!hash) return;
     setLoading(true);
@@ -389,6 +583,14 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
   const visibleTxids = txids.slice(0, txPage * PAGE_SIZE);
   const hasMore = visibleTxids.length < txids.length;
 
+  // pending 모드: mempoolBlocks[0] 실시간 추적
+  const pendingBlock = isPending ? (mempoolBlocks?.[0] ?? block?.mempoolBlock) : null;
+  const pendingFeeRange = pendingBlock?.feeRange;
+  const pendingMedianFee = pendingBlock?.medianFee ?? pendingFeeRange?.[3];
+  const pendingNTx = pendingBlock?.nTx;
+  const pendingVSize = pendingBlock?.blockVSize;
+  const pendingTotalFees = pendingBlock?.totalFees;
+
   return (
     <>
       <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[var(--z-modal-backdrop)]" />
@@ -400,31 +602,44 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
                       max-sm:w-[calc(100vw-16px)] max-sm:max-h-[90vh]"
            style={{ boxShadow: 'var(--shadow-modal)' }}>
 
-        {/* 1. Block Navigation Header */}
+        {/* 1. Header */}
         <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigateBlock(-1)}
-              className="bg-transparent border border-white/10 rounded text-muted
-                        cursor-pointer px-2 py-0.5 text-sm hover:text-text-primary hover:bg-white/5"
-            >
-              ‹
-            </button>
+            {!isPending && (
+              <button
+                onClick={() => navigateBlock(-1)}
+                className="bg-transparent border border-white/10 rounded text-muted
+                          cursor-pointer px-2 py-0.5 text-sm hover:text-text-primary hover:bg-white/5"
+              >
+                ‹
+              </button>
+            )}
             <div>
-              <div className="text-btc-orange font-bold text-base">
-                Block #{(navHeight ?? block?.height)?.toLocaleString() ?? '?'}
-              </div>
-              {pool && (
-                <div className="text-muted text-xs mt-0.5">Mined by {pool}</div>
+              {isPending ? (
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-mempool-green animate-pulse" />
+                  <span className="text-mempool-green font-bold text-base">Next Block (대기 중)</span>
+                </div>
+              ) : (
+                <>
+                  <div className="text-btc-orange font-bold text-base">
+                    Block #{(navHeight ?? block?.height)?.toLocaleString() ?? '?'}
+                  </div>
+                  {pool && (
+                    <div className="text-muted text-xs mt-0.5">Mined by {pool}</div>
+                  )}
+                </>
               )}
             </div>
-            <button
-              onClick={() => navigateBlock(1)}
-              className="bg-transparent border border-white/10 rounded text-muted
-                        cursor-pointer px-2 py-0.5 text-sm hover:text-text-primary hover:bg-white/5"
-            >
-              ›
-            </button>
+            {!isPending && (
+              <button
+                onClick={() => navigateBlock(1)}
+                className="bg-transparent border border-white/10 rounded text-muted
+                          cursor-pointer px-2 py-0.5 text-sm hover:text-text-primary hover:bg-white/5"
+              >
+                ›
+              </button>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -435,25 +650,14 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
           </button>
         </div>
 
-        {loading && (
-          <div className="text-text-dim text-center py-4">로드 중…</div>
-        )}
-
-        {error && (
-          <div className="text-error text-center py-2 text-xs">로드 실패: {error}</div>
-        )}
-
-        {detail && (
+        {/* Pending 모드 */}
+        {isPending && (
           <>
-            {/* 2. TX FEE RATE MAP — 전체 너비 */}
-            <div className="bg-dark-surface/60 border border-dark-border rounded-lg p-2 mb-3">
-              <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP</div>
+            {/* TX FEE RATE MAP — 실시간 진동 */}
+            <div className="bg-dark-surface/60 border border-mempool-green/20 rounded-lg p-2 mb-3">
+              <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP (실시간)</div>
               <div className="h-[250px] max-sm:h-[180px]">
-                <BlockTreemap
-                  txids={txids.length > 0 ? txids : (detail._txids || [])}
-                  blockHash={navHash || block?.hash}
-                  sourceType={sourceType}
-                />
+                <PendingBlockTreemap mempoolBlock={pendingBlock} />
               </div>
               {/* Fee 색상 범례 */}
               <div className="flex gap-1.5 mt-2 flex-wrap">
@@ -464,129 +668,189 @@ export default function BlockDetailPanel({ block, onClose, onTxClick, sourceType
                   </div>
                 ))}
                 <span className="text-label-xs text-muted ml-1">sat/vB</span>
-                <div className="flex items-center gap-0.5 ml-1.5 border-l border-dark-border pl-1.5">
-                  <div className="w-2.5 h-2.5 rounded-sm bg-dark-surface opacity-35" />
-                  <span className="text-label-xs text-muted">미확인</span>
-                </div>
               </div>
             </div>
 
-            {/* 3. 2열 Info Grid — 블록 정보 + 통계 */}
+            {/* Pending 블록 정보 */}
             <div className="grid grid-cols-2 gap-3 mb-3 max-sm:grid-cols-1">
-              {/* 좌측 — 블록 메타정보 */}
               <div className="space-y-0.5">
-                <InfoRow label="Hash" value={detail.id || block?.hash} mono copyable />
-                {ts && <InfoRow label="Timestamp" value={`${ts} (${relativeTime(detail.timestamp)})`} />}
-                <InfoRow label="TX Count" value={txCount?.toLocaleString()} />
-                {sizeKB && <InfoRow label="Size" value={sizeKB} />}
-                {weightMWU && <InfoRow label="Weight" value={weightMWU} />}
-                {feeRange && (
-                  <InfoRow label="Fee Span" value={`${Math.round(feeRange[0])} – ${Math.round(feeRange[feeRange.length - 1])} sat/vB`} />
-                )}
-                {medianFee != null && (
-                  <InfoRow label="Median Fee" value={`${medianFee.toFixed(1)} sat/vB`} />
-                )}
-                {totalFees != null && (
-                  <InfoRow label="Total Fees" value={`${formatBtc(totalFees)} BTC`} highlight />
-                )}
-                <InfoRow label="Subsidy" value={`${formatBtc(subsidy)} BTC`} />
-                {rewardSats != null && (
-                  <InfoRow label="Subsidy + Fees" value={`${formatBtc(rewardSats)} BTC`} highlight />
-                )}
+                {pendingNTx != null && <InfoRow label="TX Count" value={`~${pendingNTx.toLocaleString()}`} />}
+                {pendingVSize != null && <InfoRow label="Block vSize" value={`${(pendingVSize / 1_000_000).toFixed(3)} MvB`} />}
+                {pendingTotalFees != null && <InfoRow label="Total Fees" value={`${formatBtc(pendingTotalFees)} BTC`} highlight />}
+                {pendingMedianFee != null && <InfoRow label="Median Fee" value={`${Math.round(pendingMedianFee)} sat/vB`} />}
               </div>
-
-              {/* 우측 — TX 유형 + Fee 분포 */}
               <div className="space-y-2">
-                {txids.length > 0 && (
-                  <SegwitStats txids={txids} blockHash={navHash || block?.hash} sourceType={sourceType} />
-                )}
-                {feeRange && (
+                {pendingFeeRange && (
                   <div className="p-2 bg-dark-surface rounded border border-dark-border">
-                    <FeeBar feeRange={feeRange} />
+                    <FeeBar feeRange={pendingFeeRange} />
                   </div>
                 )}
               </div>
             </div>
 
-            {/* 4. Details (접이식) */}
-            <div className="border-t border-dark-border pt-2 mb-2">
-              <button
-                onClick={() => setShowDetails(!showDetails)}
-                className="text-muted text-xs font-bold cursor-pointer bg-transparent border-none
-                           hover:text-text-secondary w-full text-left py-1"
-              >
-                {showDetails ? '▾' : '▸'} DETAILS
-              </button>
-              {showDetails && (
-                <div className="mt-1 space-y-0.5 text-xs">
-                  <InfoRow label="Difficulty" value={detail.difficulty?.toLocaleString()} />
-                  <InfoRow label="Nonce" value={detail.nonce?.toLocaleString()} />
-                  <InfoRow label="Bits" value={detail.bits} />
-                  <InfoRow label="Version" value={detail.version != null ? `0x${detail.version.toString(16)}` : null} />
-                  <InfoRow label="Merkle Root" value={detail.merkle_root} mono copyable />
-                  <InfoRow label="Previous Block" value={detail.previousblockhash} mono copyable />
-                </div>
-              )}
+            <div className="text-center text-text-dim text-xs py-2">
+              채굴 시 자동으로 확정 블록 정보로 전환됩니다
             </div>
+          </>
+        )}
 
-            {/* 5. TX 목록 */}
-            {txCount > 0 && (
-              <div className="border-t border-dark-border pt-2">
-                <div
-                  onClick={loadTxids}
-                  className="text-btc-orange text-xs font-bold cursor-pointer py-1 select-none hover:text-btc-orange/80"
-                >
-                  {showTxList ? '▾' : '▸'} TRANSACTIONS ({txCount?.toLocaleString()})
-                </div>
-
-                {showTxList && (
-                  <div className="mt-1">
-                    {txLoading && (
-                      <div className="text-text-dim text-xs py-2 text-center">TX 목록 로딩 중…</div>
-                    )}
-                    {visibleTxids.map((txid, i) => (
-                      <div
-                        key={txid}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onTxClick?.({ txid, data: {} });
-                        }}
-                        className="text-xs text-text-secondary py-1 px-2 border-b border-dark-surface
-                                  cursor-pointer flex items-center gap-2 hover:bg-btc-orange/5 rounded"
-                      >
-                        <span className={`text-text-dim min-w-[24px] ${i === 0 ? 'text-btc-orange font-bold' : ''}`}>
-                          {i === 0 ? 'CB' : i}
-                        </span>
-                        <span className="font-mono flex-1 truncate">{txid}</span>
-                      </div>
-                    ))}
-                    {hasMore && (
-                      <button
-                        onClick={() => setTxPage(p => p + 1)}
-                        className="w-full text-center text-btc-orange text-xs py-2 cursor-pointer
-                                  bg-transparent border border-white/10 rounded mt-1.5
-                                  hover:bg-white/5"
-                      >
-                        더 보기 ({(txids.length - visibleTxids.length).toLocaleString()}개 남음)
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+        {/* 확정 블록 모드 */}
+        {!isPending && (
+          <>
+            {loading && (
+              <div className="text-text-dim text-center py-4">로드 중…</div>
             )}
 
-            {/* mempool.space 링크 */}
-            <div className="mt-3 text-center">
-              <a
-                href={`https://mempool.space/block/${navHash || block?.hash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-text-secondary text-xs no-underline border border-white/10
-                          px-3 py-1 rounded hover:bg-white/5 hover:text-text-primary"
-              >
-                mempool.space에서 보기 ↗
-              </a>
-            </div>
+            {error && (
+              <div className="text-error text-center py-2 text-xs">로드 실패: {error}</div>
+            )}
+
+            {detail && (
+              <>
+                {/* 2. TX FEE RATE MAP — 전체 너비 */}
+                <div className="bg-dark-surface/60 border border-dark-border rounded-lg p-2 mb-3">
+                  <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP</div>
+                  <div className="h-[250px] max-sm:h-[180px]">
+                    <BlockTreemap
+                      txids={txids.length > 0 ? txids : (detail._txids || [])}
+                      blockHash={navHash || block?.hash}
+                      sourceType={sourceType}
+                    />
+                  </div>
+                  {/* Fee 색상 범례 */}
+                  <div className="flex gap-1.5 mt-2 flex-wrap">
+                    {FEE_LEGEND.map(l => (
+                      <div key={l.label} className="flex items-center gap-0.5">
+                        <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: l.color }} />
+                        <span className="text-label-xs text-muted">{l.label}</span>
+                      </div>
+                    ))}
+                    <span className="text-label-xs text-muted ml-1">sat/vB</span>
+                    <div className="flex items-center gap-0.5 ml-1.5 border-l border-dark-border pl-1.5">
+                      <div className="w-2.5 h-2.5 rounded-sm bg-dark-surface opacity-35" />
+                      <span className="text-label-xs text-muted">미확인</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. 2열 Info Grid — 블록 정보 + 통계 */}
+                <div className="grid grid-cols-2 gap-3 mb-3 max-sm:grid-cols-1">
+                  {/* 좌측 — 블록 메타정보 */}
+                  <div className="space-y-0.5">
+                    <InfoRow label="Hash" value={detail.id || block?.hash} mono copyable />
+                    {ts && <InfoRow label="Timestamp" value={`${ts} (${relativeTime(detail.timestamp)})`} />}
+                    <InfoRow label="TX Count" value={txCount?.toLocaleString()} />
+                    {sizeKB && <InfoRow label="Size" value={sizeKB} />}
+                    {weightMWU && <InfoRow label="Weight" value={weightMWU} />}
+                    {feeRange && (
+                      <InfoRow label="Fee Span" value={`${Math.round(feeRange[0])} – ${Math.round(feeRange[feeRange.length - 1])} sat/vB`} />
+                    )}
+                    {medianFee != null && (
+                      <InfoRow label="Median Fee" value={`${medianFee.toFixed(1)} sat/vB`} />
+                    )}
+                    {totalFees != null && (
+                      <InfoRow label="Total Fees" value={`${formatBtc(totalFees)} BTC`} highlight />
+                    )}
+                    <InfoRow label="Subsidy" value={`${formatBtc(subsidy)} BTC`} />
+                    {rewardSats != null && (
+                      <InfoRow label="Subsidy + Fees" value={`${formatBtc(rewardSats)} BTC`} highlight />
+                    )}
+                  </div>
+
+                  {/* 우측 — TX 유형 + Fee 분포 */}
+                  <div className="space-y-2">
+                    {txids.length > 0 && (
+                      <SegwitStats txids={txids} blockHash={navHash || block?.hash} sourceType={sourceType} />
+                    )}
+                    {feeRange && (
+                      <div className="p-2 bg-dark-surface rounded border border-dark-border">
+                        <FeeBar feeRange={feeRange} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Details (접이식) */}
+                <div className="border-t border-dark-border pt-2 mb-2">
+                  <button
+                    onClick={() => setShowDetails(!showDetails)}
+                    className="text-muted text-xs font-bold cursor-pointer bg-transparent border-none
+                               hover:text-text-secondary w-full text-left py-1"
+                  >
+                    {showDetails ? '▾' : '▸'} DETAILS
+                  </button>
+                  {showDetails && (
+                    <div className="mt-1 space-y-0.5 text-xs">
+                      <InfoRow label="Difficulty" value={detail.difficulty?.toLocaleString()} />
+                      <InfoRow label="Nonce" value={detail.nonce?.toLocaleString()} />
+                      <InfoRow label="Bits" value={detail.bits} />
+                      <InfoRow label="Version" value={detail.version != null ? `0x${detail.version.toString(16)}` : null} />
+                      <InfoRow label="Merkle Root" value={detail.merkle_root} mono copyable />
+                      <InfoRow label="Previous Block" value={detail.previousblockhash} mono copyable />
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. TX 목록 */}
+                {txCount > 0 && (
+                  <div className="border-t border-dark-border pt-2">
+                    <div
+                      onClick={loadTxids}
+                      className="text-btc-orange text-xs font-bold cursor-pointer py-1 select-none hover:text-btc-orange/80"
+                    >
+                      {showTxList ? '▾' : '▸'} TRANSACTIONS ({txCount?.toLocaleString()})
+                    </div>
+
+                    {showTxList && (
+                      <div className="mt-1">
+                        {txLoading && (
+                          <div className="text-text-dim text-xs py-2 text-center">TX 목록 로딩 중…</div>
+                        )}
+                        {visibleTxids.map((txid, i) => (
+                          <div
+                            key={txid}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onTxClick?.({ txid, data: {} });
+                            }}
+                            className="text-xs text-text-secondary py-1 px-2 border-b border-dark-surface
+                                      cursor-pointer flex items-center gap-2 hover:bg-btc-orange/5 rounded"
+                          >
+                            <span className={`text-text-dim min-w-[24px] ${i === 0 ? 'text-btc-orange font-bold' : ''}`}>
+                              {i === 0 ? 'CB' : i}
+                            </span>
+                            <span className="font-mono flex-1 truncate">{txid}</span>
+                          </div>
+                        ))}
+                        {hasMore && (
+                          <button
+                            onClick={() => setTxPage(p => p + 1)}
+                            className="w-full text-center text-btc-orange text-xs py-2 cursor-pointer
+                                      bg-transparent border border-white/10 rounded mt-1.5
+                                      hover:bg-white/5"
+                          >
+                            더 보기 ({(txids.length - visibleTxids.length).toLocaleString()}개 남음)
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* mempool.space 링크 */}
+                <div className="mt-3 text-center">
+                  <a
+                    href={`https://mempool.space/block/${navHash || block?.hash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-text-secondary text-xs no-underline border border-white/10
+                              px-3 py-1 rounded hover:bg-white/5 hover:text-text-primary"
+                  >
+                    mempool.space에서 보기 ↗
+                  </a>
+                </div>
+              </>
+            )}
           </>
         )}
       </div>

@@ -49,12 +49,32 @@ function BlockCard({ block, isLatest, onClick, onReplay }) {
   );
 }
 
-function PendingCard() {
+function PendingCard({ mempoolBlock, onClick }) {
+  if (!mempoolBlock) return null;
+
+  const medianFee = mempoolBlock.medianFee ?? mempoolBlock.feeRange?.[3];
+
   return (
-    <div className="shrink-0 w-[100px] border border-dashed border-dark-border rounded-lg
-                   px-3 py-2 text-center flex flex-col items-center justify-center">
-      <div className="text-muted-dim text-sm">?</div>
-      <div className="text-label-sm text-muted-dim">pending</div>
+    <div
+      onClick={() => onClick?.({ isPending: true, mempoolBlock })}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.({ isPending: true, mempoolBlock }); }}
+      tabIndex={0}
+      role="button"
+      title="클릭하면 대기 중인 블록 상세 정보"
+      className="shrink-0 w-[130px] border border-dashed border-mempool-green/40 rounded-lg
+                 cursor-pointer px-3 py-2 bg-mempool-green/5 hover:bg-mempool-green/10
+                 transition-all duration-300 animate-pulse-subtle"
+    >
+      <div className="flex items-center gap-1.5">
+        <span className="w-2 h-2 rounded-full bg-mempool-green animate-pulse" />
+        <span className="font-bold text-sm text-mempool-green">Next</span>
+      </div>
+      <div className="mt-1 space-y-0.5">
+        <div className="text-muted text-label font-mono">{mempoolBlock.nTx?.toLocaleString()} TX</div>
+        {medianFee != null && (
+          <div className="text-text-dim text-label-sm">{Math.round(medianFee)} sat/vB</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -69,7 +89,7 @@ function Connector() {
 }
 
 export default function ChainStrip({
-  recentBlocks, onBlockClick, onReplayCompactBlock, sourceType, visible,
+  recentBlocks, mempoolBlocks, onBlockClick, onReplayCompactBlock, sourceType, visible,
 }) {
   if (!visible || !recentBlocks?.length) return null;
 
@@ -241,7 +261,7 @@ export default function ChainStrip({
           </React.Fragment>
         ))}
         <Connector />
-        <PendingCard />
+        <PendingCard mempoolBlock={mempoolBlocks?.[0]} onClick={onBlockClick} />
       </div>
     </div>
   );
