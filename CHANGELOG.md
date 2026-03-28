@@ -4,6 +4,80 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ---
 
+## [1.5.0] — 2026-03-28
+
+### Added — 통합 관제센터 + 교육 레이어
+
+분산된 플로팅 패널을 우측 사이드바로 통합하고, 비트코인 풀노드를 처음 접하는 사용자를 위한 교육 기능을 추가.
+
+#### 통합 관제센터 (Control Center)
+- 기존 5개 플로팅 패널(HudPanels, BlockVerifyPanel, TxStreamPanel, NodeInternalsPanel, ChainTipsPanel) → 우측 380px 사이드바 1개로 통합
+- 5개 탭: ①연결 → ②TX검증 → ③블록 → ④체인 → ⑤깊이 (학습 순서대로 배치)
+- ToggleBar ↔ 관제센터 탭 자동 연동 (Globe 뷰 전환 시 대응 탭 자동 선택)
+- 접기/펼치기 토글 (Globe 전체 화면 가능)
+- 모든 패널 컴포넌트에 `embedded` 모드 추가
+
+#### 멤풀 플로어 (Mempool Floor)
+- 컬럼 기반 Tetris → Squarified Treemap으로 전환 (빈 공간 없이 전체 영역 채움)
+- TX 수신 즉시 플로어에 표시 (검증 완료 대기 없음)
+- opacity fade-in 애니메이션 (scale-up → 빈 공간 발생 문제 해결)
+- sweep 애니메이션: 채굴된 TX가 하얗게 변하며 위로 사라짐
+- 트리맵 재계산 디바운스 500ms (레이아웃 안정성)
+- 사이드바 겹침 방지 (동적 right offset)
+
+#### 교육 기능
+- **온보딩 인트로 3슬라이드**: "비트코인 풀노드란?", "풀노드는 무엇을 하나요?", "이 앱의 구성"
+- **탭 교육 배너**: 각 탭 상단에 1줄 한국어 설명 상시 표시
+- **용어 사전**: `glossary.js` — 20+ 비트코인 용어 (Mempool, UTXO, sat/vB, PoW 등) 한국어 풀이
+- **Term 컴포넌트**: 기술 용어에 호버 시 설명 툴팁 표시
+- **블록 채굴 알림 배너**: "⛏ 새 블록 #942,649 발견! 5,943건의 거래가 확정되었습니다"
+- **수수료 범례 한국어**: 급행/빠름/보통/느림/저속/최저
+- **설정에 "온보딩 투어 다시보기" 버튼** 추가
+
+#### ChainStrip 개선
+- 리팩토링 중 누락된 렌더링 복원
+- `touch-action: pan-y` + 터치 핸들러 추가 (Chrome 뒤로가기 제스처 충돌 방지)
+- Genesis 블록 스크롤 수정
+- 카드 너비 계산 보정 (148 → 146px)
+
+#### ChainTips 리디자인 (embedded 모드)
+- 콤팩트 기본 뷰: `● ACTIVE #942,566` + 포크 수 배지
+- 펼친 뷰: 카테고리별 그룹핑 (FORK/HEADERS/HDR-ONLY) + 해시 복사 버튼
+- 교육 설명 + ? 툴팁 추가
+
+#### ToggleBar 명확화
+- 라벨 변경: 노드 정보 → "P2P 연결", 검증센터 → "검증", 내부 구조 → "내부 탐색"
+- 컨텍스트 배너: "지구본: 피어 연결과 데이터 전파를 시각화합니다"
+
+#### 기타
+- BlockDetailPanel: treemap canvas에 aria-label 추가
+- SearchBar: 에러 메시지 UI 개선 (fade-in 애니메이션)
+- GlobeScene: onReady 콜백 prop 지원
+- MacWindow, WindowDock, MiniHud: 관제센터로 대체 (레거시)
+
+### Files Modified / Added
+- `client/src/components/ControlCenter.jsx` (신규)
+- `client/src/components/Term.jsx` (신규)
+- `client/src/utils/glossary.js` (신규)
+- `client/src/App.jsx` (레이아웃 전면 재구성)
+- `client/src/components/BitfeedFloor.jsx` (트리맵 전환)
+- `client/src/components/HudPanels.jsx` (embedded 모드 + Term)
+- `client/src/components/BlockVerifyPanel.jsx` (embedded 모드 + Term)
+- `client/src/components/TxStreamPanel.jsx` (embedded 모드)
+- `client/src/components/NodeInternalsPanel.jsx` (embedded 모드)
+- `client/src/components/ChainTipsPanel.jsx` (embedded 리디자인)
+- `client/src/components/ChainStrip.jsx` (터치 스크롤 수정)
+- `client/src/components/ToggleBar.jsx` (라벨 변경)
+- `client/src/components/OnboardingTour.jsx` (인트로 슬라이드)
+- `client/src/components/SettingsPanel.jsx` (투어 다시보기)
+- `client/src/components/SearchBar.jsx` (에러 UI)
+- `client/src/components/BlockDetailPanel.jsx` (접근성)
+- `client/src/globe/GlobeScene.jsx` (onReady)
+- `client/src/utils/colors.js` (한국어 수수료 범례)
+- `client/src/styles/main.css`
+
+---
+
 ## [1.6.1] — 2026-03-24
 
 ### Changed — BlockDetailPanel: 너비 확장 + 폰트 확대 + 빈 공간 제거
