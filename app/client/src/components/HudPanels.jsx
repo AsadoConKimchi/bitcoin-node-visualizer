@@ -1,5 +1,6 @@
 import React, { forwardRef, useState } from 'react';
 import MacWindow from './MacWindow.jsx';
+import Term from './Term.jsx';
 
 const STATUS_COLOR = {
   live: 'text-success',
@@ -165,9 +166,9 @@ const HudPanels = forwardRef(function HudPanels({
         )}
 
         <Row label="Chain"   value={chain ?? 'mainnet'} />
-        <Row label="Height"  value={blockHeight != null ? `#${blockHeight.toLocaleString()}` : null} />
-        <Row label="Fee"     value={feeRate != null ? `~${feeRate} sat/vB` : null} />
-        <Row label="Mempool" value={mempoolStr} />
+        <Row label={<Term k="block" label="Height" />} value={blockHeight != null ? `#${blockHeight.toLocaleString()}` : null} />
+        <Row label={<Term k="fee" label="Fee" />} value={feeRate != null ? <><span>{`~${feeRate} `}</span><Term k="satVb" label="sat/vB" /></> : null} />
+        <Row label={<Term k="mempool" label="Mempool" />} value={mempoolStr} />
         {peersStr != null && <Row label="Peers" value={peersStr} />}
         {isServer && peersStr != null && (
           <div className="text-label text-white/30 -mt-1 mb-0.5 pl-1">🟢 피어 · 🟠 연결선</div>

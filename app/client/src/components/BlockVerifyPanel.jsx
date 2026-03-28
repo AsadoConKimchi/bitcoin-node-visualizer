@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import MacWindow from './MacWindow.jsx';
+import Term from './Term.jsx';
 
 // ── 블록 검증 단계 상세 ──
 const BLOCK_STEP_DETAILS = {
@@ -332,7 +333,7 @@ export default function BlockVerifyPanel({
     return (
       <div>
         <div className="flex justify-between items-center px-3.5 pt-3 pb-1">
-          <span className="font-bold text-xs tracking-wide text-block-purple">BLOCK VERIFICATION</span>
+          <span className="font-bold text-xs tracking-wide text-block-purple"><Term k="block" label="BLOCK" /> VERIFICATION</span>
           {verifyState && <span className="text-muted text-label font-mono">{progress}%</span>}
         </div>
         {content}
