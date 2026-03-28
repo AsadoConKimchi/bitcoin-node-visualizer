@@ -70,8 +70,8 @@ function BlockCard({ block, isLatest, highlight, onClick, onReplay, cardRef }) {
       className={`shrink-0 rounded-lg cursor-pointer focus-ring
                  transition-all duration-300 px-3 py-2
                  ${isLatest
-                   ? 'w-[150px] border-2 border-btc-orange/40 bg-btc-orange/8'
-                   : 'w-[130px] border border-dark-border bg-white/4 hover:bg-white/6'
+                   ? 'w-[150px] border-2 border-btc-orange/40 bg-btc-orange/8 hover:bg-btc-orange/12'
+                   : 'w-[130px] border border-dark-border bg-white/4 hover:bg-white/8 hover:border-white/20 hover:-translate-y-0.5'
                  }
                  ${highlight ? 'ring-2 ring-btc-orange animate-pulse' : ''}`}
     >
@@ -146,8 +146,9 @@ function Connector() {
 
 // ── ChainStrip ───────────────────────────────────────────────────────────────
 const ChainStrip = forwardRef(function ChainStrip({
-  recentBlocks, mempoolBlocks, onBlockClick, onReplayCompactBlock, sourceType, visible,
+  recentBlocks, mempoolBlocks, onBlockClick, onReplayCompactBlock, sourceType, visible, isMobile,
 }, ref) {
+  const [mobileCollapsed, setMobileCollapsed] = useState(true);
   const scrollRef = useRef(null);
   const [blockCache, setBlockCache] = useState(new Map());
   const [loading, setLoading] = useState(false);
@@ -159,6 +160,7 @@ const ChainStrip = forwardRef(function ChainStrip({
   const debounceRef = useRef(null);
   const preloadedRef = useRef(false);
   const cardRefsMap = useRef(new Map());
+  const touchStartRef = useRef(null);
 
   // recentBlocks 정규화 (최신 10개, 높이순)
   const blocks = [...(recentBlocks || [])]
@@ -221,7 +223,14 @@ const ChainStrip = forwardRef(function ChainStrip({
           return next;
         });
       }
-      if (targetMin === 0) setReachedGenesis(true);
+      if (targetMin === 0) {
+        setReachedGenesis(true);
+        // genesis 도달 시 스크롤을 맨 왼쪽으로 이동
+        requestAnimationFrame(() => {
+          const el = scrollRef.current;
+          if (el) el.scrollLeft = 0;
+        });
+      }
     } catch (err) {
       console.warn('[ChainStrip] 이전 블록 로드 실패:', err);
     }
@@ -253,7 +262,7 @@ const ChainStrip = forwardRef(function ChainStrip({
     const currentCount = cachedBlocks.length;
     const added = currentCount - prevCachedCountRef.current;
     if (added > 0 && prevCachedCountRef.current > 0 && viewMode === 'tip') {
-      el.scrollLeft += added * 148;
+      el.scrollLeft += added * 146;
     }
     prevCachedCountRef.current = currentCount;
   }, [cachedBlocks.length, viewMode]);
@@ -271,6 +280,23 @@ const ChainStrip = forwardRef(function ChainStrip({
     }
     prevBlockCountRef.current = newCount;
   }, [recentBlocks?.length, viewMode]);
+
+  // ── 터치 기반 가로 스크롤 (swipe-back 제스처 방지) ──
+  const handleTouchStart = useCallback((e) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, scrollLeft: scrollRef.current?.scrollLeft ?? 0 };
+  }, []);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!touchStartRef.current || !scrollRef.current) return;
+    const touch = e.touches[0];
+    const deltaX = touchStartRef.current.x - touch.clientX;
+    scrollRef.current.scrollLeft = touchStartRef.current.scrollLeft + deltaX;
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    touchStartRef.current = null;
+  }, []);
 
   // 트랙패드 wheel 이벤트 → 가로 스크롤 변환 + 브라우저 네비게이션 차단
   // visible/recentBlocks 변경 시 DOM이 생성/소멸되므로 재등록 필요
@@ -344,19 +370,59 @@ const ChainStrip = forwardRef(function ChainStrip({
 
   if (!visible || !recentBlocks?.length) return null;
 
+  // 모바일 축소 모드: 한 줄 요약만 표시
+  if (isMobile && mobileCollapsed) {
+    const latest = allBlocks[allBlocks.length - 1];
+    return (
+      <div
+        className="absolute top-[48px] left-0 right-0 z-[var(--z-strip)]
+                   bg-dark-bg/80 backdrop-blur-sm border-b border-dark-border"
+      >
+        <button
+          onClick={() => setMobileCollapsed(false)}
+          className="w-full flex items-center justify-between px-4 py-2.5
+                     bg-transparent border-none text-text-primary cursor-pointer"
+        >
+          <span className="text-xs font-mono">
+            <span className="text-btc-orange font-bold">#{latest?.height?.toLocaleString()}</span>
+            <span className="text-text-secondary ml-2">{latest?.txCount?.toLocaleString()} TX</span>
+            {latest?.pool && <span className="text-text-dim ml-2">{latest.pool}</span>}
+          </span>
+          <span className="text-text-dim text-label">▾ 펼치기</span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="absolute top-[48px] left-0 right-0 z-[var(--z-strip)]
                     bg-dark-bg/80 backdrop-blur-sm border-b border-dark-border">
+      {/* 모바일 접기 버튼 */}
+      {isMobile && (
+        <button
+          onClick={() => setMobileCollapsed(true)}
+          className="absolute top-1 right-2 z-10 text-text-dim text-label-sm
+                     bg-transparent border-none cursor-pointer hover:text-text-primary"
+        >
+          ▴ 접기
+        </button>
+      )}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         className="flex items-center gap-0 px-3 py-2 overflow-x-auto
                    scrollbar-thin"
-        style={{ scrollBehavior: 'smooth', overscrollBehaviorX: 'contain' }}
+        style={{ scrollBehavior: 'smooth', overscrollBehaviorX: 'contain', touchAction: 'pan-y' }}
       >
         {/* 로딩 인디케이터 */}
         {loading && (
-          <div className="shrink-0 text-label text-text-dim px-2">⟳</div>
+          <div className="shrink-0 text-label text-btc-orange px-3 flex items-center gap-1.5 animate-pulse">
+            <span>⟳</span>
+            <span className="text-label-sm">불러오는 중...</span>
+          </div>
         )}
         {reachedGenesis && (
           <div className="shrink-0 text-label text-btc-orange px-2">⬡ Genesis</div>

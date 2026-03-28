@@ -129,8 +129,8 @@ const Z_FOCUSED = 15;
 
 // ── MempoolFloor (적응형 높이) ──
 function MempoolFloor({ bitfeedRef, mempoolCount, onTxClick }) {
-  const [expanded, setExpanded] = useState(false);
-  const height = expanded ? 200 : 120;
+  const [expanded, setExpanded] = useState(true);
+  const height = expanded ? 280 : 140;
 
   return (
     <div
@@ -620,6 +620,8 @@ export default function App() {
       if (data.txid) {
         txBufferRef.current.push(data);
         if (txBufferRef.current.length > TX_BUFFER_MAX) txBufferRef.current.shift();
+        // 수신 즉시 멤풀 플로어에 추가 (bitfeed 스타일)
+        bitfeedRef.current?.addBlock(data);
       }
 
       addRing({ lat: MY_NODE.lat, lng: MY_NODE.lng });
