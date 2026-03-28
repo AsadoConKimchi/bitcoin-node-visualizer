@@ -6,6 +6,7 @@ import TxTooltip from './TxTooltip.jsx';
 const MAX_BLOCKS = 400;
 const ANIM_DURATION = 350;
 const SWEEP_DURATION = 700;
+const RECALC_DEBOUNCE = 500; // 트리맵 재계산 최소 간격 (ms)
 
 /**
  * BitfeedFloor — Treemap 기반 멤풀 시각화
@@ -130,7 +131,8 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
       const now = Date.now();
       const hovTxid = hoveredTxRef.current;
 
-      if (dirtyRef.current) recalcLayout();
+      // 디바운스: 500ms마다 최대 1회 재계산 (레이아웃 안정성)
+      if (dirtyRef.current && (now - layoutTimeRef.current) > RECALC_DEBOUNCE) recalcLayout();
       ctx.clearRect(0, 0, w, h);
 
       const layout = layoutRef.current;

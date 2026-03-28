@@ -128,14 +128,14 @@ const Z_BASE = 10;
 const Z_FOCUSED = 15;
 
 // ── MempoolFloor (적응형 높이) ──
-function MempoolFloor({ bitfeedRef, mempoolCount, onTxClick }) {
+function MempoolFloor({ bitfeedRef, mempoolCount, onTxClick, sidebarWidth = 0 }) {
   const [expanded, setExpanded] = useState(true);
   const height = expanded ? 280 : 140;
 
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 z-[var(--z-strip)] transition-[height] duration-300"
-      style={{ height, background: 'rgba(6, 10, 20, 0.96)' }}
+      className="absolute bottom-0 left-0 z-[var(--z-strip)] transition-all duration-300"
+      style={{ height, right: sidebarWidth, background: 'rgba(6, 10, 20, 0.96)' }}
     >
       {/* 헤더 */}
       <div className="flex justify-between items-center px-4 py-2 shrink-0">
@@ -873,14 +873,35 @@ export default function App() {
         forceReplay={forceCompactBlock}
       />
 
-      {/* BitfeedFloor — 전체 너비 하단 바 */}
-      <div style={{ marginRight: ccCollapsed ? 0 : CC_WIDTH }}>
-        <MempoolFloor
-          bitfeedRef={bitfeedRef}
-          mempoolCount={mempoolCount}
-          onTxClick={handleTxClick}
+      {/* 체인 스트립 — Globe 상단 */}
+      <div className="absolute top-[48px] left-0 z-[var(--z-strip)]"
+           style={{ right: ccCollapsed ? 0 : CC_WIDTH }}>
+        <ChainStrip
+          ref={chainStripRef}
+          recentBlocks={recentBlocks}
+          mempoolBlocks={mempoolBlocks}
+          onBlockClick={handleBlockClick}
+          onReplayCompactBlock={handleReplayCompactBlock}
+          sourceType={sourceType}
+          visible={visible.p2p}
+          isMobile={isMobile}
         />
       </div>
+
+      {/* 예상 블록 (P2P 모드) */}
+      <MempoolBlocksPanel
+        mempoolBlocks={mempoolBlocks}
+        visible={visible.p2p && mempoolBlocks.length > 0}
+        topOffset={0}
+      />
+
+      {/* BitfeedFloor — 하단 바 (사이드바 겹침 방지) */}
+      <MempoolFloor
+        bitfeedRef={bitfeedRef}
+        mempoolCount={mempoolCount}
+        onTxClick={handleTxClick}
+        sidebarWidth={ccCollapsed ? 0 : CC_WIDTH}
+      />
 
       {/* 우측: 통합 관제센터 */}
       <div
