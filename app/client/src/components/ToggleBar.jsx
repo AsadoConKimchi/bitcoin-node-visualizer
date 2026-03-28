@@ -1,15 +1,15 @@
 import React, { useRef, useState, useEffect } from 'react';
 
 const BUTTONS = [
-  { key: 'p2p', label: '노드 정보', icon: '◉' },
-  { key: 'verifyCenter', label: '검증센터', icon: '▣' },
-  { key: 'internals', label: '내부 구조', icon: '🔧' },
+  { key: 'p2p', label: 'P2P 연결', icon: '🌐' },
+  { key: 'verifyCenter', label: '검증', icon: '✓' },
+  { key: 'internals', label: '내부 탐색', icon: '🔍' },
 ];
 
 const CONTEXT_BANNERS = {
-  p2p: '네트워크 연결 — 피어와 블록 전파 시각화',
-  verifyCenter: '검증 과정 — TX/블록 유효성 검증 실시간 표시',
-  internals: '내부 구조 — 풀노드의 핵심 모듈 탐색',
+  p2p: '지구본: 피어 연결과 데이터 전파를 시각화합니다',
+  verifyCenter: '지구본: 블록/TX 전파 경로를 시각화합니다',
+  internals: '지구본: 네트워크 맵을 표시합니다',
 };
 
 export default function ToggleBar({ visible, onToggle, onSettingsClick }) {

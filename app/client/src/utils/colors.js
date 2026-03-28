@@ -31,10 +31,10 @@ export function feeGlow(feeRate) {
 }
 
 export const FEE_LEGEND = [
-  { label: '50+', color: FEE_COLORS.highest },
-  { label: '20+', color: FEE_COLORS.high },
-  { label: '10+', color: FEE_COLORS.medium },
-  { label: '5+',  color: FEE_COLORS.normal },
-  { label: '2+',  color: FEE_COLORS.low },
-  { label: '<2',  color: FEE_COLORS.lowest },
+  { label: '50+ 급행', color: FEE_COLORS.highest },
+  { label: '20+ 빠름', color: FEE_COLORS.high },
+  { label: '10+ 보통', color: FEE_COLORS.medium },
+  { label: '5+ 느림',  color: FEE_COLORS.normal },
+  { label: '2+ 저속',  color: FEE_COLORS.low },
+  { label: '<2 최저',  color: FEE_COLORS.lowest },
 ];

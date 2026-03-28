@@ -3,33 +3,53 @@ import React, { useState, useEffect, useCallback } from 'react';
 const LS_KEY = 'bnv_onboarded';
 
 const STEPS = [
+  // ── 인트로 3슬라이드: "비트코인 풀노드란?" ──
   {
-    title: '비트코인 네트워크의 3D 지도',
-    description: '세계 각지에 분포된 비트코인 풀노드를 실시간으로 시각화합니다. 각 점은 하나의 풀노드입니다.',
-    targetSelector: null, // 전체 지구본
-    position: 'center',
-  },
-  {
-    title: '주황색 점 = 당신의 노드',
-    description: '지구본의 주황색 빛나는 점이 당신의 노드 위치입니다. 초록색은 연결된 피어, 파란색은 알려진 다른 노드입니다.',
+    title: '비트코인 풀노드란?',
+    description: null,
+    customContent: true,
+    customId: 'intro1',
     targetSelector: null,
     position: 'center',
   },
   {
-    title: '새 블록 도착 → 검증 과정',
-    description: '새 블록이 도착하면 우측에 7단계 검증 과정이 애니메이션으로 표시됩니다. 헤더 파싱, PoW 확인, 머클 트리 검증 등.',
+    title: '풀노드는 무엇을 하나요?',
+    description: null,
+    customContent: true,
+    customId: 'intro2',
+    targetSelector: null,
+    position: 'center',
+  },
+  {
+    title: '이 앱의 구성',
+    description: null,
+    customContent: true,
+    customId: 'intro3',
+    targetSelector: null,
+    position: 'center',
+  },
+  // ── 기존 사용법 가이드 ──
+  {
+    title: '3D 지구본',
+    description: '세계 각지의 비트코인 풀노드를 실시간으로 시각화합니다. 주황색 = 당신의 노드, 초록색 = 피어, 파란색 = 알려진 노드.',
+    targetSelector: null,
+    position: 'center',
+  },
+  {
+    title: '우측 관제센터',
+    description: '5개 탭을 순서대로 탐색하면 풀노드의 전체 작업 흐름을 이해할 수 있습니다. ①연결 → ②TX검증 → ③블록 → ④체인 → ⑤깊이',
     targetSelector: null,
     position: 'right',
   },
   {
-    title: '멤풀 대기 거래 확인',
-    description: '"TX 흐름" 뷰에서 실시간으로 수신되는 트랜잭션과 검증 과정을 볼 수 있습니다. 검증 완료된 TX는 하단 멤풀 풀에 표시됩니다.',
+    title: '하단 멤풀',
+    description: '블록에 포함되기를 기다리는 거래들이 실시간으로 표시됩니다. 색상은 수수료율을 나타냅니다.',
     targetSelector: null,
-    position: 'left',
+    position: 'bottom',
   },
   {
-    title: '상단 메뉴로 뷰 전환',
-    description: 'P2P, TX 흐름, 블록 검증, Internals — 4가지 뷰를 전환하며 풀노드의 다양한 기능을 탐색하세요.',
+    title: '상단 지구본 모드',
+    description: 'P2P 연결, 검증, 내부 탐색 — 3가지 모드로 지구본 시각화를 전환합니다.',
     targetSelector: null,
     position: 'top',
   },
@@ -106,9 +126,50 @@ export default function OnboardingTour() {
           </h3>
 
           {/* 설명 */}
-          <p className="text-text-secondary text-sm leading-relaxed mb-4">
-            {step.description}
-          </p>
+          {step.customId === 'intro1' ? (
+            <div className="mb-4 space-y-2 text-sm text-text-secondary leading-relaxed">
+              <p>비트코인 풀노드는 <span className="text-btc-orange font-medium">모든 거래와 블록을 직접 검증</span>하는 소프트웨어입니다.</p>
+              <p>은행이나 제3자에 의존하지 않고, 비트코인 네트워크의 규칙이 지켜지고 있는지 스스로 확인합니다.</p>
+              <p className="text-text-dim text-xs">전 세계 약 50,000개의 풀노드가 24시간 운영되고 있습니다.</p>
+            </div>
+          ) : step.customId === 'intro2' ? (
+            <div className="mb-4 space-y-2.5">
+              {[
+                { icon: '🌐', color: 'text-tx-blue', title: '① 다른 노드와 연결', desc: 'P2P 네트워크로 전 세계 노드와 직접 소통' },
+                { icon: '🔍', color: 'text-mempool-green', title: '② 거래를 수신하고 검증', desc: '6단계 검증으로 위조 거래를 걸러냄' },
+                { icon: '⛏', color: 'text-btc-orange', title: '③ 새 블록을 검증', desc: '7가지 규칙을 확인하여 유효한 블록만 수용' },
+                { icon: '💾', color: 'text-block-purple', title: '④ 블록체인 전체를 저장', desc: '2009년부터의 모든 거래 기록을 보관' },
+              ].map((item, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <span className={`text-base ${item.color}`}>{item.icon}</span>
+                  <div>
+                    <div className="text-text-primary text-sm font-medium">{item.title}</div>
+                    <div className="text-text-secondary text-xs">{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : step.customId === 'intro3' ? (
+            <div className="mb-4 space-y-2.5">
+              {[
+                { icon: '🌍', title: '왼쪽: 3D 지구본', desc: '노드 간 연결과 데이터 전파를 실시간 시각화' },
+                { icon: '📊', title: '오른쪽: 관제센터', desc: '5개 탭을 순서대로 탐색하면 풀노드의 전체 작업을 이해할 수 있습니다' },
+                { icon: '📦', title: '하단: 멤풀', desc: '블록에 포함되기를 기다리는 거래들이 쌓입니다' },
+              ].map((item, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <span className="text-base">{item.icon}</span>
+                  <div>
+                    <div className="text-text-primary text-sm font-medium">{item.title}</div>
+                    <div className="text-text-secondary text-xs">{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : step.description ? (
+            <p className="text-text-secondary text-sm leading-relaxed mb-4">
+              {step.description}
+            </p>
+          ) : null}
 
           {/* 버튼 */}
           <div className="flex justify-end gap-2">

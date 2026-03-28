@@ -139,7 +139,7 @@ function MempoolFloor({ bitfeedRef, mempoolCount, onTxClick, sidebarWidth = 0 })
     >
       {/* 헤더 */}
       <div className="flex justify-between items-center px-4 py-2 shrink-0">
-        <span className="text-mempool-green font-bold text-xs tracking-wide">▸ MEMPOOL FLOOR</span>
+        <span className="text-mempool-green font-bold text-xs tracking-wide">▸ 멤풀 — 블록에 포함되기를 기다리는 거래들</span>
         <div className="flex items-center gap-2">
           <span className="text-muted text-label">
             {mempoolCount != null ? `${mempoolCount.toLocaleString()} TX` : '—'}
@@ -396,6 +396,7 @@ export default function App() {
 
   // ── 블록 검증 상태 ──
   const [blockVerifyState, setBlockVerifyState] = useState(null);
+  const [mineAlert, setMineAlert] = useState(null);
   const blockVerifyRef = useRef(null);
   const txBufferRef = useRef([]);
 
@@ -737,6 +738,9 @@ export default function App() {
       }
 
       startBlockVerification(data);
+      // 블록 채굴 알림 배너
+      setMineAlert({ height: data.height, txCount: data.txCount || data.nTx });
+      setTimeout(() => setMineAlert(null), 4000);
       // 블록 수신 시 검증센터로 전환 + 관제센터 블록 탭
       setVisible({ p2p: false, verifyCenter: true, internals: false });
       setCcTab('blockVerify');
@@ -844,6 +848,22 @@ export default function App() {
         <div className="absolute inset-0 flex items-center justify-center z-[var(--z-hud)] pointer-events-none">
           <div className="text-btc-orange text-sm font-mono tracking-wider animate-pulse">
             Loading...
+          </div>
+        </div>
+      )}
+
+      {/* 블록 채굴 알림 배너 */}
+      {mineAlert && (
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 z-[var(--z-modal)]
+                        bg-panel-bg/95 border border-btc-orange/40 rounded-xl
+                        px-8 py-5 text-center backdrop-blur-xl animate-fade-in
+                        pointer-events-none"
+             style={{ boxShadow: '0 0 40px rgba(247,147,26,0.2)' }}>
+          <div className="text-btc-orange text-base font-bold mb-1">
+            ⛏ 새 블록 #{mineAlert.height?.toLocaleString()} 발견!
+          </div>
+          <div className="text-text-secondary text-sm">
+            {mineAlert.txCount ? `${mineAlert.txCount.toLocaleString()}건의 거래가 확정되었습니다` : '블록 검증을 시작합니다'}
           </div>
         </div>
       )}

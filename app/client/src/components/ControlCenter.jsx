@@ -1,18 +1,18 @@
 import React, { useState, useCallback } from 'react';
 
-// 탭 정의
+// 탭 정의 (학습 순서대로)
 const TABS = [
-  { key: 'nodeInfo', label: '노드', icon: '◉' },
-  { key: 'blockVerify', label: '블록', icon: '▣' },
-  { key: 'txStream', label: 'TX', icon: '⟐' },
-  { key: 'chainTips', label: '체인', icon: '⑂' },
-  { key: 'internals', label: '구조', icon: '⚙' },
+  { key: 'nodeInfo',    label: '①연결',   desc: '당신의 노드가 전 세계 다른 노드와 어떻게 연결되어 있는지 봅니다' },
+  { key: 'txStream',    label: '②TX검증', desc: '누군가 비트코인을 보냈습니다 — 노드가 그 거래를 6단계로 검증합니다' },
+  { key: 'blockVerify', label: '③블록',   desc: '약 10분마다 새 블록이 도착합니다 — 7가지를 확인합니다' },
+  { key: 'chainTips',   label: '④체인',   desc: '노드가 추적하는 블록체인의 끝점들' },
+  { key: 'internals',   label: '⑤깊이',   desc: '풀노드 내부의 저장소, 보안, 프로토콜을 탐색합니다' },
 ];
 
 // ToggleBar 키 → ControlCenter 탭 매핑
 export const TOGGLE_TO_TAB = {
   p2p: 'nodeInfo',
-  verifyCenter: 'blockVerify',
+  verifyCenter: 'txStream',
   internals: 'internals',
 };
 
@@ -73,6 +73,17 @@ export default function ControlCenter({
           ▸
         </button>
       </div>
+
+      {/* 교육 배너 — 현재 탭 설명 */}
+      {(() => {
+        const tab = TABS.find(t => t.key === activeTab);
+        return tab?.desc ? (
+          <div className="px-3.5 py-2 shrink-0 bg-btc-orange/5 border-b border-btc-orange/10
+                          text-[10px] text-text-secondary leading-relaxed">
+            {tab.desc}
+          </div>
+        ) : null;
+      })()}
 
       {/* 탭 콘텐츠 */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
