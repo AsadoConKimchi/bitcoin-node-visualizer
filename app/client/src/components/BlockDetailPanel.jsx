@@ -198,7 +198,7 @@ function PendingBlockTreemap({ mempoolBlock }) {
 
   return (
     <div ref={containerRef} className="w-full h-full relative overflow-hidden rounded">
-      <canvas ref={canvasRef} className="block" />
+      <canvas ref={canvasRef} className="block" role="img" aria-label="블록 내 트랜잭션 분포를 트리맵으로 시각화. 각 셀은 TX를 나타내며 색상은 수수료율입니다." />
       <div className="absolute bottom-1 right-1.5 text-label-xs text-white/40 pointer-events-none">
         ~{mempoolBlock.nTx.toLocaleString()} TX
       </div>
@@ -454,7 +454,7 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
           }
         </div>
       )}
-      <canvas ref={canvasRef} className="block" />
+      <canvas ref={canvasRef} className="block" role="img" aria-label="블록 내 트랜잭션 분포를 트리맵으로 시각화. 각 셀은 TX를 나타내며 색상은 수수료율입니다." />
       <div className="absolute bottom-1 right-1.5 text-label-xs text-white/40 pointer-events-none">
         {total.toLocaleString()} TX
       </div>

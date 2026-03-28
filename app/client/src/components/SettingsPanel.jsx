@@ -128,6 +128,21 @@ export default function SettingsPanel({ sourceType, serverUrl, onConnect, onClos
           </div>
         )}
 
+        {/* 투어 다시보기 */}
+        <div className="mt-4 pt-3 border-t border-white/6">
+          <button
+            className="text-xs text-text-secondary hover:text-text-primary cursor-pointer
+                       bg-transparent border-none transition-colors"
+            onClick={() => {
+              localStorage.removeItem('bnv_onboarded');
+              onClose();
+              window.location.reload();
+            }}
+          >
+            ↺ 온보딩 투어 다시보기
+          </button>
+        </div>
+
         {/* 버튼 행 */}
         <div className="flex justify-end gap-2.5 mt-5">
           <button

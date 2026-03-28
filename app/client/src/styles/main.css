@@ -13,7 +13,7 @@
   --color-dark-bg: #141820;
   --color-dark-surface: #1e2328;
   --color-dark-border: rgba(255,255,255,0.08);
-  --color-muted: #64748b;
+  --color-muted: #8899aa;
   --color-muted-dim: #334155;
   --color-text-primary: #e2e8f0;
   --color-text-secondary: #94a3b8;
@@ -198,7 +198,8 @@ body {
     right: 0 !important;
     top: auto !important;
     width: 100% !important;
-    max-height: 50vh;
+    max-height: 60vh;
+    min-height: auto;
     border-radius: 12px 12px 0 0 !important;
     transform: none !important;
   }
@@ -248,4 +249,17 @@ body {
 }
 .animate-pulse-subtle {
   animation: pulseSubtle 2s ease-in-out infinite;
+}
+
+/* 접근성: 동작 줄이기 설정 존중 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .step-pulse,
+  .animate-pulse-subtle {
+    animation: none !important;
+  }
 }

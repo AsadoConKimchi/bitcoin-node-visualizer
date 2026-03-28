@@ -36,7 +36,7 @@ function makeStars() {
  *   arcs:       [{ startLat, startLng, endLat, endLng, color }]
  *   rings:      [{ lat, lng }]
  */
-const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isServerMode }, ref) {
+const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isServerMode, onReady }, ref) {
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
 
@@ -78,6 +78,13 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isS
     // NASA Blue Marble 텍스처로 대륙/바다 구분
     globe.globeImageUrl('/earth-blue-marble.jpg');
     globe.bumpImageUrl('/earth-topology.png');
+
+    // 텍스처 로딩 완료 감지
+    if (onReady) {
+      const img = new Image();
+      img.onload = () => onReady();
+      img.src = '/earth-blue-marble.jpg';
+    }
 
     // 대기권 효과
     globe.showAtmosphere(true);

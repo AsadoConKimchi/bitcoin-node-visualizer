@@ -94,9 +94,9 @@ export default function SearchBar({ onSearchBlock, onSearchTx, onSearchAddress }
 
       {/* 에러 메시지 */}
       {error && (
-        <div className="absolute top-full mt-1 left-0 right-0 bg-panel-bg-solid
-                       border border-error/30 rounded-lg px-3 py-1.5 z-[var(--z-modal)]
-                       text-label-sm text-error">
+        <div className="absolute top-full mt-1 left-0 right-0 bg-error/10
+                       border border-error/40 rounded-lg px-3 py-2 z-[var(--z-modal)]
+                       text-sm text-error animate-fade-in">
           {error}
         </div>
       )}
