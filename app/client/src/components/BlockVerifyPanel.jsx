@@ -252,34 +252,18 @@ export default function BlockVerifyPanel({
   onMinimize,
   zIndex,
   onFocus,
+  onBlockDetailClick,
+  embedded = false,
 }) {
-  if (!visible) return null;
+  if (!visible && !embedded) return null;
 
   const { blockData, steps, merkle } = verifyState || {};
   const doneSteps = steps?.filter(s => s.status === 'done').length || 0;
   const progress = steps ? Math.round((doneSteps / steps.length) * 100) : 0;
 
-  return (
-    <MacWindow
-      title="BLOCK VERIFICATION"
-      titleColor="text-block-purple"
-      initialPosition={{ x: typeof window !== 'undefined' ? window.innerWidth - 340 : 800, y: 56 }}
-      onClose={onClose}
-      onMinimize={onMinimize}
-      minimized={minimized}
-      zIndex={zIndex}
-      onFocus={onFocus}
-      width={300}
-      height="calc(100vh - 280px)"
-      headerRight={
-        verifyState && (
-          <span className="text-muted text-label font-mono">
-            {progress}%
-          </span>
-        )
-      }
-    >
-      <div className="flex-1 overflow-y-auto px-3.5 py-3">
+  // 공통 콘텐츠
+  const content = (
+      <div className={embedded ? "px-3.5 py-3" : "flex-1 overflow-y-auto px-3.5 py-3"}>
         {!verifyState ? (
           <div className="text-muted-dim text-sm text-center py-4">블록 대기 중…</div>
         ) : (
@@ -326,9 +310,57 @@ export default function BlockVerifyPanel({
 
             {/* 머클트리 */}
             <MerkleTree merkle={merkle} />
+
+            {/* 검증 완료 시 블록 상세 바로가기 */}
+            {progress === 100 && onBlockDetailClick && blockData?.height != null && (
+              <button
+                onClick={() => onBlockDetailClick({ height: blockData.height, hash: blockData.hash })}
+                className="w-full mt-3 py-2 rounded-lg bg-block-purple/15 border border-block-purple/30
+                          text-block-purple text-xs font-medium cursor-pointer
+                          hover:bg-block-purple/25 transition-colors"
+              >
+                블록 상세 보기 →
+              </button>
+            )}
           </>
         )}
       </div>
+  );
+
+  // 임베디드 모드
+  if (embedded) {
+    return (
+      <div>
+        <div className="flex justify-between items-center px-3.5 pt-3 pb-1">
+          <span className="font-bold text-xs tracking-wide text-block-purple">BLOCK VERIFICATION</span>
+          {verifyState && <span className="text-muted text-label font-mono">{progress}%</span>}
+        </div>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <MacWindow
+      title="BLOCK VERIFICATION"
+      titleColor="text-block-purple"
+      initialPosition={{ x: typeof window !== 'undefined' ? window.innerWidth - 340 : 800, y: 56 }}
+      onClose={onClose}
+      onMinimize={onMinimize}
+      minimized={minimized}
+      zIndex={zIndex}
+      onFocus={onFocus}
+      width={300}
+      height="calc(100vh - 280px)"
+      headerRight={
+        verifyState && (
+          <span className="text-muted text-label font-mono">
+            {progress}%
+          </span>
+        )
+      }
+    >
+      {content}
     </MacWindow>
   );
 }

@@ -12,9 +12,9 @@ function StepProgressBar({ steps }) {
   const hasFail = steps.some(s => s.status === 'fail');
 
   return (
-    <div className="flex flex-col items-end gap-0.5 ml-1 min-w-[120px]">
+    <div className="flex flex-col items-end gap-0.5 ml-1 min-w-[140px]">
       {/* 세그먼트 바 */}
-      <div className="flex gap-[2px] w-[120px] h-[8px]">
+      <div className="flex gap-[2px] w-[140px] h-[12px]">
         {steps.map((step, i) => {
           let bg;
           let className = 'flex-1 rounded-sm transition-all duration-300';
@@ -98,6 +98,7 @@ export default function TxStreamPanel({
   onMinimize,
   zIndex,
   onFocus,
+  embedded = false,
 }) {
   const [expandedTxid, setExpandedTxid] = useState(null);
   const [detailTx, setDetailTx] = useState(null);
@@ -119,12 +120,111 @@ export default function TxStreamPanel({
     setExpandedTxid((prev) => prev === txid ? null : txid);
   }, []);
 
-  if (!visible) return null;
+  if (!visible && !embedded) return null;
 
   const txCount = txStream.length;
   const verifyingCount = txStream.filter((t) => t.status === 'verifying').length;
   const failedCount = txStream.filter((t) => t.status === 'failed').length;
   const doneCount = txStream.filter((t) => t.status === 'done' || t.status === 'animating').length;
+
+  // 임베디드 모드: MacWindow 없이 콘텐츠만 렌더링
+  if (embedded) {
+    return (
+      <div className="px-3 py-2">
+        {/* 헤더 */}
+        <div className="flex justify-between items-center mb-2">
+          <span className="font-bold text-xs tracking-wide text-tx-blue">TX VERIFICATION</span>
+          <span className="text-muted text-label font-mono">
+            {txCount}건
+            {verifyingCount > 0 && ` ⟳${verifyingCount}`}
+            {failedCount > 0 && <span className="text-error ml-1">✗{failedCount}</span>}
+          </span>
+        </div>
+
+        {/* TX 리스트 */}
+        <div>
+          {txStream.length === 0 && (
+            <div className="text-muted-dim text-sm text-center py-4">TX 대기 중…</div>
+          )}
+          {txStream.map((tx, idx) => {
+            const isDone = tx.status === 'done' || tx.status === 'animating';
+            const isFailed = tx.status === 'failed';
+            const isAnimating = tx.status === 'animating';
+            const isExpanded = expandedTxid === tx.txid;
+            const short = tx.txid ? tx.txid.slice(0, 10) + '…' : '?';
+            const oddRow = idx % 2 === 1;
+            const snap = tx.verifySnapshot;
+            const txFeeRate = snap?.feeRate ?? tx.data?.feeRate;
+            const txSize = snap?.size ?? tx.data?.size;
+            const txWeight = snap?.weight ?? tx.data?.weight;
+            const txVin = snap?.vin ?? tx.data?.vin;
+            const txVout = snap?.vout ?? tx.data?.vout;
+
+            return (
+              <div key={tx.txid}>
+                <div
+                  onClick={() => handleClick(tx.txid)}
+                  className={`px-2 py-1.5 rounded cursor-pointer transition-all duration-500
+                             ${isFailed ? 'bg-error/10' : isExpanded ? 'bg-tx-blue/10' : oddRow ? 'bg-white/3 hover:bg-tx-blue/5' : 'hover:bg-tx-blue/5'}
+                             ${isAnimating ? 'opacity-0 translate-y-5' : ''}`}
+                  style={isAnimating ? { opacity: 0, transform: 'translateY(20px)', boxShadow: '0 0 12px rgba(34,197,94,0.3)' } : undefined}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm min-w-[14px] ${isFailed ? 'text-error' : isDone ? 'text-success' : 'text-warning'}`}>
+                      {isFailed ? '✗' : isDone ? '✓' : '⟳'}
+                    </span>
+                    <span
+                      className={`text-sm font-mono hover:underline ${isFailed ? 'text-error/70' : isDone ? 'text-success/70' : 'text-text-primary'}`}
+                      onClick={(e) => { e.stopPropagation(); onTxClick?.({ txid: tx.txid, data: tx.data }); }}
+                    >
+                      {short}
+                    </span>
+                    {isFailed && tx.failReason && <span className="text-error text-label ml-1">{tx.failReason}</span>}
+                    <span className="ml-auto">
+                      {isFailed ? <span className="text-error text-label">반려</span>
+                       : isAnimating ? <span className="text-mempool-green text-label">→ 멤풀</span>
+                       : snap?.steps ? <StepProgressBar steps={snap.steps} />
+                       : <span className="text-text-dim text-label">검증중</span>}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 ml-6 mt-0.5 text-label font-mono">
+                    {txFeeRate != null && <span style={{ color: feeColor(txFeeRate) }}>{txFeeRate} sat/vB</span>}
+                    {(txSize != null || txWeight != null) && (
+                      <span className="text-text-dim">
+                        {txSize != null && `${txSize}B`}{txSize != null && txWeight != null && ' · '}{txWeight != null && `${txWeight}WU`}
+                      </span>
+                    )}
+                    {txVin != null && txVout != null && <span className="text-muted">{txVin}in → {txVout}out</span>}
+                  </div>
+                </div>
+
+                {/* 인라인 검증 상세 (임베디드) */}
+                {isExpanded && detailTx?.verifySnapshot && (
+                  <div className="ml-4 mr-1 my-1 p-2.5 bg-dark-surface/50 rounded-lg border border-tx-blue/15">
+                    <div className="text-tx-blue font-bold text-label tracking-wide mb-1">
+                      ▸ TX 검증 상세
+                      {detailTx.verifySnapshot.done && detailTx.status !== 'failed' && <span className="text-success ml-1">완료 ✓</span>}
+                      {detailTx.status === 'failed' && <span className="text-error ml-1">실패 ✗</span>}
+                    </div>
+                    <div className="text-text-dim text-label font-mono mb-1 truncate">{detailTx.txid}</div>
+                    {detailTx.verifySnapshot.steps.map((step, i) => (
+                      <InlineStepRow key={i} step={step} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {doneCount > 0 && (
+          <div className="py-1.5 border-t border-dark-border text-mempool-green text-label text-center mt-2">
+            → Mempool: {doneCount}건 이동 중
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -187,7 +287,11 @@ export default function TxStreamPanel({
                     <span className={`text-sm min-w-[14px] ${isFailed ? 'text-error' : isDone ? 'text-success' : 'text-warning'}`}>
                       {isFailed ? '✗' : isDone ? '✓' : '⟳'}
                     </span>
-                    <span className={`text-sm font-mono ${isFailed ? 'text-error/70' : isDone ? 'text-success/70' : 'text-text-primary'}`}>
+                    <span
+                      className={`text-sm font-mono hover:underline ${isFailed ? 'text-error/70' : isDone ? 'text-success/70' : 'text-text-primary'}`}
+                      onClick={(e) => { e.stopPropagation(); onTxClick?.({ txid: tx.txid, data: tx.data }); }}
+                      title="TX 상세 보기"
+                    >
                       {short}
                     </span>
                     {isFailed && tx.failReason && (

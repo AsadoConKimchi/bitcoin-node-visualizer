@@ -16,7 +16,7 @@ const STATUS_LABEL = {
   'invalid': 'INVALID',
 };
 
-const ChainTipsPanel = forwardRef(function ChainTipsPanel({ chaintips }, ref) {
+const ChainTipsPanel = forwardRef(function ChainTipsPanel({ chaintips, embedded = false }, ref) {
   if (!chaintips?.length) return null;
 
   const prevActiveRef = useRef(null);
@@ -60,12 +60,8 @@ const ChainTipsPanel = forwardRef(function ChainTipsPanel({ chaintips }, ref) {
 
   const hiddenCount = forks.length - visibleForks.length;
 
-  return (
-    <div ref={ref} className="absolute top-14 right-4 bg-panel-bg border border-white/10
-                    rounded-xl px-3.5 py-2.5 font-mono text-sm text-text-primary
-                    backdrop-blur-xl leading-7 min-w-[260px] max-w-[320px] z-[var(--z-hud)]
-                    max-sm:right-2 max-sm:min-w-[220px]"
-         style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
+  const panelContent = (
+    <>
       {/* Reorg 배너 */}
       {reorgEvent && (
         <div className="bg-red-900 border border-error rounded px-2 py-1.5 mb-2
@@ -135,6 +131,20 @@ const ChainTipsPanel = forwardRef(function ChainTipsPanel({ chaintips }, ref) {
           )}
         </>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return <div ref={ref} className="px-3.5 py-2.5 font-mono text-sm text-text-primary leading-7">{panelContent}</div>;
+  }
+
+  return (
+    <div ref={ref} className="absolute top-14 right-4 bg-panel-bg border border-white/10
+                    rounded-xl px-3.5 py-2.5 font-mono text-sm text-text-primary
+                    backdrop-blur-xl leading-7 min-w-[260px] max-w-[320px] z-[var(--z-hud)]
+                    max-sm:right-2 max-sm:min-w-[220px]"
+         style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
+      {panelContent}
     </div>
   );
 });

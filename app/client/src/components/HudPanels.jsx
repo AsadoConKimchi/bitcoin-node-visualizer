@@ -23,9 +23,9 @@ const SERVER_MODE_SUFFIX = {
 
 function Row({ label, value, valueColor }) {
   return (
-    <div className="flex justify-between gap-4 py-0.5">
+    <div className="flex justify-between gap-4 py-0.5 overflow-hidden">
       <span className="text-text-secondary shrink-0">{label}</span>
-      <span className={`font-mono ${valueColor || 'text-text-primary'}`}>{value ?? '—'}</span>
+      <span className={`font-mono text-right shrink min-w-0 truncate ${valueColor || 'text-text-primary'}`}>{value ?? '—'}</span>
     </div>
   );
 }
@@ -34,8 +34,9 @@ const HudPanels = forwardRef(function HudPanels({
   mode, serverMode, chain, blockHeight, mempoolCount, feeRate, halfHourFee, hourFee,
   diffAdj, txPerSec, visible, sourceType, mempoolInfo, nodeInfo, utxoStats, bestBlockHash,
   minimized, onClose, onMinimize, zIndex, onFocus,
+  embedded = false,
 }, ref) {
-  if (!visible) return null;
+  if (!visible && !embedded) return null;
 
   const effectiveMode = serverMode === 'error' ? 'error' : mode;
   const dotColorClass = STATUS_COLOR[effectiveMode] || 'text-orange-500';
@@ -55,7 +56,7 @@ const HudPanels = forwardRef(function HudPanels({
     sourceSubtitle = '자체 풀노드 데이터';
   } else {
     sourceBadge = '📡 mempool.space';
-    sourceSubtitle = '공개 API (교육용)';
+    sourceSubtitle = '교육용 시뮬레이션 — 실제 풀노드 연결은 설정에서';
   }
 
   // 값 계산
@@ -117,6 +118,107 @@ const HudPanels = forwardRef(function HudPanels({
   // 컴팩트/확장 모드
   const [expanded, setExpanded] = useState(false);
 
+  // 임베디드 모드: MacWindow 없이 콘텐츠만 렌더링
+  if (embedded) {
+    return (
+      <div ref={ref} className="px-3.5 py-3 text-sm leading-7 overflow-hidden">
+        {/* 상태 표시 */}
+        <div className="flex justify-between items-center mb-2">
+          <span className="font-bold text-xs tracking-wide">NODE INFO</span>
+          <span className={`text-xs font-mono ${dotColorClass}`}>{statusLabel}</span>
+        </div>
+
+        {/* IBD 배너 */}
+        {isIBD && (
+          <div className="bg-yellow-900 border border-yellow-500 rounded px-2 py-1 mb-2
+                         text-xs text-yellow-300 text-center">
+            ⟳ SYNCING — {(nodeInfo.verificationProgress * 100).toFixed(1)}%
+            {blockHeight != null && (
+              <span className="text-yellow-500/60"> (블록 {blockHeight.toLocaleString()})</span>
+            )}
+          </div>
+        )}
+
+        {/* 데이터소스 배지 */}
+        <div className={`inline-block px-2 py-1 rounded text-xs font-bold tracking-wide mb-1
+                         ${isServer
+                           ? 'bg-green-500/15 border border-green-500/30 text-green-400'
+                           : 'bg-amber-500/15 border border-amber-500/30 text-amber-400'
+                         }`}>
+          {sourceBadge}
+        </div>
+        <div className="text-label text-muted mb-1">{sourceSubtitle}</div>
+        {!isServer && (
+          <div className="text-label text-white/40 mb-0.5">📍 Seoul (default)</div>
+        )}
+        {isServer && nodeInfo?.subversion && (
+          <div className="text-label text-white/50 mb-0.5">
+            {nodeInfo.subversion.replace(/\//g, '')}
+            {' · '}{nodeInfo.connections ?? '?'} peers
+            {nodeInfo.inbound != null && ` (${nodeInfo.outbound}↑ ${nodeInfo.inbound}↓)`}
+          </div>
+        )}
+        {isServer && bestBlockHash && (
+          <div className="text-label text-white/30 font-mono truncate mb-1.5" title={bestBlockHash}>
+            tip: {bestBlockHash.slice(0, 16)}…
+          </div>
+        )}
+
+        <Row label="Chain"   value={chain ?? 'mainnet'} />
+        <Row label="Height"  value={blockHeight != null ? `#${blockHeight.toLocaleString()}` : null} />
+        <Row label="Fee"     value={feeRate != null ? `~${feeRate} sat/vB` : null} />
+        <Row label="Mempool" value={mempoolStr} />
+        {peersStr != null && <Row label="Peers" value={peersStr} />}
+        {isServer && peersStr != null && (
+          <div className="text-label text-white/30 -mt-1 mb-0.5 pl-1">🟢 피어 · 🟠 연결선</div>
+        )}
+        <Row label="TX/s" value={txPerSec != null ? txPerSec.toFixed(1) : null} />
+
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="w-full text-left text-label text-text-dim hover:text-text-secondary
+                     cursor-pointer bg-transparent border-none mt-1 py-0.5"
+        >
+          {expanded ? '▾ 접기' : '▸ 상세'}
+        </button>
+
+        {expanded && (
+          <>
+            {feeRate != null && halfHourFee != null && (
+              <div className="flex justify-between gap-4 py-0.5">
+                <span className="text-text-secondary shrink-0">Fee 상세</span>
+                <span className="font-mono text-sm">
+                  <span className="text-btc-orange">{feeRate}</span>
+                  {' · '}
+                  <span className="text-yellow-400">{halfHourFee}</span>
+                  {' · '}
+                  <span className="text-success">{hourFee}</span>
+                  <span className="text-muted ml-1">sat/vB</span>
+                </span>
+              </div>
+            )}
+            {peersDetail && <Row label="Peers 상세" value={peersDetail} />}
+            {sourceType === 'server' && mempoolInfo?.mempoolminfee != null && (
+              <Row label="Min Fee" value={`${(mempoolInfo.mempoolminfee * 1e5).toFixed(1)} sat/vB`} />
+            )}
+            {diffStr && <Row label="Diff Adj" value={diffStr} />}
+            {securityStr && <Row label="Security" value={securityStr} />}
+            {timeStr && <Row label="Time Δ" value={timeStr} valueColor={timeColor} />}
+            {sourceType === 'server' && nodeInfo?.localServices?.length > 0 && (
+              <Row label="Services" value={nodeInfo.localServices.join(' ')} />
+            )}
+            {utxoStats?.txouts != null && (
+              <Row label="UTXOs" value={utxoStats.txouts.toLocaleString()} />
+            )}
+            {utxoStats?.diskSize != null && (
+              <Row label="UTXO Size" value={`${(utxoStats.diskSize / 1e9).toFixed(1)} GB`} />
+            )}
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <MacWindow
       title="NODE INFO"
@@ -148,7 +250,7 @@ const HudPanels = forwardRef(function HudPanels({
         <div className={`inline-block px-2 py-1 rounded text-xs font-bold tracking-wide mb-1
                          ${isServer
                            ? 'bg-green-500/15 border border-green-500/30 text-green-400'
-                           : 'bg-slate-500/15 border border-slate-500/25 text-slate-400'
+                           : 'bg-amber-500/15 border border-amber-500/30 text-amber-400'
                          }`}>
           {sourceBadge}
         </div>

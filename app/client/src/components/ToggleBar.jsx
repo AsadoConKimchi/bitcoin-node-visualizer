@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect } from 'react';
 const BUTTONS = [
   { key: 'p2p', label: '노드 정보', icon: '◉' },
   { key: 'verifyCenter', label: '검증센터', icon: '▣' },
-  { key: 'internals', label: 'Internals', icon: '🔧' },
+  { key: 'internals', label: '내부 구조', icon: '🔧' },
 ];
 
 const CONTEXT_BANNERS = {
@@ -105,10 +105,11 @@ export default function ToggleBar({ visible, onToggle, onSettingsClick }) {
             <button
               onClick={onSettingsClick}
               aria-label="설정 열기"
-              className="text-xs px-2 py-1.5 rounded-lg cursor-pointer
+              className="text-xs px-3 py-2.5 rounded-lg cursor-pointer
                          transition-colors duration-150 focus-ring
                          text-text-secondary hover:text-text-primary hover:bg-white/5
-                         md:px-2.5 md:text-sm"
+                         md:px-2.5 md:py-1.5 md:text-sm min-w-[44px] min-h-[44px]
+                         flex items-center justify-center"
             >
               ⚙
             </button>

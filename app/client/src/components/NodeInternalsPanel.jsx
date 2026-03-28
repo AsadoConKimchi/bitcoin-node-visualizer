@@ -1,23 +1,25 @@
 import React, { useState } from 'react';
 
 const TABS = [
-  { key: 'p2p', label: 'P2P' },
-  { key: 'storage', label: 'Storage' },
-  { key: 'utxo', label: 'UTXO' },
-  { key: 'security', label: 'Security' },
-  { key: 'time', label: 'Time' },
+  { key: 'p2p', label: 'P2P 네트워크' },
+  { key: 'storage', label: '저장소' },
+  { key: 'utxo', label: 'UTXO 셋' },
+  { key: 'security', label: '보안' },
+  { key: 'time', label: '시간' },
   { key: 'rpc', label: 'RPC/API' },
-  { key: 'spv', label: 'SPV' },
+  { key: 'spv', label: 'SPV 검증' },
 ];
 
 function TabBar({ active, onSelect }) {
   return (
-    <div className="flex gap-0.5 mb-2.5 flex-wrap bg-white/5 rounded-lg p-0.5">
+    <div className="flex gap-0.5 mb-2.5 bg-white/5 rounded-lg p-0.5
+                    overflow-x-auto max-sm:flex-nowrap max-sm:whitespace-nowrap flex-wrap">
       {TABS.map(({ key, label }) => (
         <button
           key={key}
           onClick={() => onSelect(key)}
-          className={`text-xs px-2.5 py-1.5 rounded-md cursor-pointer transition-colors focus-ring
+          className={`text-xs px-2.5 py-1.5 rounded-md cursor-pointer transition-colors focus-ring shrink-0
+                     max-sm:px-3 max-sm:py-2
                      ${active === key
                        ? 'bg-white/12 text-white font-medium shadow-sm border-b-2 border-btc-orange'
                        : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
@@ -578,17 +580,11 @@ function SPVTab() {
   );
 }
 
-export default function NodeInternalsPanel({ sourceType, nodeInfo, storageInfo, securityInfo, utxoStats, blockHeight, recentBlocks }) {
+export default function NodeInternalsPanel({ sourceType, nodeInfo, storageInfo, securityInfo, utxoStats, blockHeight, recentBlocks, embedded = false }) {
   const [activeTab, setActiveTab] = useState('p2p');
 
-  return (
-    <div className="absolute bottom-16 right-4 w-[360px] max-h-[calc(100vh-140px)]
-                    overflow-y-auto bg-panel-bg border border-white/10
-                    rounded-xl px-3.5 py-2.5 font-mono text-sm text-text-primary
-                    backdrop-blur-xl z-[var(--z-hud-float)]
-                    max-sm:right-0 max-sm:left-0 max-sm:bottom-0 max-sm:w-full
-                    max-sm:max-h-[50vh] max-sm:rounded-b-none max-sm:rounded-t-xl"
-         style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
+  const innerContent = (
+    <>
       <div className="text-text-primary font-bold text-xs tracking-wide mb-2">
         ▸ NODE INTERNALS
       </div>
@@ -602,6 +598,22 @@ export default function NodeInternalsPanel({ sourceType, nodeInfo, storageInfo, 
       {activeTab === 'time' && <TimeTab sourceType={sourceType} nodeInfo={nodeInfo} />}
       {activeTab === 'rpc' && <RPCTab sourceType={sourceType} />}
       {activeTab === 'spv' && <SPVTab />}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="px-3.5 py-2.5 font-mono text-sm text-text-primary">{innerContent}</div>;
+  }
+
+  return (
+    <div className="absolute bottom-16 right-4 w-[360px] max-h-[calc(100vh-140px)]
+                    overflow-y-auto bg-panel-bg border border-white/10
+                    rounded-xl px-3.5 py-2.5 font-mono text-sm text-text-primary
+                    backdrop-blur-xl z-[var(--z-hud-float)]
+                    max-sm:right-0 max-sm:left-0 max-sm:bottom-0 max-sm:w-full
+                    max-sm:max-h-[50vh] max-sm:rounded-b-none max-sm:rounded-t-xl"
+         style={{ boxShadow: 'var(--shadow-panel-layered)' }}>
+      {innerContent}
     </div>
   );
 }

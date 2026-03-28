@@ -10,8 +10,8 @@ import HudPanels from './components/HudPanels.jsx';
 import TxStreamPanel from './components/TxStreamPanel.jsx';
 import BlockVerifyPanel from './components/BlockVerifyPanel.jsx';
 import BitfeedFloor from './components/BitfeedFloor.jsx';
-import WindowDock from './components/WindowDock.jsx';
 import MempoolBlocksPanel from './components/MempoolBlocksPanel.jsx';
+import ControlCenter, { TOGGLE_TO_TAB } from './components/ControlCenter.jsx';
 import TxDetailPanel from './components/TxDetailPanel.jsx';
 import ChainStrip from './components/ChainStrip.jsx';
 import BlockDetailPanel from './components/BlockDetailPanel.jsx';
@@ -21,6 +21,22 @@ import ChainTipsPanel from './components/ChainTipsPanel.jsx';
 import NodeInternalsPanel from './components/NodeInternalsPanel.jsx';
 import CompactBlockPanel from './components/CompactBlockPanel.jsx';
 import OnboardingTour from './components/OnboardingTour.jsx';
+// import MiniHud from './components/MiniHud.jsx'; // 관제센터로 대체
+
+// 모바일 감지 훅
+function useIsMobile(breakpoint = 639) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth <= breakpoint : false
+  );
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const handler = (e) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    setIsMobile(mql.matches);
+    return () => mql.removeEventListener('change', handler);
+  }, [breakpoint]);
+  return isMobile;
+}
 
 const MAX_RECENT_BLOCKS = 10;
 const ARC_LIFETIME_MS = 3000;
@@ -46,6 +62,67 @@ function pickRandom(arr, n) {
   return result.filter(Boolean);
 }
 
+// ── 에러 오버레이 (자동 재연결 카운트다운) ──
+function ErrorOverlay({ onSettings, onFallback, onRetry }) {
+  const [countdown, setCountdown] = useState(5);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
+
+  useEffect(() => {
+    if (retryCount >= maxRetries) return;
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setRetryCount(c => c + 1);
+          onRetry();
+          return 5;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [retryCount, onRetry]);
+
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-[var(--z-modal)]">
+      <div className="bg-panel-bg-solid border border-white/10 rounded-xl px-8 py-7
+                      text-text-primary text-center max-w-[320px] backdrop-blur-xl"
+           style={{ boxShadow: 'var(--shadow-modal)' }}>
+        <div className="text-base font-bold mb-2.5">연결 실패</div>
+        <div className="text-sm text-text-secondary mb-3">
+          서버에 연결할 수 없습니다.
+        </div>
+        {retryCount < maxRetries ? (
+          <div className="text-xs text-btc-orange mb-5">
+            {countdown}초 후 재연결 시도... ({retryCount + 1}/{maxRetries})
+          </div>
+        ) : (
+          <div className="text-xs text-error mb-5">
+            재연결 실패. 설정을 확인하세요.
+          </div>
+        )}
+        <div className="flex gap-2.5 justify-center">
+          <button
+            className="bg-btc-orange border-none rounded text-black font-bold
+                      text-sm px-4 py-2 cursor-pointer hover:bg-btc-orange/90"
+            onClick={onSettings}
+          >
+            설정 변경
+          </button>
+          <button
+            className="bg-transparent border border-white/10 rounded text-text-secondary
+                      text-sm px-4 py-2 cursor-pointer hover:border-white/20 hover:text-text-primary"
+            onClick={onFallback}
+          >
+            mempool.space로 전환
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // 윈도우 z-index 베이스
 const Z_BASE = 10;
 const Z_FOCUSED = 15;
@@ -69,8 +146,9 @@ function MempoolFloor({ bitfeedRef, mempoolCount, onTxClick }) {
           </span>
           <button
             onClick={() => setExpanded(e => !e)}
-            className="text-muted hover:text-text-primary text-label cursor-pointer
-                       bg-transparent border-none transition-colors"
+            className="text-muted hover:text-text-primary text-sm cursor-pointer
+                       bg-transparent border-none transition-colors
+                       min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label={expanded ? '축소' : '확장'}
           >
             {expanded ? '▾' : '▴'}
@@ -86,6 +164,17 @@ function MempoolFloor({ bitfeedRef, mempoolCount, onTxClick }) {
 }
 
 export default function App() {
+  const isMobile = useIsMobile();
+
+  // 모바일 검증센터: TX/Block 탭 전환
+  const [mobileVerifyTab, setMobileVerifyTab] = useState('tx');
+
+  // 지구본 로딩 상태
+  const [globeReady, setGlobeReady] = useState(false);
+
+  // aria-live 알림 (접근성)
+  const [ariaAnnouncement, setAriaAnnouncement] = useState('');
+
   // ── 데이터 소스 설정 ──
   const [sourceType, setSourceType] = useState(null);
   const [serverUrl, setServerUrl] = useState('');
@@ -156,7 +245,11 @@ export default function App() {
     internals: false,
   });
 
-  // ── 윈도우 상태 (MacWindow 시스템) ──
+  // ── 통합 관제센터 상태 ──
+  const [ccTab, setCcTab] = useState('nodeInfo');
+  const [ccCollapsed, setCcCollapsed] = useState(false);
+
+  // ── 윈도우 상태 (레거시, 점진적 제거 예정) ──
   const [windowStates, setWindowStates] = useState({
     nodeInfo: { visible: true, minimized: false },
     txStream: { visible: false, minimized: false },
@@ -165,7 +258,6 @@ export default function App() {
 
   const [focusedWindow, setFocusedWindow] = useState(null);
 
-  // 윈도우 상태 변경 헬퍼
   const setWinState = useCallback((key, updates) => {
     setWindowStates(prev => ({ ...prev, [key]: { ...prev[key], ...updates } }));
   }, []);
@@ -393,18 +485,21 @@ export default function App() {
 
   // verifyCenter 토글 → 검증 패널 ON/OFF + 블록 검증 시작
   const handleToggle = useCallback((key) => {
+    // 관제센터 탭 연동
+    if (TOGGLE_TO_TAB[key]) {
+      setCcTab(TOGGLE_TO_TAB[key]);
+      setCcCollapsed(false);
+    }
+
     setVisible((prev) => {
-      // 라디오 모드: 이미 활성이면 끄기, 아니면 해당 키만 활성
       const turning = !prev[key];
       const next = { p2p: false, verifyCenter: false, internals: false };
       if (turning) next[key] = true;
 
-      // 검증 패널 동시 제어
       setWindowStates(ws => ({
         ...ws,
         txStream: { ...ws.txStream, visible: next.verifyCenter },
         blockVerify: { ...ws.blockVerify, visible: next.verifyCenter },
-        // P2P 모드일 때만 NODE INFO 표시
         nodeInfo: { ...ws.nodeInfo, visible: next.p2p },
       }));
 
@@ -480,9 +575,11 @@ export default function App() {
       if (data?.mode === 'error') {
         setMode('error');
         setServerMode('error');
+        setAriaAnnouncement('네트워크 연결 오류');
       } else {
         setMode('live');
         if (data?.mode) setServerMode(data.mode);
+        setAriaAnnouncement('네트워크 연결됨');
       }
       if (errorTimerRef.current) {
         clearTimeout(errorTimerRef.current);
@@ -585,7 +682,10 @@ export default function App() {
     }));
 
     unsubs.push(ds.subscribe('block:received', (data) => {
-      if (data.height != null) setBlockHeight(data.height);
+      if (data.height != null) {
+        setBlockHeight(data.height);
+        setAriaAnnouncement(`새 블록 #${data.height.toLocaleString()} 수신됨`);
+      }
 
       const peers = nodePointsRef.current.filter((n) => n.isMyPeer);
       const blockSrcPeers = pickRandom(peers.length ? peers : nodePointsRef.current.filter((n) => !n.isMyNode), 4);
@@ -635,14 +735,10 @@ export default function App() {
       }
 
       startBlockVerification(data);
-      // 라디오 모드: 블록 수신 시 검증센터로 전환
+      // 블록 수신 시 검증센터로 전환 + 관제센터 블록 탭
       setVisible({ p2p: false, verifyCenter: true, internals: false });
-      setWindowStates(ws => ({
-        ...ws,
-        nodeInfo: { ...ws.nodeInfo, visible: false },
-        txStream: { ...ws.txStream, visible: true },
-        blockVerify: { ...ws.blockVerify, visible: true },
-      }));
+      setCcTab('blockVerify');
+      setCcCollapsed(false);
     }));
 
     unsubs.push(ds.subscribe('block:validated', (data) => {
@@ -729,46 +825,38 @@ export default function App() {
     setSelectedTx(tx);
   }, []);
 
-  // ── WindowDock 최소화 아이템 ──
-  const dockItems = useMemo(() => {
-    const items = [];
-    if (windowStates.nodeInfo.visible && windowStates.nodeInfo.minimized) {
-      items.push({
-        key: 'nodeInfo',
-        title: 'NODE INFO',
-        titleColor: 'text-text-primary',
-        onRestore: () => setWinState('nodeInfo', { minimized: false }),
-      });
-    }
-    if (windowStates.txStream.visible && windowStates.txStream.minimized) {
-      items.push({
-        key: 'txStream',
-        title: 'TX VERIFY',
-        titleColor: 'text-tx-blue',
-        onRestore: () => setWinState('txStream', { minimized: false }),
-      });
-    }
-    if (windowStates.blockVerify.visible && windowStates.blockVerify.minimized) {
-      items.push({
-        key: 'blockVerify',
-        title: 'BLOCK VERIFY',
-        titleColor: 'text-block-purple',
-        onRestore: () => setWinState('blockVerify', { minimized: false }),
-      });
-    }
-    return items;
-  }, [windowStates, setWinState]);
+  // WindowDock은 관제센터로 대체됨
+
+  // 관제센터 사이드바 폭
+  const CC_WIDTH = 380;
 
   return (
     <div className="relative w-screen h-screen overflow-hidden">
       {/* 3D 지구본 — 전체 배경 */}
-      <GlobeScene nodePoints={nodePoints} arcs={combinedArcs} rings={rings} isServerMode={sourceType === 'server'} />
+      <div className="absolute inset-0" style={{ right: ccCollapsed ? 0 : CC_WIDTH }}>
+        <GlobeScene nodePoints={nodePoints} arcs={combinedArcs} rings={rings} isServerMode={sourceType === 'server'} onReady={() => setGlobeReady(true)} />
+      </div>
+
+      {/* 지구본 로딩 스피너 */}
+      {!globeReady && (
+        <div className="absolute inset-0 flex items-center justify-center z-[var(--z-hud)] pointer-events-none">
+          <div className="text-btc-orange text-sm font-mono tracking-wider animate-pulse">
+            Loading...
+          </div>
+        </div>
+      )}
 
       {/* 상단 토글 바 */}
-      <ToggleBar visible={visible} onToggle={handleToggle} onSettingsClick={() => setSettingsOpen(true)} />
+      <div className="absolute top-0 left-0 z-[var(--z-modal)] flex justify-center pt-3 pointer-events-none"
+           style={{ right: ccCollapsed ? 0 : CC_WIDTH }}>
+        <div className="pointer-events-auto">
+          <ToggleBar visible={visible} onToggle={handleToggle} onSettingsClick={() => setSettingsOpen(true)} />
+        </div>
+      </div>
 
       {/* 검색 바 */}
-      <div className="absolute top-3 right-4 z-[var(--z-modal)] max-sm:right-2">
+      <div className="absolute top-3 z-[var(--z-modal)] max-sm:right-2"
+           style={{ right: ccCollapsed ? 16 : CC_WIDTH + 16 }}>
         <SearchBar
           onSearchBlock={handleSearchBlock}
           onSearchTx={handleSearchTx}
@@ -776,92 +864,102 @@ export default function App() {
         />
       </div>
 
-      {/* 좌상단 HUD — MacWindow */}
-      {windowStates.nodeInfo.visible && (
-        <HudPanels
-          ref={hudRef}
-          visible={visible.p2p}
-          mode={mode}
-          serverMode={serverMode}
-          chain={chain}
-          blockHeight={blockHeight}
-          mempoolCount={mempoolCount}
-          feeRate={feeRate}
-          halfHourFee={halfHourFee}
-          hourFee={hourFee}
-          diffAdj={diffAdj}
-          txPerSec={txPerSec}
-          sourceType={sourceType}
-          mempoolInfo={mempoolInfo}
-          nodeInfo={nodeInfo}
-          utxoStats={utxoStats}
-          bestBlockHash={bestBlockHash}
-          minimized={windowStates.nodeInfo.minimized}
-          onClose={() => setWinState('nodeInfo', { visible: false })}
-          onMinimize={() => setWinState('nodeInfo', { minimized: !windowStates.nodeInfo.minimized })}
-          zIndex={getZIndex('nodeInfo')}
-          onFocus={() => focusWindow('nodeInfo')}
-        />
-      )}
-
-      {/* 체인 분기 패널 (서버 모드, P2P 모드일 때) */}
-      {sourceType === 'server' && visible.p2p && chaintips.length > 0 && (
-        <ChainTipsPanel ref={chainTipsRef} chaintips={chaintips} />
-      )}
-
-      {/* TX 검증 패널 — 독립 MacWindow */}
-      <TxStreamPanel
-        txStream={txStream}
-        onTxClick={handleTxClick}
-        visible={windowStates.txStream.visible}
-        minimized={windowStates.txStream.minimized}
-        onClose={() => {
-          setWinState('txStream', { visible: false });
-          setVisible(prev => ({ ...prev, verifyCenter: false }));
-        }}
-        onMinimize={() => setWinState('txStream', { minimized: !windowStates.txStream.minimized })}
-        zIndex={getZIndex('txStream')}
-        onFocus={() => focusWindow('txStream')}
-      />
-
-      {/* 블록 검증 패널 — 독립 MacWindow */}
-      <BlockVerifyPanel
-        verifyState={blockVerifyState}
-        visible={windowStates.blockVerify.visible}
-        minimized={windowStates.blockVerify.minimized}
-        onClose={() => {
-          setWinState('blockVerify', { visible: false });
-          setVisible(prev => ({ ...prev, verifyCenter: false }));
-        }}
-        onMinimize={() => setWinState('blockVerify', { minimized: !windowStates.blockVerify.minimized })}
-        zIndex={getZIndex('blockVerify')}
-        onFocus={() => focusWindow('blockVerify')}
-      />
-
-      {/* BitfeedFloor — 전체 너비 하단 바 (적응형 높이) */}
-      <MempoolFloor
-        bitfeedRef={bitfeedRef}
-        mempoolCount={mempoolCount}
-        onTxClick={handleTxClick}
-      />
-
-      {/* 예상 블록 적층 (검증 OFF일 때) */}
-      <MempoolBlocksPanel
-        mempoolBlocks={mempoolBlocks}
-        visible={visible.p2p && mempoolBlocks.length > 0}
-        topOffset={chainTipsHeight}
-      />
-
-      {/* 체인 스트립 — 가로 상단 바 */}
-      <ChainStrip
-        ref={chainStripRef}
+      {/* Compact Block 패널 */}
+      <CompactBlockPanel
         recentBlocks={recentBlocks}
-        mempoolBlocks={mempoolBlocks}
-        onBlockClick={handleBlockClick}
-        onReplayCompactBlock={handleReplayCompactBlock}
-        sourceType={sourceType}
-        visible={visible.p2p}
+        mempoolCount={mempoolCount}
+        forceReplay={forceCompactBlock}
       />
+
+      {/* BitfeedFloor — 전체 너비 하단 바 */}
+      <div style={{ marginRight: ccCollapsed ? 0 : CC_WIDTH }}>
+        <MempoolFloor
+          bitfeedRef={bitfeedRef}
+          mempoolCount={mempoolCount}
+          onTxClick={handleTxClick}
+        />
+      </div>
+
+      {/* 우측: 통합 관제센터 */}
+      <div
+        className="absolute top-0 bottom-0 right-0 z-[var(--z-hud)]
+                   transition-[width] duration-300 ease-out overflow-hidden"
+        style={{ width: ccCollapsed ? 0 : CC_WIDTH }}
+      >
+          <ControlCenter
+            activeTab={ccTab}
+            onTabChange={setCcTab}
+            collapsed={ccCollapsed}
+            onToggleCollapse={() => setCcCollapsed(c => !c)}
+          >
+            {/* 노드 정보 탭 */}
+            {ccTab === 'nodeInfo' && (
+              <HudPanels
+                ref={hudRef}
+                embedded
+                visible={true}
+                mode={mode}
+                serverMode={serverMode}
+                chain={chain}
+                blockHeight={blockHeight}
+                mempoolCount={mempoolCount}
+                feeRate={feeRate}
+                halfHourFee={halfHourFee}
+                hourFee={hourFee}
+                diffAdj={diffAdj}
+                txPerSec={txPerSec}
+                sourceType={sourceType}
+                mempoolInfo={mempoolInfo}
+                nodeInfo={nodeInfo}
+                utxoStats={utxoStats}
+                bestBlockHash={bestBlockHash}
+              />
+            )}
+
+            {/* 블록 검증 탭 */}
+            {ccTab === 'blockVerify' && (
+              <BlockVerifyPanel
+                embedded
+                verifyState={blockVerifyState}
+                visible={true}
+                onBlockDetailClick={(block) => setSelectedBlock(block)}
+              />
+            )}
+
+            {/* TX 검증 탭 */}
+            {ccTab === 'txStream' && (
+              <TxStreamPanel
+                embedded
+                txStream={txStream}
+                onTxClick={handleTxClick}
+                visible={true}
+              />
+            )}
+
+            {/* 체인 팁 탭 */}
+            {ccTab === 'chainTips' && (
+              <ChainTipsPanel
+                ref={chainTipsRef}
+                chaintips={chaintips}
+                embedded
+              />
+            )}
+
+            {/* 내부 구조 탭 */}
+            {ccTab === 'internals' && (
+              <NodeInternalsPanel
+                embedded
+                sourceType={sourceType}
+                nodeInfo={nodeInfo}
+                storageInfo={storageInfo}
+                securityInfo={securityInfo}
+                utxoStats={utxoStats}
+                blockHeight={blockHeight}
+                recentBlocks={recentBlocks}
+              />
+            )}
+          </ControlCenter>
+        </div>
 
       {/* 블록 상세 패널 */}
       {selectedBlock && (
@@ -894,57 +992,19 @@ export default function App() {
         />
       )}
 
-      {/* Node Internals 패널 */}
-      {visible.internals && (
-        <NodeInternalsPanel
-          sourceType={sourceType}
-          nodeInfo={nodeInfo}
-          storageInfo={storageInfo}
-          securityInfo={securityInfo}
-          utxoStats={utxoStats}
-          blockHeight={blockHeight}
-          recentBlocks={recentBlocks}
-        />
-      )}
-
-      {/* Compact Block 패널 */}
-      <CompactBlockPanel
-        recentBlocks={recentBlocks}
-        mempoolCount={mempoolCount}
-        forceReplay={forceCompactBlock}
-      />
-
-      {/* WindowDock — 최소화된 윈도우 복원 */}
-      <WindowDock items={dockItems} />
-
-      {/* 연결 실패 에러 오버레이 */}
+      {/* 연결 실패 에러 오버레이 (자동 재연결) */}
       {showErrorOverlay && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px] z-[var(--z-modal)]">
-          <div className="bg-panel-bg-solid border border-white/10 rounded-xl px-8 py-7
-                        text-text-primary text-center max-w-[320px] backdrop-blur-xl"
-               style={{ boxShadow: 'var(--shadow-modal)' }}>
-            <div className="text-base font-bold mb-2.5">연결 실패</div>
-            <div className="text-sm text-text-secondary mb-5">
-              서버에 연결할 수 없습니다. 설정을 확인하세요.
-            </div>
-            <div className="flex gap-2.5 justify-center">
-              <button
-                className="bg-btc-orange border-none rounded text-black font-bold
-                          text-sm px-4 py-2 cursor-pointer hover:bg-btc-orange/90"
-                onClick={() => { setShowErrorOverlay(false); setSettingsOpen(true); }}
-              >
-                설정 변경
-              </button>
-              <button
-                className="bg-transparent border border-white/10 rounded text-text-secondary
-                          text-sm px-4 py-2 cursor-pointer hover:border-white/20 hover:text-text-primary"
-                onClick={() => handleConnect('mempool', '')}
-              >
-                mempool.space로 전환
-              </button>
-            </div>
-          </div>
-        </div>
+        <ErrorOverlay
+          onSettings={() => { setShowErrorOverlay(false); setSettingsOpen(true); }}
+          onFallback={() => handleConnect('mempool', '')}
+          onRetry={() => {
+            setShowErrorOverlay(false);
+            setSourceType(prev => {
+              setTimeout(() => setSourceType(prev), 50);
+              return null;
+            });
+          }}
+        />
       )}
 
       {settingsOpen && (
@@ -955,6 +1015,12 @@ export default function App() {
           onClose={() => setSettingsOpen(false)}
         />
       )}
+
+      {/* 스크린 리더용 동적 알림 */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only"
+           style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>
+        {ariaAnnouncement}
+      </div>
 
       {/* 온보딩 가이드 투어 */}
       <OnboardingTour />
