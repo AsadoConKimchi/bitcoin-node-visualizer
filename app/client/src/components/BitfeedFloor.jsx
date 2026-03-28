@@ -148,12 +148,14 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
           const t = easeOut(Math.min(1, elapsed / ANIM_DURATION));
           dx = prev.x + (r.x - prev.x) * t; dy = prev.y + (r.y - prev.y) * t;
           dw = prev.w + (r.w - prev.w) * t; dh = prev.h + (r.h - prev.h) * t;
-        } else if (isNew && !prev) {
-          const t = easeOut(Math.min(1, (now - r.enterTime) / ANIM_DURATION));
-          const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
-          dw = r.w * t; dh = r.h * t; dx = cx - dw / 2; dy = cy - dh / 2;
+        }
+        // 신규 TX: 크기 유지, opacity 페이드인 (빈 공간 방지)
+        let cellAlpha = 1;
+        if (isNew && !prev) {
+          cellAlpha = easeOut(Math.min(1, (now - r.enterTime) / ANIM_DURATION));
         }
         if (dw < 1 || dh < 1) continue;
+        if (cellAlpha < 1) ctx.globalAlpha = cellAlpha;
 
         if (isHovered) { ctx.shadowColor = r.glow || 'rgba(255,255,255,0.3)'; ctx.shadowBlur = 10; }
         ctx.fillStyle = isHovered ? r.color : r.color + 'DD';
@@ -176,6 +178,7 @@ const BitfeedFloor = forwardRef(function BitfeedFloor({ className, onTxClick }, 
           ctx.fillText(r.txid.slice(0, Math.max(4, Math.floor(dw / 7))), dx + dw / 2, dy + dh / 2);
         }
         ctx.shadowBlur = 0;
+        if (cellAlpha < 1) ctx.globalAlpha = 1;
       }
 
       // sweep (하얗게 → 위로)
