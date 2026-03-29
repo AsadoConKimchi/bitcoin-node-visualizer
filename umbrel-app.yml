@@ -2,7 +2,7 @@ manifestVersion: 1
 id: bitcoin-node-visualizer
 category: bitcoin
 name: Bitcoin Node Visualizer
-version: "1.5.0"
+version: "1.6.0"
 tagline: Real-time 3D globe visualization of your Bitcoin full node
 description: >-
   Visualize your Bitcoin Core full node activity on an interactive 3D globe.
@@ -21,7 +21,7 @@ support: https://github.com/AsadoConKimchi/bitcoin-node-visualizer/issues
 port: 3000
 icon: https://raw.githubusercontent.com/AsadoConKimchi/umbrel-app-store/main/asadoconkimchi-bitcoin-node-visualizer/appicon.png
 gallery: []
-releaseNotes: "v1.5.0 Major UI redesign: unified Control Center sidebar, treemap mempool floor, educational onboarding (glossary, learning path tabs, intro slides), ChainStrip/ChainTips improvements, block mine alert."
+releaseNotes: "v1.6.0 Complete fullnode feature coverage: IBD visualization panel, security dashboard (network diversity chart, Eclipse defense checklist), storage visualization (disk usage breakdown, pruning timeline, chain growth trend), SPV tab enhancement (SERVICE flag badges, interactive filter flow), Vercel mode guidance banners."
 submitter: AsadoConKimchi
 submission: ""
 path: ""
