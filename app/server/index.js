@@ -315,12 +315,27 @@ app.get('/api/security', async (req, res) => {
     // BIP324 v2 Transport 피어 수
     let v2Count = 0;
     const asnSet = new Set();
+    const asnCounts = {};
     let blockRelayOnly = 0;
+    let torPeers = 0, i2pPeers = 0, cjdnsPeers = 0;
     for (const p of peerInfo) {
       if (p.transport_protocol_type === 'v2') v2Count++;
-      if (p.mapped_as) asnSet.add(p.mapped_as);
+      if (p.mapped_as) {
+        asnSet.add(p.mapped_as);
+        asnCounts[p.mapped_as] = (asnCounts[p.mapped_as] || 0) + 1;
+      }
       if (p.connection_type === 'block-relay-only') blockRelayOnly++;
+      const addr = p.addr || '';
+      if (addr.includes('.onion')) torPeers++;
+      else if (addr.includes('.b32.i2p')) i2pPeers++;
+      else if (p.network === 'cjdns') cjdnsPeers++;
     }
+
+    // ASN 빈도 상위 10개
+    const topASNs = Object.entries(asnCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([asn, count]) => ({ asn, count }));
 
     res.json({
       localServices: networkInfo.localservicesnames || [],
@@ -328,11 +343,46 @@ app.get('/api/security', async (req, res) => {
       totalPeers: peerInfo.length,
       networks,
       uniqueASNs: asnSet.size,
+      topASNs,
       blockRelayOnly,
+      peersByNetwork: {
+        clearnet: peerInfo.length - torPeers - i2pPeers - cjdnsPeers,
+        tor: torPeers,
+        i2p: i2pPeers,
+        cjdns: cjdnsPeers,
+      },
       warnings: networkInfo.warnings || '',
     });
   } catch (err) {
     console.error(`[api]`, err.message);
+    res.status(503).json({ error: 'Service unavailable' });
+  }
+});
+
+/** IBD 상태 (풀노드 고유 — 10초 캐시) */
+let _ibdCache = null;
+let _ibdCacheTime = 0;
+const IBD_CACHE_MS = 10_000;
+
+app.get('/api/ibd-status', async (req, res) => {
+  try {
+    const now = Date.now();
+    if (_ibdCache && (now - _ibdCacheTime) < IBD_CACHE_MS) {
+      return res.json(_ibdCache);
+    }
+    const chainInfo = await rpc.getBlockchainInfo();
+    _ibdCache = {
+      isIBD: chainInfo.initialblockdownload || false,
+      verificationProgress: chainInfo.verificationprogress,
+      headers: chainInfo.headers,
+      blocks: chainInfo.blocks,
+      sizeOnDisk: chainInfo.size_on_disk,
+      chain: chainInfo.chain,
+    };
+    _ibdCacheTime = now;
+    res.json(_ibdCache);
+  } catch (err) {
+    console.error('[api/ibd-status]', err.message);
     res.status(503).json({ error: 'Service unavailable' });
   }
 });

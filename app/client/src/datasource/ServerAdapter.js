@@ -87,6 +87,29 @@ export class ServerAdapter extends EventBus {
       }
     };
     this._medPollTimer = setTimeout(pollMed, MED_FIRST_DELAY_MS);
+
+    // IBD 상태 — 초기 10초 후 시작, IBD 중 10초/완료 후 60초 간격
+    this._ibdPollTimer = null;
+    this._isIBD = false;
+    const pollIBD = async () => {
+      if (this._destroyed) return;
+      try {
+        const res = await fetch(this._restUrl('/api/ibd-status'));
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.error) {
+            this._isIBD = data.isIBD;
+            this.emit('ibdStatus', data);
+          }
+        }
+      } catch (err) {
+        console.debug('[ServerAdapter] IBD 폴링 실패:', err);
+      }
+      if (!this._destroyed) {
+        this._ibdPollTimer = setTimeout(pollIBD, this._isIBD ? 10_000 : MED_POLL_INTERVAL_MS);
+      }
+    };
+    this._ibdPollTimer = setTimeout(pollIBD, 4000);
   }
 
   // WebSocket URL 변환 (http → ws, https → wss)
@@ -293,6 +316,7 @@ export class ServerAdapter extends EventBus {
     if (this._pollTimer) clearTimeout(this._pollTimer);
     if (this._slowPollTimer) clearTimeout(this._slowPollTimer);
     if (this._medPollTimer) clearTimeout(this._medPollTimer);
+    if (this._ibdPollTimer) clearTimeout(this._ibdPollTimer);
     if (this._ws) this._ws.close();
     this.clear();
   }

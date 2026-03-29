@@ -54,6 +54,8 @@ export class MempoolAdapter extends EventBus {
       this._ws.send(JSON.stringify({ 'track-mempool-txids': true }));
 
       this.emit('__connected', {});
+      // mempool.space는 항상 동기화 완료 상태
+      this.emit('ibdStatus', { isIBD: false, verificationProgress: 1.0, headers: 0, blocks: 0, sizeOnDisk: 0 });
     });
 
     this._ws.addEventListener('message', (ev) => {

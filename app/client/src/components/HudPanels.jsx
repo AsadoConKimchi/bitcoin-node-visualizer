@@ -214,6 +214,14 @@ const HudPanels = forwardRef(function HudPanels({
             {utxoStats?.diskSize != null && (
               <Row label="UTXO Size" value={`${(utxoStats.diskSize / 1e9).toFixed(1)} GB`} />
             )}
+            {!isServer && (
+              <div className="mt-1.5 pt-1.5 border-t border-white/5">
+                <div className="text-label-xs text-text-dim leading-relaxed">
+                  💡 풀노드 연결 시 추가: UTXO 통계, 실시간 TX 검증,
+                  피어 GeoIP, 체인 팁, 스토리지/보안 분석
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

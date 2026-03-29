@@ -20,6 +20,7 @@ import SettingsPanel from './components/SettingsPanel.jsx';
 import ChainTipsPanel from './components/ChainTipsPanel.jsx';
 import NodeInternalsPanel from './components/NodeInternalsPanel.jsx';
 import CompactBlockPanel from './components/CompactBlockPanel.jsx';
+import IBDPanel from './components/IBDPanel.jsx';
 import OnboardingTour from './components/OnboardingTour.jsx';
 // import MiniHud from './components/MiniHud.jsx'; // 관제센터로 대체
 
@@ -313,6 +314,7 @@ export default function App() {
   const [utxoStats, setUtxoStats] = useState(null);
   const [storageInfo, setStorageInfo] = useState(null);
   const [securityInfo, setSecurityInfo] = useState(null);
+  const [ibdStatus, setIbdStatus] = useState(null);
 
   const recentBlocksRef = useRef([]);
   recentBlocksRef.current = recentBlocks;
@@ -784,6 +786,7 @@ export default function App() {
     unsubs.push(ds.subscribe('utxoStats', (data) => setUtxoStats(data)));
     unsubs.push(ds.subscribe('storageInfo', (data) => setStorageInfo(data)));
     unsubs.push(ds.subscribe('securityInfo', (data) => setSecurityInfo(data)));
+    unsubs.push(ds.subscribe('ibdStatus', (data) => setIbdStatus(data)));
 
     return () => {
       if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
@@ -981,11 +984,18 @@ export default function App() {
 
             {/* 체인 팁 탭 */}
             {ccTab === 'chainTips' && (
-              <ChainTipsPanel
-                ref={chainTipsRef}
-                chaintips={chaintips}
-                embedded
-              />
+              <>
+                <IBDPanel
+                  ibdStatus={ibdStatus}
+                  sourceType={sourceType}
+                  blockHeight={blockHeight}
+                />
+                <ChainTipsPanel
+                  ref={chainTipsRef}
+                  chaintips={chaintips}
+                  embedded
+                />
+              </>
             )}
 
             {/* 내부 구조 탭 */}

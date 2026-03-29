@@ -58,6 +58,15 @@ function DiagramBox({ children, border = 'border-muted-dim' }) {
   );
 }
 
+function ServerOnlyBanner() {
+  return (
+    <div className="text-label-xs text-btc-orange bg-btc-orange/5 border border-btc-orange/10
+                    rounded px-2 py-1.5 mb-2 text-center">
+      아래 데이터는 풀노드 연결 시 실시간으로 표시됩니다
+    </div>
+  );
+}
+
 // ── P2P Protocol ──
 function P2PTab({ sourceType, nodeInfo }) {
   const isServer = sourceType === 'server';
@@ -123,9 +132,20 @@ function P2PTab({ sourceType, nodeInfo }) {
 // ── Storage ──
 function StorageTab({ sourceType, storageInfo, blockHeight }) {
   const isServer = sourceType === 'server';
+  const sizeGB = storageInfo?.sizeOnDisk != null ? storageInfo.sizeOnDisk / 1e9 : null;
+  const blkFileCount = storageInfo?.sizeOnDisk != null ? Math.ceil(storageInfo.sizeOnDisk * 0.85 / (128 * 1024 * 1024)) : null;
+
+  // 체인 성장 추세 데이터포인트 (근사치)
+  const growthData = [
+    { year: 2013, gb: 10 }, { year: 2015, gb: 50 }, { year: 2017, gb: 150 },
+    { year: 2019, gb: 250 }, { year: 2021, gb: 380 }, { year: 2023, gb: 530 },
+    { year: 2025, gb: 650 },
+  ];
+  const maxGB = sizeGB ? Math.max(sizeGB, 700) : 700;
 
   return (
     <div>
+      {!isServer && <ServerOnlyBanner />}
       <SectionTitle>▸ 블록 저장 구조</SectionTitle>
       <DiagramBox border="border-btc-orange/25">
         <div className="text-btc-orange">
@@ -138,6 +158,36 @@ function StorageTab({ sourceType, storageInfo, blockHeight }) {
           </div>
         </div>
       </DiagramBox>
+
+      {isServer && storageInfo?.sizeOnDisk != null && (
+        <>
+          <SectionTitle>▸ 디스크 사용량 분포 (추정)</SectionTitle>
+          <DiagramBox border="border-btc-orange/25">
+            <StackBar height={12} segments={[
+              { label: `blk*.dat ~${(sizeGB * 0.85).toFixed(0)} GB`, ratio: 0.85, color: '#f7931a' },
+              { label: `rev*.dat ~${(sizeGB * 0.10).toFixed(0)} GB`, ratio: 0.10, color: '#a78bfa' },
+              { label: `index ~${(sizeGB * 0.05).toFixed(0)} GB`, ratio: 0.05, color: '#93c5fd' },
+            ]} />
+            <div className="flex justify-between text-label-xs mt-1.5">
+              <div className="flex items-center gap-1">
+                <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: '#f7931a' }} />
+                <span className="text-btc-orange">blk*.dat ~{(sizeGB * 0.85).toFixed(0)}GB</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: '#a78bfa' }} />
+                <span className="text-block-purple">rev*.dat ~{(sizeGB * 0.10).toFixed(0)}GB</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: '#93c5fd' }} />
+                <span className="text-tx-blue">index ~{(sizeGB * 0.05).toFixed(0)}GB</span>
+              </div>
+            </div>
+            <div className="text-text-dim text-label-xs mt-1 text-center">
+              총 {sizeGB.toFixed(1)} GB · 약 {blkFileCount}개 blk*.dat 파일
+            </div>
+          </DiagramBox>
+        </>
+      )}
 
       <SectionTitle>▸ blk*.dat 파일 내부 구조</SectionTitle>
       <DiagramBox border="border-block-purple/25">
@@ -152,21 +202,54 @@ function StorageTab({ sourceType, storageInfo, blockHeight }) {
       </DiagramBox>
 
       <SectionTitle>▸ Pruning (가지치기)</SectionTitle>
-      <DiagramBox border="border-warning/25">
-        <div className="text-warning">
-          <div>prune=550 → 최소 550MB 유지</div>
-          <div className="text-muted text-label-xs">
-            오래된 블록 데이터 삭제. UTXO 세트는 항상 유지.
-            가지치기된 노드도 새 블록/TX 검증 가능.
-            단, 과거 블록 제공 불가 → 다른 노드의 IBD 도움 불가.
+      {isServer && storageInfo?.pruned ? (
+        <DiagramBox border="border-warning/25">
+          <div className="text-warning text-label-xs mb-1.5">
+            prune 모드 활성 — 오래된 블록 데이터 삭제, UTXO 세트는 유지
           </div>
-        </div>
-      </DiagramBox>
+          {/* Pruning 타임라인 */}
+          <div className="relative h-6 bg-white/5 rounded overflow-hidden">
+            {(() => {
+              const pruneH = storageInfo.pruneHeight || 0;
+              const currentH = blockHeight || storageInfo.blocks || pruneH + 1;
+              const ratio = currentH > 0 ? pruneH / currentH : 0;
+              return (
+                <>
+                  <div className="absolute inset-y-0 left-0 bg-white/5 border-r border-warning/50"
+                       style={{ width: `${ratio * 100}%` }} />
+                  <div className="absolute inset-y-0 bg-warning/15"
+                       style={{ left: `${ratio * 100}%`, right: 0 }} />
+                  <div className="absolute inset-0 flex items-center justify-between px-2 text-label-xs">
+                    <span className="text-text-dim">삭제됨: 0~{pruneH.toLocaleString()}</span>
+                    <span className="text-warning">보관: {pruneH.toLocaleString()}~{currentH.toLocaleString()}</span>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </DiagramBox>
+      ) : (
+        <DiagramBox border="border-warning/25">
+          <div className="text-warning">
+            <div>prune=550 → 최소 550MB 유지</div>
+            <div className="text-muted text-label-xs">
+              오래된 블록 데이터 삭제. UTXO 세트는 항상 유지.
+              가지치기된 노드도 새 블록/TX 검증 가능.
+              단, 과거 블록 제공 불가 → 다른 노드의 IBD 도움 불가.
+            </div>
+          </div>
+          {isServer && storageInfo && !storageInfo.pruned && (
+            <div className="mt-1.5 text-success text-label-xs text-center py-0.5 bg-success/10 rounded">
+              풀 아카이브 모드 — 모든 블록 보관 중
+            </div>
+          )}
+        </DiagramBox>
+      )}
 
       {isServer && storageInfo ? (
         <>
           <SectionTitle>▸ 현재 스토리지</SectionTitle>
-          <InfoRow label="체인 크기" value={storageInfo.sizeOnDisk != null ? `${(storageInfo.sizeOnDisk / 1e9).toFixed(1)} GB` : null} />
+          <InfoRow label="체인 크기" value={sizeGB != null ? `${sizeGB.toFixed(1)} GB` : null} />
           <InfoRow label="블록 수" value={storageInfo.blocks?.toLocaleString()} />
           <InfoRow label="헤더 수" value={storageInfo.headers?.toLocaleString()} />
           <InfoRow
@@ -182,11 +265,35 @@ function StorageTab({ sourceType, storageInfo, blockHeight }) {
             label="예상 크기"
             value={blockHeight != null ? `~${((blockHeight * 1.5) / 1000).toFixed(0)} GB` : null}
           />
-          <div className="text-muted text-label-xs mt-1">
-            평균 블록 크기 ~1.5MB 기준 추정치
-          </div>
         </>
       )}
+
+      <SectionTitle>▸ 체인 성장 추세</SectionTitle>
+      <DiagramBox border="border-muted-dim">
+        <div className="space-y-0.5">
+          {growthData.map(({ year, gb }) => (
+            <div key={year} className="flex items-center gap-2 text-label-xs">
+              <span className="text-text-dim w-8 shrink-0">{year}</span>
+              <div className="flex-1 h-2.5 bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full rounded-full" style={{
+                  width: `${(gb / maxGB) * 100}%`,
+                  backgroundColor: year === 2025 ? '#f7931a' : 'rgba(247,147,26,0.4)',
+                }} />
+              </div>
+              <span className="text-text-secondary w-14 text-right shrink-0">{gb} GB</span>
+            </div>
+          ))}
+          {sizeGB != null && (
+            <div className="flex items-center gap-2 text-label-xs">
+              <span className="text-btc-orange w-8 shrink-0 font-bold">지금</span>
+              <div className="flex-1 h-2.5 bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-btc-orange" style={{ width: `${(sizeGB / maxGB) * 100}%` }} />
+              </div>
+              <span className="text-btc-orange w-14 text-right shrink-0 font-bold">{sizeGB.toFixed(0)} GB</span>
+            </div>
+          )}
+        </div>
+      </DiagramBox>
     </div>
   );
 }
@@ -195,6 +302,7 @@ function StorageTab({ sourceType, storageInfo, blockHeight }) {
 function UTXOTab({ sourceType, utxoStats, blockHeight }) {
   return (
     <div>
+      {sourceType !== 'server' && <ServerOnlyBanner />}
       <SectionTitle>▸ UTXO 세트란?</SectionTitle>
       <DiagramBox border="border-btc-orange/25">
         <div className="text-btc-orange">
@@ -256,12 +364,77 @@ function UTXOTab({ sourceType, utxoStats, blockHeight }) {
   );
 }
 
+// ── SVG 도넛 차트 ──
+function DonutChart({ segments, size = 80, strokeWidth = 14 }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const cx = size / 2, cy = size / 2;
+  let offset = 0;
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {/* 배경 원 */}
+      <circle cx={cx} cy={cy} r={radius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={strokeWidth} />
+      {segments.map((seg, i) => {
+        const dash = circumference * seg.ratio;
+        const gap = circumference - dash;
+        const style = {
+          strokeDasharray: `${dash} ${gap}`,
+          strokeDashoffset: -offset,
+          transform: `rotate(-90deg)`,
+          transformOrigin: `${cx}px ${cy}px`,
+        };
+        offset += dash;
+        return dash > 0.5 ? (
+          <circle key={i} cx={cx} cy={cy} r={radius} fill="none"
+                  stroke={seg.color} strokeWidth={strokeWidth}
+                  strokeLinecap="butt" style={style} />
+        ) : null;
+      })}
+    </svg>
+  );
+}
+
+// ── 수평 스택 바 ──
+function StackBar({ segments, height = 10 }) {
+  return (
+    <div className="flex rounded-full overflow-hidden" style={{ height }}>
+      {segments.map((seg, i) => (
+        seg.ratio > 0 ? (
+          <div key={i} style={{ width: `${Math.max(seg.ratio * 100, 1)}%`, backgroundColor: seg.color }}
+               title={seg.label} />
+        ) : null
+      ))}
+    </div>
+  );
+}
+
 // ── Security ──
 function SecurityTab({ sourceType, securityInfo, nodeInfo }) {
   const isServer = sourceType === 'server';
 
+  // 네트워크별 피어 분포 데이터
+  const peersByNet = securityInfo?.peersByNetwork;
+  const totalPeers = securityInfo?.totalPeers || 0;
+  const netSegments = peersByNet ? [
+    { label: `Clearnet ${peersByNet.clearnet}`, ratio: totalPeers ? peersByNet.clearnet / totalPeers : 0, color: '#93c5fd' },
+    { label: `Tor ${peersByNet.tor}`, ratio: totalPeers ? peersByNet.tor / totalPeers : 0, color: '#a78bfa' },
+    { label: `I2P ${peersByNet.i2p}`, ratio: totalPeers ? peersByNet.i2p / totalPeers : 0, color: '#60a5fa' },
+    { label: `CJDNS ${peersByNet.cjdns}`, ratio: totalPeers ? peersByNet.cjdns / totalPeers : 0, color: '#fbbf24' },
+  ].filter(s => s.ratio > 0) : [];
+
+  // v2 Transport 비율
+  const v2Count = securityInfo?.v2Transport || 0;
+  const v1Count = totalPeers - v2Count;
+  const v2Ratio = totalPeers ? v2Count / totalPeers : 0;
+
+  // Eclipse 방어 체크리스트
+  const activeNetworks = securityInfo?.networks
+    ? Object.values(securityInfo.networks).filter(n => n.reachable).length : 0;
+
   return (
     <div>
+      {!isServer && <ServerOnlyBanner />}
       <SectionTitle>▸ BIP324 v2 Transport</SectionTitle>
       <DiagramBox border="border-block-purple/25">
         <div className="text-block-purple">
@@ -269,10 +442,19 @@ function SecurityTab({ sourceType, securityInfo, nodeInfo }) {
           <div className="text-muted text-label-xs">
             중간자 공격 방어, 트래픽 분석 차단
           </div>
-          {isServer && nodeInfo?.v2Transport != null && (
-            <div className="text-success mt-1">현재 v2 피어: {nodeInfo.v2Transport}개</div>
-          )}
         </div>
+        {isServer && totalPeers > 0 && (
+          <div className="mt-2">
+            <div className="flex justify-between text-label-xs mb-1">
+              <span className="text-block-purple">v2 암호화: {v2Count}개 ({Math.round(v2Ratio * 100)}%)</span>
+              <span className="text-text-dim">v1 평문: {v1Count}개</span>
+            </div>
+            <StackBar height={8} segments={[
+              { label: `v2: ${v2Count}`, ratio: v2Ratio, color: '#a78bfa' },
+              { label: `v1: ${v1Count}`, ratio: 1 - v2Ratio, color: 'rgba(255,255,255,0.1)' },
+            ]} />
+          </div>
+        )}
       </DiagramBox>
 
       <SectionTitle>▸ BIP324 핸드셰이크 플로우</SectionTitle>
@@ -290,33 +472,87 @@ function SecurityTab({ sourceType, securityInfo, nodeInfo }) {
       </DiagramBox>
 
       <SectionTitle>▸ Eclipse Attack 방어</SectionTitle>
-      <DiagramBox border="border-error/25">
-        <div className="text-red-400 text-label-xs">
-          <div className="font-bold mb-1">공격: 모든 피어 연결을 장악하여 노드를 고립</div>
-          <div className="text-mempool-green">방어 메커니즘:</div>
-          <div>• 다양한 네트워크 사용 (IPv4 + Tor + I2P)</div>
-          <div>• Block-Relay-Only 연결 2개 (TX 미공유)</div>
-          <div>• Anchor 연결 (재시작 시 기존 피어 우선)</div>
-          <div>• ASN 다양성 (같은 ISP 피어 제한)</div>
-          <div className="text-muted mt-1">
-            피어 테이블을 시드별로 버킷화하여 단일 공격자가
-            전체 테이블을 점유하기 어렵게 설계.
+      {isServer && securityInfo ? (
+        <DiagramBox border="border-error/25">
+          <div className="text-label-xs mb-2">
+            <span className="text-red-400 font-bold">공격:</span>
+            <span className="text-muted"> 모든 피어 연결을 장악하여 노드를 고립</span>
           </div>
-        </div>
-      </DiagramBox>
+          <div className="space-y-1">
+            {[
+              { ok: activeNetworks >= 2, label: '다중 네트워크 활성', detail: `${activeNetworks}개 네트워크`, threshold: '≥ 2' },
+              { ok: (securityInfo.blockRelayOnly || 0) >= 2, label: 'Block-Relay-Only 연결', detail: `${securityInfo.blockRelayOnly || 0}개`, threshold: '≥ 2' },
+              { ok: (securityInfo.uniqueASNs || 0) > 5, label: 'ASN 다양성', detail: `${securityInfo.uniqueASNs || 0}개`, threshold: '> 5' },
+              { ok: totalPeers > 8, label: '충분한 피어 수', detail: `${totalPeers}개`, threshold: '> 8' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center justify-between py-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className={item.ok ? 'text-success' : 'text-red-400'}>{item.ok ? '✓' : '✗'}</span>
+                  <span className="text-text-secondary">{item.label}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={item.ok ? 'text-success' : 'text-red-400'}>{item.detail}</span>
+                  <span className="text-text-dim">({item.threshold})</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className={`mt-2 text-center text-label-xs py-1 rounded ${
+            [activeNetworks >= 2, (securityInfo.blockRelayOnly || 0) >= 2, (securityInfo.uniqueASNs || 0) > 5, totalPeers > 8].filter(Boolean).length >= 3
+              ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
+          }`}>
+            방어 점수: {[activeNetworks >= 2, (securityInfo.blockRelayOnly || 0) >= 2, (securityInfo.uniqueASNs || 0) > 5, totalPeers > 8].filter(Boolean).length}/4
+          </div>
+        </DiagramBox>
+      ) : (
+        <DiagramBox border="border-error/25">
+          <div className="text-red-400 text-label-xs">
+            <div className="font-bold mb-1">공격: 모든 피어 연결을 장악하여 노드를 고립</div>
+            <div className="text-mempool-green">방어 메커니즘:</div>
+            <div>• 다양한 네트워크 사용 (IPv4 + Tor + I2P)</div>
+            <div>• Block-Relay-Only 연결 2개 (TX 미공유)</div>
+            <div>• Anchor 연결 (재시작 시 기존 피어 우선)</div>
+            <div>• ASN 다양성 (같은 ISP 피어 제한)</div>
+          </div>
+        </DiagramBox>
+      )}
 
       <SectionTitle>▸ 네트워크 다양성</SectionTitle>
-      <DiagramBox border="border-mempool-green/25">
-        <div>
-          <div className="text-mempool-green">IPv4/IPv6 — 기본 네트워크</div>
-          <div className="text-block-purple">Tor (.onion) — IP 은닉</div>
-          <div className="text-blue-400">I2P — 분산 익명 네트워크</div>
-          <div className="text-warning">CJDNS — 메시 네트워크</div>
-          <div className="text-muted text-label-xs mt-1">
-            다양한 네트워크 = Eclipse Attack 방어력 ↑
+      {isServer && netSegments.length > 0 ? (
+        <DiagramBox border="border-mempool-green/25">
+          <div className="flex items-center gap-3">
+            <DonutChart segments={netSegments} size={72} strokeWidth={12} />
+            <div className="flex-1 space-y-0.5">
+              {netSegments.map((seg, i) => (
+                <div key={i} className="flex items-center gap-1.5 text-label-xs">
+                  <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+                  <span className="text-text-secondary">{seg.label}</span>
+                  <span className="text-text-dim ml-auto">({Math.round(seg.ratio * 100)}%)</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </DiagramBox>
+          <div className={`mt-2 text-center text-label-xs py-1 rounded ${
+            netSegments.length >= 3 ? 'bg-success/10 text-success' :
+            netSegments.length >= 2 ? 'bg-warning/10 text-warning' :
+            'bg-error/10 text-red-400'
+          }`}>
+            다양성: {netSegments.length}개 네트워크 활성
+          </div>
+        </DiagramBox>
+      ) : (
+        <DiagramBox border="border-mempool-green/25">
+          <div>
+            <div className="text-mempool-green">IPv4/IPv6 — 기본 네트워크</div>
+            <div className="text-block-purple">Tor (.onion) — IP 은닉</div>
+            <div className="text-blue-400">I2P — 분산 익명 네트워크</div>
+            <div className="text-warning">CJDNS — 메시 네트워크</div>
+            <div className="text-muted text-label-xs mt-1">
+              다양한 네트워크 = Eclipse Attack 방어력 ↑
+            </div>
+          </div>
+        </DiagramBox>
+      )}
 
       {isServer && securityInfo && (
         <>
@@ -334,24 +570,6 @@ function SecurityTab({ sourceType, securityInfo, nodeInfo }) {
           {securityInfo.localServices?.length > 0 && (
             <InfoRow label="Services" value={securityInfo.localServices.join(', ')} />
           )}
-
-          {/* 네트워크 파이차트 (텍스트 기반) */}
-          {securityInfo.networks && (() => {
-            const nets = Object.entries(securityInfo.networks).filter(([, v]) => v.reachable);
-            if (nets.length <= 1) return null;
-            return (
-              <>
-                <SectionTitle>▸ 네트워크별 피어 분포</SectionTitle>
-                <div className="flex gap-2 flex-wrap text-label-xs">
-                  {nets.map(([name]) => (
-                    <span key={name} className="bg-dark-surface border border-dark-border rounded px-1.5 py-0.5">
-                      {name}
-                    </span>
-                  ))}
-                </div>
-              </>
-            );
-          })()}
         </>
       )}
 
@@ -481,9 +699,53 @@ function RPCTab({ sourceType }) {
 }
 
 // ── SPV ──
-function SPVTab() {
+const FILTER_FLOW_STEPS = [
+  { from: '클라이언트', to: '풀노드', msg: 'getcfheaders', desc: '필터 헤더 요청', color: '#93c5fd' },
+  { from: '풀노드', to: '클라이언트', msg: 'cfheaders', desc: '헤더 체인 검증용 데이터', color: '#22c55e' },
+  { from: '클라이언트', to: '풀노드', msg: 'getcfilters', desc: '실제 필터 요청', color: '#93c5fd' },
+  { from: '풀노드', to: '클라이언트', msg: 'cfilter', desc: 'GCS 필터 데이터 (~20KB/블록)', color: '#22c55e' },
+];
+
+// SERVICE 플래그 정의
+const SERVICE_FLAGS = [
+  { key: 'NETWORK', desc: '블록/TX 데이터 제공', required: true },
+  { key: 'WITNESS', desc: 'SegWit TX 데이터', required: true },
+  { key: 'COMPACT_FILTERS', desc: 'BIP 157 필터', required: false },
+  { key: 'NETWORK_LIMITED', desc: '최근 288 블록만', required: false },
+  { key: 'P2P_V2', desc: 'BIP324 v2 Transport', required: false },
+];
+
+function SPVTab({ sourceType, securityInfo }) {
+  const isServer = sourceType === 'server';
+  const [activeFlowStep, setActiveFlowStep] = useState(-1);
+  const localServices = securityInfo?.localServices || [];
+
   return (
     <div>
+      {/* SERVICE 플래그 뱃지 그리드 */}
+      {isServer && localServices.length > 0 && (
+        <>
+          <SectionTitle>▸ 노드 SERVICE 플래그</SectionTitle>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {SERVICE_FLAGS.map(({ key, desc }) => {
+              const active = localServices.includes(key);
+              return (
+                <div key={key} className={`text-label-xs px-2 py-1 rounded border ${
+                  active
+                    ? 'bg-success/10 border-success/25 text-success'
+                    : 'bg-white/3 border-white/5 text-text-dim'
+                }`} title={desc}>
+                  {active ? '✓' : '·'} {key}
+                </div>
+              );
+            })}
+          </div>
+          <div className="text-text-dim text-label-xs mb-2">
+            경량 클라이언트는 이 플래그를 보고 필요한 서비스를 가진 노드를 선택합니다.
+          </div>
+        </>
+      )}
+
       <SectionTitle>▸ SPV 클라이언트란?</SectionTitle>
       <DiagramBox border="border-tx-blue/25">
         <div className="text-tx-blue">
@@ -521,61 +783,70 @@ function SPVTab() {
 
       <SectionTitle>▸ BIP 157/158 필터 다운로드 플로우</SectionTitle>
       <DiagramBox border="border-success/25">
-        <div className="text-success text-label-xs">
-          <div>1. 클라이언트 → getcfheaders (필터 헤더 요청)</div>
-          <div>2. 풀노드 → cfheaders (헤더 체인 검증용)</div>
-          <div>3. 클라이언트 → getcfilters (실제 필터 요청)</div>
-          <div>4. 풀노드 → cfilter (GCS 필터 데이터)</div>
-          <div className="text-muted mt-1">
-            Golomb-coded Set (GCS): 블록 내 모든 scriptPubKey를
-            압축 인코딩. 블록당 ~20KB.
-          </div>
+        <div className="space-y-1">
+          {FILTER_FLOW_STEPS.map((step, i) => {
+            const isActive = activeFlowStep === i;
+            const isDone = activeFlowStep > i;
+            const arrow = step.from === '클라이언트' ? '→' : '←';
+            return (
+              <button
+                key={i}
+                onClick={() => setActiveFlowStep(isActive ? -1 : i)}
+                className={`w-full text-left px-2 py-1 rounded text-label-xs transition-colors cursor-pointer
+                           ${isActive ? 'bg-white/8' : isDone ? 'bg-white/3' : 'hover:bg-white/5'}`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
+                    isDone ? 'bg-success/20 text-success' : isActive ? 'bg-white/15 text-white' : 'bg-white/5 text-text-dim'
+                  }`}>{isDone ? '✓' : i + 1}</span>
+                  <span style={{ color: step.color }}>{step.from} {arrow} {step.msg}</span>
+                </div>
+                {isActive && (
+                  <div className="ml-6 mt-0.5 text-text-dim">{step.desc}</div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <div className="text-muted text-label-xs mt-1.5">
+          Golomb-coded Set (GCS): 블록 내 모든 scriptPubKey를 압축 인코딩.
         </div>
       </DiagramBox>
 
       <SectionTitle>▸ Bloom vs Compact Block Filter</SectionTitle>
       <DiagramBox border="border-muted-dim">
         <div className="text-label-xs">
-          <div className="flex justify-between mb-1">
-            <span className="text-muted">방식</span>
-            <span className="text-error">Bloom (BIP37)</span>
-            <span className="text-success">CBF (BIP157)</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted">프라이버시</span>
-            <span className="text-error">취약</span>
-            <span className="text-success">보호</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted">필터 생성</span>
-            <span className="text-error">클라이언트</span>
-            <span className="text-success">풀노드</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted">DoS 위험</span>
-            <span className="text-error">높음</span>
-            <span className="text-success">낮음</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted">대역폭</span>
-            <span className="text-error">높음 (FP)</span>
-            <span className="text-success">낮음</span>
-          </div>
+          {[
+            { label: '프라이버시', bloom: '취약', cbf: '보호' },
+            { label: '필터 생성', bloom: '클라이언트', cbf: '풀노드' },
+            { label: 'DoS 위험', bloom: '높음', cbf: '낮음' },
+            { label: '대역폭', bloom: '높음 (FP)', cbf: '낮음' },
+          ].map(({ label, bloom, cbf }, i) => (
+            <div key={i} className="flex justify-between py-0.5">
+              <span className="text-muted w-16">{label}</span>
+              <span className="text-error bg-error/8 px-1.5 rounded">{bloom}</span>
+              <span className="text-success bg-success/8 px-1.5 rounded">{cbf}</span>
+            </div>
+          ))}
         </div>
       </DiagramBox>
 
-      <SectionTitle>▸ 풀노드의 역할</SectionTitle>
-      <DiagramBox border="border-btc-orange/25">
-        <div className="text-btc-orange">
-          <div>NETWORK — 블록/TX 데이터 제공</div>
-          <div>WITNESS — SegWit TX 데이터 제공</div>
-          <div className="text-success">COMPACT_FILTERS — BIP 157 필터 제공</div>
-          <div className="text-muted text-label-xs mt-1">
-            SERVICE 플래그로 지원 기능을 광고.
-            경량 클라이언트는 필요한 서비스를 가진 풀노드를 선택.
-          </div>
-        </div>
-      </DiagramBox>
+      {!isServer && (
+        <>
+          <SectionTitle>▸ 풀노드의 역할</SectionTitle>
+          <DiagramBox border="border-btc-orange/25">
+            <div className="text-btc-orange">
+              <div>NETWORK — 블록/TX 데이터 제공</div>
+              <div>WITNESS — SegWit TX 데이터 제공</div>
+              <div className="text-success">COMPACT_FILTERS — BIP 157 필터 제공</div>
+              <div className="text-muted text-label-xs mt-1">
+                SERVICE 플래그로 지원 기능을 광고.
+                경량 클라이언트는 필요한 서비스를 가진 풀노드를 선택.
+              </div>
+            </div>
+          </DiagramBox>
+        </>
+      )}
     </div>
   );
 }
@@ -597,7 +868,7 @@ export default function NodeInternalsPanel({ sourceType, nodeInfo, storageInfo, 
       {activeTab === 'security' && <SecurityTab sourceType={sourceType} securityInfo={securityInfo} nodeInfo={nodeInfo} />}
       {activeTab === 'time' && <TimeTab sourceType={sourceType} nodeInfo={nodeInfo} />}
       {activeTab === 'rpc' && <RPCTab sourceType={sourceType} />}
-      {activeTab === 'spv' && <SPVTab />}
+      {activeTab === 'spv' && <SPVTab sourceType={sourceType} securityInfo={securityInfo} />}
     </>
   );
 
