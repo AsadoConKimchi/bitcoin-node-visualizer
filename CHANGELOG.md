@@ -4,6 +4,50 @@ All notable changes to Bitcoin Node Visualizer are documented here.
 
 ---
 
+## [1.6.0] — 2026-03-29
+
+### Added — 풀노드 기능 완성도 강화 (8/12 → 12/12 카테고리)
+
+13개 풀노드 기능 카테고리 중 미구현·부분구현이었던 4개(IBD, 보안, 저장소, 경량 클라이언트)를 시각화하여 전체 커버리지를 완성.
+
+#### IBD (Initial Block Download) 시각화 — 신규
+- `IBDPanel.jsx`: 3단계 인터랙티브 교육 다이어그램 (Headers-first → 병렬 다운로드 → 순차 검증)
+- 하드웨어별 소요 시간 추정표 (고성능 PC / RPi4 SSD / RPi4 HDD)
+- 서버 모드: 실시간 IBD 진행률 3단계 프로그레스 바 (headers/blocks/verification)
+- `/api/ibd-status` 백엔드 엔드포인트 (10초 캐시)
+- ServerAdapter: IBD 폴링 (IBD 중 10초 / 완료 후 60초 간격)
+- ④체인 탭에 ChainTipsPanel 상단에 배치
+
+#### SecurityTab 데이터 시각화 — 강화
+- SVG 도넛 차트: 네트워크 다양성 (Clearnet/Tor/I2P/CJDNS 비율)
+- 수평 스택 바: v2 Transport 비율 (v2 purple vs v1 gray)
+- Eclipse Attack 방어 라이브 체크리스트 (4항목 점수: 다중 네트워크/Block-Relay/ASN/피어 수)
+- 네트워크 다양성 점수 표시 (활성 네트워크 수)
+- 백엔드: `/api/security`에 `peersByNetwork` 및 `topASNs` 추가
+
+#### StorageTab 시각화 — 강화
+- 디스크 사용량 분포 스택 바 (blk*.dat ~85% / rev*.dat ~10% / index ~5%)
+- blk*.dat 파일 개수 자동 계산 표시
+- Pruning 타임라인: 수평 바로 삭제/보관 구간 시각화
+- 체인 성장 추세: 2013~현재 연도별 바 차트 (현재 노드 크기 하이라이트)
+
+#### SPVTab 강화 — 강화
+- SERVICE 플래그 뱃지 그리드 (NETWORK/WITNESS/COMPACT_FILTERS 등 활성/비활성 표시)
+- BIP 157/158 필터 다운로드 플로우 인터랙티브 애니메이션 (4단계 클릭 확장)
+- Bloom vs Compact Block Filter 비교 테이블 컬러 코딩 (빨강/초록 배경)
+
+#### Vercel 모드 안내
+- `ServerOnlyBanner`: 저장소/보안/UTXO 탭에 "풀노드 연결 시 실시간 표시" 배너
+- HudPanels 확장 뷰: "풀노드 연결 시 추가: UTXO 통계, 실시간 TX 검증..." 힌트
+
+### Changed
+- `DonutChart`, `StackBar` 공통 SVG 컴포넌트를 NodeInternalsPanel에 추가
+- SecurityTab: Eclipse 방어 섹션을 서버/교육 모드로 분기 렌더링
+- StorageTab: Pruning 섹션을 서버(타임라인)/교육(텍스트) 모드로 분기
+- SPVTab: `sourceType`, `securityInfo` props 추가
+
+---
+
 ## [1.5.0] — 2026-03-28
 
 ### Added — 통합 관제센터 + 교육 레이어
