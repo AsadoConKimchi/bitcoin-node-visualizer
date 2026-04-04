@@ -96,5 +96,6 @@ export function normalizeRpcBlock(rpc) {
     _txids: rpc.tx || [],
     txTypeStats: rpc.txTypeStats || null,
     blockStats: rpc.blockStats || null,
+    txSummary: rpc.txSummary || null,
   };
 }

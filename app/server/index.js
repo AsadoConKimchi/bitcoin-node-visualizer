@@ -48,10 +48,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// REST API 요청 제한 (60req/min)
+// REST API 요청 제한 (200req/min — 블록 상세 TX 목록 lazy-fetch 고려)
 app.use('/api/', rateLimit({
   windowMs: 60 * 1000,
-  max: 60,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
 }));
@@ -498,10 +498,19 @@ app.get('/api/block/:hash', async (req, res) => {
     const medianFeeRate = feeRates.length > 0 ? feeRates[Math.floor(feeRates.length / 2)] : null;
     const avgFeeRate = feeRates.length > 0 ? feeRates.reduce((s, v) => s + v, 0) / feeRates.length : null;
 
-    // TX 본문 제거 → TXID만 + 집계 + 통계 (응답 경량화)
+    // 트리맵용 TX 요약 (txid, feeRate, vsize) — 개별 fetch 불필요
+    const txSummary = data.tx.map(t => {
+      const isCoinbase = t.vin?.[0]?.coinbase;
+      const feeSats = !isCoinbase && t.fee != null ? Math.round(t.fee * 1e8) : 0;
+      const vsize = t.weight ? t.weight / 4 : t.vsize || t.size || 1;
+      return { txid: t.txid, feeRate: vsize > 0 ? Math.round((feeSats / vsize) * 100) / 100 : 0, vsize: Math.round(vsize) };
+    });
+
+    // TX 본문 제거 → TXID만 + 집계 + 통계 + 트리맵 요약 (응답 경량화)
     res.json({
       ...data,
       tx: data.tx.map(t => t.txid),
+      txSummary,
       txTypeStats: { legacy, segwit, taproot, total: data.tx.length },
       blockStats: {
         totalFees: totalFeesSats,

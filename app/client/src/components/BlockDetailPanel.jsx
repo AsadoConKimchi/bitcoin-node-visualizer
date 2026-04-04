@@ -259,7 +259,7 @@ function TxTypeBar({ txTypeStats, txids, blockHash, sourceType }) {
 }
 
 // Block Treemap — weight 비례 사각형 + fee rate 색상
-function BlockTreemap({ txids, blockHash, sourceType, selectedTxid, onCellClick }) {
+function BlockTreemap({ txids, blockHash, sourceType, selectedTxid, onCellClick, txSummary }) {
   const [txData, setTxData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadedCount, setLoadedCount] = useState(0);
@@ -289,8 +289,13 @@ function BlockTreemap({ txids, blockHash, sourceType, selectedTxid, onCellClick 
 
     let cancelled = false;
 
-    if (sourceType === 'server') {
-      // self-hosted: 개별 TX fetch (기존 방식 유지, vsize 추출 추가)
+    if (sourceType === 'server' && txSummary?.length) {
+      // 서버에서 이미 계산된 txSummary 사용 (개별 TX fetch 불필요)
+      setTxData(txSummary);
+      setLoadedCount(txSummary.length);
+      setLoading(false);
+    } else if (sourceType === 'server') {
+      // txSummary 없으면 개별 fetch 폴백
       const sampleSize = Math.min(total, 500);
       const step = total / sampleSize;
       const sampleTxids = Array.from({ length: sampleSize }, (_, i) => txids[Math.floor(i * step)]);
@@ -878,6 +883,7 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
                         sourceType={sourceType}
                         selectedTxid={selectedTreemapTxid}
                         onCellClick={setSelectedTreemapTxid}
+                        txSummary={detail?.txSummary}
                       />
                     </div>
                     {/* Fee 색상 범례 */}
