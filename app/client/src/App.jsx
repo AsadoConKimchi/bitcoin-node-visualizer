@@ -529,12 +529,14 @@ export default function App() {
   const handleSearchBlock = useCallback((query) => {
     if (query.height != null) {
       chainStripRef.current?.scrollToHeight(query.height);
+      ccBeforeBlockRef.current = ccCollapsed;
+      setCcCollapsed(true);
       fetch(`${REST_BASE}/block-height/${query.height}`)
         .then(r => r.ok ? r.text() : Promise.reject())
         .then(hash => setSelectedBlock({ height: query.height, hash }))
         .catch(() => console.warn('블록 조회 실패:', query.height));
     }
-  }, []);
+  }, [ccCollapsed]);
 
   const handleSearchTx = useCallback((query) => {
     if (query.txid) {
@@ -828,9 +830,14 @@ export default function App() {
     txStreamVerifyRefs.current.clear();
   }, []);
 
+  // 블록 상세 열기 전 CC 상태 저장
+  const ccBeforeBlockRef = useRef(false);
+
   const handleBlockClick = useCallback((block) => {
+    ccBeforeBlockRef.current = ccCollapsed;
+    setCcCollapsed(true); // 블록 상세 열릴 때 CC 자동 접기
     setSelectedBlock(block);
-  }, []);
+  }, [ccCollapsed]);
 
   const handleTxClick = useCallback((tx) => {
     setSelectedTx(tx);
@@ -857,7 +864,7 @@ export default function App() {
           <BlockDetailPanel
             block={selectedBlock}
             mempoolBlocks={mempoolBlocks}
-            onClose={() => setSelectedBlock(null)}
+            onClose={() => { setSelectedBlock(null); setCcCollapsed(ccBeforeBlockRef.current); }}
             onTxClick={handleTxClick}
             sourceType={sourceType}
             onAddressClick={(addr) => { setSelectedBlock(null); setSelectedAddress(addr); }}
