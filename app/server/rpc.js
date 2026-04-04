@@ -16,7 +16,9 @@ let _reqId = 0;
  */
 async function rpcCall(method, params = []) {
   const id = ++_reqId;
-  const res = await fetch(RPC_URL, {
+  let res;
+  try {
+    res = await fetch(RPC_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -24,9 +26,21 @@ async function rpcCall(method, params = []) {
     },
     body: JSON.stringify({ jsonrpc: '1.1', id, method, params }),
     signal: AbortSignal.timeout(10_000),
-  });
+    });
+  } catch (err) {
+    if (err.cause?.code === 'ECONNREFUSED') {
+      throw new Error(`RPC 연결 거부 — ${RPC_URL} 호스트/포트 확인 필요: ${method}`);
+    }
+    throw new Error(`RPC 네트워크 오류 — ${err.message}: ${method}`);
+  }
 
   if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error(`RPC 인증 실패 (401) — BITCOIN_RPC_USER/PASS 환경변수 확인 필요: ${method}`);
+    }
+    if (res.status === 403) {
+      throw new Error(`RPC 접근 거부 (403) — rpcallowip 설정 확인 필요: ${method}`);
+    }
     throw new Error(`RPC HTTP ${res.status}: ${method}`);
   }
 

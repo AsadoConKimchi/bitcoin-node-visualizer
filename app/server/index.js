@@ -587,9 +587,17 @@ wss.on('connection', (ws) => {
 });
 
 // ── 서버 시작 ─────────────────────────────────────────────────────────────────
-server.listen(config.port, () => {
+server.listen(config.port, async () => {
   console.log(`[server] Bitcoin Node Visualizer 시작 → http://localhost:${config.port}`);
   console.log(`[server] 환경: ${config.nodeEnv}`);
+
+  // RPC 연결 테스트
+  try {
+    const height = await rpc.getBlockCount();
+    console.log(`[server] ✓ RPC 연결 확인 — 블록 높이 #${height.toLocaleString()}`);
+  } catch (err) {
+    console.error(`[server] ✗ RPC 연결 실패 — ${err.message}`);
+  }
 
   // ZMQ 시작 (실패 시 RPC 폴링으로 자동 전환)
   startZmq().catch((err) => {

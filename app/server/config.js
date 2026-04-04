@@ -1,8 +1,10 @@
 'use strict';
 
-// .env.local → .env 순서로 로드 (Vite 컨벤션 맞춤)
-require('dotenv').config({ path: require('path').resolve(__dirname, '../.env.local') });
-require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+// 프로덕션(Docker)에서는 dotenv 스킵 — 환경변수는 Docker/Umbrel이 주입
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({ path: require('path').resolve(__dirname, '../.env.local') });
+  require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+}
 
 const config = {
   // 서버
@@ -29,9 +31,14 @@ const config = {
   },
 };
 
-// RPC 자격증명 미설정 경고
+// RPC 설정 진단 로깅
+const maskedPass = config.rpc.pass
+  ? `${config.rpc.pass.slice(0, 4)}****` : '(비어있음)';
+console.log(`[config] RPC → ${config.rpc.user}@${config.rpc.host}:${config.rpc.port} (pass: ${maskedPass})`);
+console.log(`[config] ZMQ → ${config.zmq.host}:${config.zmq.rawblockPort}/${config.zmq.rawtxPort}`);
+
 if (!config.rpc.user || !config.rpc.pass) {
-  console.warn('[config] ⚠ BITCOIN_RPC_USER / BITCOIN_RPC_PASS 환경변수가 설정되지 않았습니다.');
+  console.error('[config] ⚠ BITCOIN_RPC_USER / BITCOIN_RPC_PASS 미설정 — RPC 호출 실패 예상');
 }
 
 module.exports = config;
