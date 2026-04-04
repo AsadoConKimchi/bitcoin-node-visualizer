@@ -756,9 +756,9 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
   const pendingTotalFees = pendingBlock?.totalFees;
 
   return (
-      <div className="absolute inset-0 overflow-y-auto bg-panel-bg-solid
+      <div className="absolute inset-0 overflow-y-auto overflow-x-hidden bg-panel-bg-solid
                       font-mono text-sm text-text-primary z-[var(--z-modal)]
-                      px-5 py-4 flex flex-col">
+                      px-5 py-4 flex flex-col border-r border-white/10">
 
         {/* 1. Header */}
         <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/10">
@@ -814,7 +814,7 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
             {/* Treemap(좌) + Pending 정보(우) 사이드바이사이드 */}
             <div className="flex gap-3 mb-3 max-sm:flex-col">
               {/* 좌측 — TX FEE RATE MAP (정사각형, 실시간 진동) */}
-              <div className="flex-[2] min-w-0 bg-dark-surface/60 border border-mempool-green/20 rounded-lg p-2">
+              <div className="w-[40%] shrink-0 min-w-0 bg-dark-surface/60 border border-mempool-green/20 rounded-lg p-2">
                 <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP (실시간)</div>
                 <div className="h-[420px] max-sm:h-[300px]">
                   <PendingBlockTreemap mempoolBlock={pendingBlock} />
@@ -832,7 +832,7 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
               </div>
 
               {/* 우측 — Pending 블록 정보 */}
-              <div className="flex-[3] max-sm:w-full space-y-3 min-w-0 pr-3">
+              <div className="flex-1 max-sm:w-full space-y-3 min-w-0 overflow-hidden pr-8">
                 <div className="space-y-0.5">
                   {pendingNTx != null && <InfoRow label="TX Count" value={`~${pendingNTx.toLocaleString()}`} />}
                   {pendingVSize != null && <InfoRow label="Block vSize" value={`${(pendingVSize / 1_000_000).toFixed(3)} MvB`} />}
@@ -869,7 +869,7 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
                 {/* 2. Treemap(좌) + 블록 정보(우) 사이드바이사이드 */}
                 <div className="flex gap-3 mb-3 max-sm:flex-col overflow-hidden">
                   {/* 좌측 — TX FEE RATE MAP (정사각형) */}
-                  <div className="flex-[2] min-w-0 bg-dark-surface/60 border border-dark-border rounded-lg p-2">
+                  <div className="w-[40%] shrink-0 min-w-0 bg-dark-surface/60 border border-dark-border rounded-lg p-2">
                     <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP</div>
                     <div className="h-[420px] max-sm:h-[300px]">
                       <BlockTreemap
@@ -893,7 +893,7 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
                   </div>
 
                   {/* 우측 — 블록 정보 + 통계 */}
-                  <div className="flex-[3] max-sm:w-full space-y-3 min-w-0 pr-3">
+                  <div className="flex-1 max-sm:w-full space-y-3 min-w-0 overflow-hidden pr-8">
                     {/* 블록 메타정보 */}
                     <div className="space-y-0.5">
                       <InfoRow label="Hash" value={detail.id || block?.hash} mono copyable />
