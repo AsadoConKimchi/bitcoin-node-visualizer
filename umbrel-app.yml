@@ -2,7 +2,7 @@ manifestVersion: 1
 id: bitcoin-node-visualizer
 category: bitcoin
 name: Bitcoin Node Visualizer
-version: "1.8.0"
+version: "1.9.0"
 tagline: Real-time 3D globe visualization of your Bitcoin full node
 description: >-
   Visualize your Bitcoin Core full node activity on an interactive 3D globe.
@@ -21,7 +21,7 @@ support: https://github.com/AsadoConKimchi/bitcoin-node-visualizer/issues
 port: 3000
 icon: https://raw.githubusercontent.com/AsadoConKimchi/umbrel-app-store/main/asadoconkimchi-bitcoin-node-visualizer/appicon.png
 gallery: []
-releaseNotes: "v1.8.0 Block detail redesign: full-area layout replacing modal, server-side TX type census (verbosity=2), DETAILS always visible, enriched TX list with Fee/Value/Weight/Type columns, RPC field mapping fix for SegWit/Taproot classification."
+releaseNotes: "v1.9.0 Treemap-TX list click linking, block statistics panel, TX type counts, column unit headers, padding improvements."
 submitter: AsadoConKimchi
 submission: ""
 path: ""
