@@ -843,10 +843,27 @@ export default function App() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden">
-      {/* 3D 지구본 — 전체 배경 */}
-      <div className="absolute inset-0" style={{ right: ccCollapsed ? 28 : CC_WIDTH }}>
+      {/* 3D 지구본 — 전체 배경 (블록 상세 시 숨기되 WebGL context 유지) */}
+      <div className="absolute inset-0" style={{
+        right: ccCollapsed ? 28 : CC_WIDTH,
+        visibility: selectedBlock ? 'hidden' : 'visible',
+      }}>
         <GlobeScene nodePoints={nodePoints} arcs={combinedArcs} rings={rings} isServerMode={sourceType === 'server'} onReady={() => setGlobeReady(true)} />
       </div>
+
+      {/* 블록 상세 — Globe 영역 대체 */}
+      {selectedBlock && (
+        <div className="absolute inset-0 z-[var(--z-strip)]" style={{ right: ccCollapsed ? 28 : CC_WIDTH }}>
+          <BlockDetailPanel
+            block={selectedBlock}
+            mempoolBlocks={mempoolBlocks}
+            onClose={() => setSelectedBlock(null)}
+            onTxClick={handleTxClick}
+            sourceType={sourceType}
+            onAddressClick={(addr) => { setSelectedBlock(null); setSelectedAddress(addr); }}
+          />
+        </div>
+      )}
 
       {/* 지구본 로딩 스피너 */}
       {!globeReady && (
@@ -873,13 +890,15 @@ export default function App() {
         </div>
       )}
 
-      {/* 상단 토글 바 */}
-      <div className="absolute top-0 left-0 z-[var(--z-modal)] flex justify-center pt-3 pointer-events-none"
-           style={{ right: ccCollapsed ? 28 : CC_WIDTH }}>
-        <div className="pointer-events-auto">
-          <ToggleBar visible={visible} onToggle={handleToggle} onSettingsClick={() => setSettingsOpen(true)} />
+      {/* 상단 토글 바 (블록 상세 열려있으면 숨김) */}
+      {!selectedBlock && (
+        <div className="absolute top-0 left-0 z-[var(--z-modal)] flex justify-center pt-3 pointer-events-none"
+             style={{ right: ccCollapsed ? 28 : CC_WIDTH }}>
+          <div className="pointer-events-auto">
+            <ToggleBar visible={visible} onToggle={handleToggle} onSettingsClick={() => setSettingsOpen(true)} />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 검색 바 */}
       <div className="absolute top-3 z-[var(--z-modal)] max-sm:right-2"
@@ -898,9 +917,9 @@ export default function App() {
         forceReplay={forceCompactBlock}
       />
 
-      {/* 체인 스트립 — Globe 상단 */}
+      {/* 체인 스트립 — Globe 상단 (블록 상세 열려있으면 숨김) */}
       <div className="absolute top-[48px] left-0 z-[var(--z-strip)]"
-           style={{ right: ccCollapsed ? 28 : CC_WIDTH }}>
+           style={{ right: ccCollapsed ? 28 : CC_WIDTH, display: selectedBlock ? 'none' : undefined }}>
         <ChainStrip
           ref={chainStripRef}
           recentBlocks={recentBlocks}
@@ -920,13 +939,15 @@ export default function App() {
         topOffset={0}
       />
 
-      {/* BitfeedFloor — 하단 바 (사이드바 겹침 방지) */}
-      <MempoolFloor
-        bitfeedRef={bitfeedRef}
-        mempoolCount={mempoolCount}
-        onTxClick={handleTxClick}
-        sidebarWidth={ccCollapsed ? 28 : CC_WIDTH}
-      />
+      {/* BitfeedFloor — 하단 바 (블록 상세 열려있으면 숨김) */}
+      {!selectedBlock && (
+        <MempoolFloor
+          bitfeedRef={bitfeedRef}
+          mempoolCount={mempoolCount}
+          onTxClick={handleTxClick}
+          sidebarWidth={ccCollapsed ? 28 : CC_WIDTH}
+        />
+      )}
 
       {/* 우측: 통합 관제센터 */}
       <div
@@ -1018,19 +1039,6 @@ export default function App() {
             )}
           </ControlCenter>
         </div>
-
-      {/* 블록 상세 패널 */}
-      {selectedBlock && (
-        <BlockDetailPanel
-          block={selectedBlock}
-          mempoolBlocks={mempoolBlocks}
-          onClose={() => setSelectedBlock(null)}
-          onTxClick={handleTxClick}
-          sourceType={sourceType}
-          onAddressClick={(addr) => { setSelectedBlock(null); setSelectedAddress(addr); }}
-          sidebarWidth={ccCollapsed ? 28 : CC_WIDTH}
-        />
-      )}
 
       {/* TX 상세 패널 */}
       {selectedTx && (

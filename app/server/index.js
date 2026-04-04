@@ -465,11 +465,27 @@ app.get('/api/tx/:txid', async (req, res) => {
   }
 });
 
-/** 블록 상세 (getblock verbosity=1) */
+/** 블록 상세 (getblock verbosity=2 → TX 유형 집계 후 경량화) */
 app.get('/api/block/:hash', async (req, res) => {
   try {
-    const data = await rpc.getBlock(req.params.hash, 1);
-    res.json(data);
+    const data = await rpc.getBlock(req.params.hash, 2);
+
+    // TX 유형 전수 집계
+    let legacy = 0, segwit = 0, taproot = 0;
+    for (const tx of data.tx) {
+      const hasTaproot = tx.vout?.some(v => v.scriptPubKey?.type === 'witness_v1_taproot');
+      const hasWitness = tx.vin?.some(v => v.txinwitness?.length > 0);
+      if (hasTaproot) taproot++;
+      else if (hasWitness) segwit++;
+      else legacy++;
+    }
+
+    // TX 본문 제거 → TXID만 + 집계 결과 (응답 경량화)
+    res.json({
+      ...data,
+      tx: data.tx.map(t => t.txid),
+      txTypeStats: { legacy, segwit, taproot, total: data.tx.length },
+    });
   } catch (err) {
     console.error(`[api/block]`, err.message);
     res.status(503).json({ error: 'Service unavailable' });

@@ -1,6 +1,22 @@
 // RPC 응답 정규화 함수
 // Bitcoin Core RPC 형식 → 앱 내부 형식(mempool.space API 호환)으로 변환
 
+// Bitcoin Core RPC script type → mempool.space 형식 변환
+function mapScriptType(rpcType) {
+  if (!rpcType) return null;
+  const MAP = {
+    'witness_v1_taproot': 'v1_p2tr',
+    'witness_v0_keyhash': 'v0_p2wpkh',
+    'witness_v0_scripthash': 'v0_p2wsh',
+    'pubkeyhash': 'p2pkh',
+    'scripthash': 'p2sh',
+    'nulldata': 'op_return',
+    'multisig': 'multisig',
+    'nonstandard': 'nonstandard',
+  };
+  return MAP[rpcType] || rpcType;
+}
+
 // RPC 응답 → 정규화 (verbosity=2: vin[].prevout 포함)
 export function normalizeRpcTx(rpc) {
   const fee = rpc.fee != null ? Math.round(rpc.fee * 1e8) : null;
@@ -13,7 +29,7 @@ export function normalizeRpcTx(rpc) {
       prevout = {
         value: v.prevout.value != null ? Math.round(v.prevout.value * 1e8) : null,
         scriptpubkey_address: v.prevout.scriptPubKey?.address ?? null,
-        scriptpubkey_type: v.prevout.scriptPubKey?.type ?? null,
+        scriptpubkey_type: mapScriptType(v.prevout.scriptPubKey?.type),
       };
     }
 
@@ -21,6 +37,7 @@ export function normalizeRpcTx(rpc) {
       ...v,
       isCoinbase,
       sequence: v.sequence,
+      witness: v.txinwitness || v.witness || [],
       prevout,
     };
   });
@@ -28,7 +45,7 @@ export function normalizeRpcTx(rpc) {
   const vouts = (rpc.vout || []).map(v => ({
     value: v.value != null ? Math.round(v.value * 1e8) : null,
     scriptpubkey_address: v.scriptPubKey?.address ?? null,
-    scriptpubkey_type: v.scriptPubKey?.type ?? null,
+    scriptpubkey_type: mapScriptType(v.scriptPubKey?.type),
   }));
 
   // fee 없을 때 prevout에서 계산 시도
@@ -77,5 +94,6 @@ export function normalizeRpcBlock(rpc) {
     version: rpc.version,
     extras: null,
     _txids: rpc.tx || [],
+    txTypeStats: rpc.txTypeStats || null,
   };
 }
