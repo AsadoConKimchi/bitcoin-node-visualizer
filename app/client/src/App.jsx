@@ -367,7 +367,7 @@ export default function App() {
       .map(peer => ({
         startLat: MY_NODE.lat, startLng: MY_NODE.lng,
         endLat: peer.lat, endLng: peer.lng,
-        color: 'rgba(247,147,26,0.5)',
+        color: 'rgba(247,147,26,0.45)',
         type: 'connection',
       }));
   }, [nodePoints]);
@@ -642,7 +642,7 @@ export default function App() {
           const arcs = [{
             startLat: src.lat, startLng: src.lng,
             endLat: MY_NODE.lat, endLng: MY_NODE.lng,
-            color: '#60a5fa', type: 'tx',
+            color: '#f7931a', type: 'tx',
           }];
 
           if (sourceType !== 'server' && Math.random() < 0.3) {
@@ -654,7 +654,7 @@ export default function App() {
                 arcs.push({
                   startLat: a.lat, startLng: a.lng,
                   endLat: b.lat, endLng: b.lng,
-                  color: '#93c5fd', type: 'tx',
+                  color: '#f7931a', type: 'tx',
                 });
               }
             }
@@ -669,7 +669,7 @@ export default function App() {
               addArcs(relayPeers.map(p => ({
                 startLat: MY_NODE.lat, startLng: MY_NODE.lng,
                 endLat: p.lat, endLng: p.lng,
-                color: '#93c5fd', type: 'tx',
+                color: '#f7931a', type: 'tx',
               })));
             }, 150);
           }
@@ -702,7 +702,7 @@ export default function App() {
         blockSrcPeers.map((n) => ({
           startLat: n.lat, startLng: n.lng,
           endLat: MY_NODE.lat, endLng: MY_NODE.lng,
-          color: '#f7931a', type: 'block',
+          color: '#a78bfa', type: 'block',
         }))
       );
 
@@ -714,7 +714,7 @@ export default function App() {
           addArcs(blockRelayPeers.map(p => ({
             startLat: MY_NODE.lat, startLng: MY_NODE.lng,
             endLat: p.lat, endLng: p.lng,
-            color: '#fbbf24', type: 'block',
+            color: '#a78bfa', type: 'block',
           })));
         }, 200);
       }
@@ -763,7 +763,7 @@ export default function App() {
         pickRandom(peers.length ? peers : nodePointsRef.current.filter((n) => !n.isMyNode), 10).map((n) => ({
           startLat: MY_NODE.lat, startLng: MY_NODE.lng,
           endLat: n.lat, endLng: n.lng,
-          color: '#22c55e', type: 'block',
+          color: '#a78bfa', type: 'block',
         }))
       );
     }));

@@ -125,12 +125,12 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isS
     globe.arcEndLat('endLat');
     globe.arcEndLng('endLng');
     globe.arcColor('color');
-    globe.arcAltitudeAutoScale(0.5);
-    globe.arcAltitude(d => d.type === 'connection' ? 0.35 : 0.45);
-    globe.arcStroke(d => d.type === 'connection' ? 0.5 : d.type === 'block' ? 1.5 : 0.6);
-    globe.arcDashLength(d => d.type === 'connection' ? 1.0 : 0.6);
-    globe.arcDashGap(d => d.type === 'connection' ? 0 : 0.3);
-    globe.arcDashAnimateTime(d => d.type === 'connection' ? 0 : d.type === 'block' ? 600 : 1200);
+    globe.arcAltitudeAutoScale(0.15);
+    globe.arcAltitude(d => d.type === 'connection' ? 0.08 : 0.08);
+    globe.arcStroke(d => d.type === 'connection' ? 0.5 : d.type === 'block' ? 3.0 : 2.0);
+    globe.arcDashLength(d => d.type === 'connection' ? 1.0 : d.type === 'block' ? 0.04 : 0.03);
+    globe.arcDashGap(d => d.type === 'connection' ? 0 : 1.0);
+    globe.arcDashAnimateTime(d => d.type === 'connection' ? 0 : d.type === 'block' ? 800 : 1200);
 
     // 링 (TX 이벤트)
     globe.ringsData(ringsRef.current || []);
