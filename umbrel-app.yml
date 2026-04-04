@@ -2,7 +2,7 @@ manifestVersion: 1
 id: bitcoin-node-visualizer
 category: bitcoin
 name: Bitcoin Node Visualizer
-version: "1.7.1"
+version: "1.7.2"
 tagline: Real-time 3D globe visualization of your Bitcoin full node
 description: >-
   Visualize your Bitcoin Core full node activity on an interactive 3D globe.
@@ -21,7 +21,7 @@ support: https://github.com/AsadoConKimchi/bitcoin-node-visualizer/issues
 port: 3000
 icon: https://raw.githubusercontent.com/AsadoConKimchi/umbrel-app-store/main/asadoconkimchi-bitcoin-node-visualizer/appicon.png
 gallery: []
-releaseNotes: "v1.7.1 RPC connection resilience: skip dotenv in production Docker, startup RPC diagnostics with masked credentials, detailed error messages for 401/403/connection refused, .dockerignore to prevent .env leakage."
+releaseNotes: "v1.7.2 Fix RPC compatibility with Bitcoin Core/Knots v28+: JSON-RPC version 1.1→1.0 (fixes HTTP 400 Bad Request), trust proxy for Umbrel reverse proxy, startup RPC diagnostics."
 submitter: AsadoConKimchi
 submission: ""
 path: ""
