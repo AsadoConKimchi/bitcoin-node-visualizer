@@ -6,42 +6,30 @@ import { feeColor } from '../utils/colors.js';
 function StepProgressBar({ steps }) {
   if (!steps?.length) return null;
 
-  // 현재 활성 단계 찾기
   const activeStep = steps.find(s => s.status === 'active');
   const allDone = steps.every(s => s.status === 'done');
   const hasFail = steps.some(s => s.status === 'fail');
 
   return (
-    <div className="flex flex-col items-end gap-0.5 ml-1 min-w-[140px]">
-      {/* 세그먼트 바 */}
-      <div className="flex gap-[2px] w-[140px] h-[12px]">
+    <div className="w-full mt-1">
+      {/* 전체 너비 세그먼트 바 */}
+      <div className="flex gap-[2px] w-full h-[8px]">
         {steps.map((step, i) => {
           let bg;
-          let className = 'flex-1 rounded-sm transition-all duration-300';
+          let cls = 'flex-1 rounded-sm transition-all duration-300';
           if (step.status === 'done') bg = '#22c55e';
           else if (step.status === 'fail') bg = '#ef4444';
-          else if (step.status === 'active') {
-            bg = '#f7931a';
-            className += ' step-pulse';
-          } else {
-            bg = '#1e2328';
-          }
+          else if (step.status === 'active') { bg = '#f7931a'; cls += ' step-pulse'; }
+          else bg = '#1e2328';
           return (
-            <div
-              key={i}
-              className={className}
-              style={{ backgroundColor: bg }}
-              title={step.name}
-            />
+            <div key={i} className={cls} style={{ backgroundColor: bg }} title={step.name} />
           );
         })}
       </div>
-      {/* 현재 단계명 텍스트 */}
-      <div className="text-label-xs font-mono leading-none whitespace-nowrap"
-           style={{
-             color: hasFail ? '#ef4444' : allDone ? '#22c55e' : '#f7931a',
-           }}>
-        {hasFail ? '실패' : allDone ? '완료' : activeStep?.name || '대기'}
+      {/* 현재 단계명 */}
+      <div className="text-label-sm leading-none whitespace-nowrap mt-0.5"
+           style={{ color: hasFail ? '#ef4444' : allDone ? '#22c55e' : '#f7931a' }}>
+        {hasFail ? '실패' : allDone ? '→ 멤풀' : activeStep?.name || '대기'}
       </div>
     </div>
   );
@@ -180,21 +168,18 @@ export default function TxStreamPanel({
                       {short}
                     </span>
                     {isFailed && tx.failReason && <span className="text-error text-label ml-1">{tx.failReason}</span>}
-                    <span className="ml-auto">
-                      {isFailed ? <span className="text-error text-label">반려</span>
-                       : isAnimating ? <span className="text-mempool-green text-label">→ 멤풀</span>
-                       : snap?.steps ? <StepProgressBar steps={snap.steps} />
-                       : <span className="text-text-dim text-label">검증중</span>}
+                    <span className="ml-auto flex items-center gap-1.5 text-label font-mono">
+                      {txFeeRate != null && <span style={{ color: feeColor(txFeeRate) }}>{txFeeRate} sat/vB</span>}
+                      {txWeight != null && <span className="text-text-dim">{txWeight}WU</span>}
+                      {txVin != null && txVout != null && <span className="text-muted">{txVin}in → {txVout}out</span>}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 ml-6 mt-0.5 text-label font-mono">
-                    {txFeeRate != null && <span style={{ color: feeColor(txFeeRate) }}>{txFeeRate} sat/vB</span>}
-                    {(txSize != null || txWeight != null) && (
-                      <span className="text-text-dim">
-                        {txSize != null && `${txSize}B`}{txSize != null && txWeight != null && ' · '}{txWeight != null && `${txWeight}WU`}
-                      </span>
-                    )}
-                    {txVin != null && txVout != null && <span className="text-muted">{txVin}in → {txVout}out</span>}
+                  {/* 진행 바 — 별도 행, 전체 너비 */}
+                  <div className="ml-6 mt-0.5">
+                    {isFailed ? <span className="text-error text-label">반려</span>
+                     : isAnimating ? <span className="text-mempool-green text-label">→ 멤풀</span>
+                     : snap?.steps ? <StepProgressBar steps={snap.steps} />
+                     : <span className="text-text-dim text-label">대기</span>}
                   </div>
                 </div>
 

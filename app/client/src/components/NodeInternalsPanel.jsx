@@ -34,7 +34,7 @@ function TabBar({ active, onSelect }) {
 
 function SectionTitle({ children }) {
   return (
-    <div className="text-text-secondary text-label-sm tracking-wide mt-2.5 mb-1">
+    <div className="text-xs text-muted font-semibold uppercase tracking-wider mb-2 mt-5 pb-1 border-b border-dark-border">
       {children}
     </div>
   );

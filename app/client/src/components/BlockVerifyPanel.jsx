@@ -49,11 +49,19 @@ function MerkleNode({ label, done, active }) {
   const borderClass = done ? 'border-success' : active ? 'border-warning' : 'border-dark-border';
   const textClass = done ? 'text-success' : active ? 'text-warning' : 'text-muted-dim';
 
+  // 해시가 8자 이상이면 앞4 + … + 뒤4로 줄여 가독성 확보
+  const displayLabel = label && label.length > 8
+    ? `${label.slice(0, 4)}…${label.slice(-4)}`
+    : label;
+
   return (
-    <div className={`${bgClass} border ${borderClass} ${textClass} rounded
-                    text-label px-2 py-1 text-center min-w-[64px] font-mono
-                    transition-all duration-300 ${active ? 'animate-pulse' : ''}`}>
-      {label}
+    <div
+      className={`${bgClass} border ${borderClass} ${textClass} rounded
+                  text-label px-2 py-1 text-center min-w-[72px] font-mono cursor-default
+                  transition-all duration-300 ${active ? 'animate-pulse' : ''}`}
+      title={label}
+    >
+      {displayLabel}
     </div>
   );
 }

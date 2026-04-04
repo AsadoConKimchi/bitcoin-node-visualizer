@@ -59,13 +59,18 @@ app.use(express.static(CLIENT_DIST));
 
 // ── REST API ─────────────────────────────────────────────────────────────────
 
-/** 헬스 체크 */
-app.get('/health', (req, res) => {
+/** 헬스 체크 — 실제 RPC 호출로 연결 상태 확인 */
+app.get('/health', async (req, res) => {
   const mode = getMode();
+  let rpcOk = false;
+  try {
+    await rpc.getBlockCount();
+    rpcOk = true;
+  } catch (_) { /* RPC 연결 실패 */ }
   res.json({
     ok: true,
     mode,
-    rpcConnected: mode !== 'error',
+    rpcConnected: rpcOk,
     clients: broadcaster.clientCount,
   });
 });
@@ -572,11 +577,12 @@ wss.on('connection', (ws) => {
         blocks: info.blocks,
         bestBlockHash: info.bestblockhash,
         mode: getMode(),
+        rpcConnected: true,
         recentBlocks,
       });
     })
     .catch(() => {
-      broadcaster.sendTo(ws, 'init', { mode: getMode() });
+      broadcaster.sendTo(ws, 'init', { mode: getMode(), rpcConnected: false });
     });
 });
 

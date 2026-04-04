@@ -125,8 +125,8 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isS
     globe.arcEndLat('endLat');
     globe.arcEndLng('endLng');
     globe.arcColor('color');
-    globe.arcAltitudeAutoScale(0.3);
-    globe.arcAltitude(d => d.type === 'connection' ? 0.15 : 0.25);
+    globe.arcAltitudeAutoScale(0.5);
+    globe.arcAltitude(d => d.type === 'connection' ? 0.35 : 0.45);
     globe.arcStroke(d => d.type === 'connection' ? 0.5 : d.type === 'block' ? 1.5 : 0.6);
     globe.arcDashLength(d => d.type === 'connection' ? 1.0 : 0.6);
     globe.arcDashGap(d => d.type === 'connection' ? 0 : 0.3);

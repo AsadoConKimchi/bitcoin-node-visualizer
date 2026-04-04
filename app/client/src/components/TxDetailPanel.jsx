@@ -21,7 +21,7 @@ function FeatureBadge({ label, color }) {
   );
 }
 
-export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick }) {
+export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick, sidebarWidth = 0 }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -88,14 +88,20 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick 
 
   return (
     <>
-      <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[var(--z-modal-backdrop)]" />
+      <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[var(--z-modal-backdrop)]"
+           style={{ right: sidebarWidth }} />
 
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+      <div className="absolute top-1/2 -translate-y-1/2
                       w-[720px] max-h-[85vh] overflow-y-auto bg-panel-bg-solid
                       border border-white/10 rounded-xl px-5 py-4
                       font-mono text-sm text-text-primary backdrop-blur-md z-[var(--z-modal)]
                       max-sm:w-[calc(100vw-16px)] max-sm:max-h-[90vh]"
-           style={{ boxShadow: 'var(--shadow-modal)' }}>
+           style={{
+             left: `calc((100vw - ${sidebarWidth}px) / 2)`,
+             transform: 'translate(-50%, -50%)',
+             maxWidth: `calc(100vw - ${sidebarWidth}px - 32px)`,
+             boxShadow: 'var(--shadow-modal)',
+           }}>
 
         {/* 1. Header — TXID + Copy + 확인 배지 */}
         <div className="flex justify-between items-start mb-3 pb-2 border-b border-white/10">

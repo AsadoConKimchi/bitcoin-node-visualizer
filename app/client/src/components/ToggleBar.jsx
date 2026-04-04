@@ -66,7 +66,7 @@ export default function ToggleBar({ visible, onToggle, onSettingsClick }) {
         {/* 슬라이딩 pill 배경 */}
         {pillStyle && (
           <div
-            className="absolute bg-white/12 rounded-lg shadow-sm transition-all duration-300 ease-out pointer-events-none"
+            className="absolute bg-white/18 rounded-lg shadow-sm transition-all duration-300 ease-out pointer-events-none"
             style={{
               left: pillStyle.left,
               top: pillStyle.top,
@@ -90,7 +90,7 @@ export default function ToggleBar({ visible, onToggle, onSettingsClick }) {
                          md:px-3.5 md:py-1.5 md:text-sm
                          ${active
                            ? 'text-white font-medium'
-                           : 'text-text-secondary hover:text-text-primary hover:bg-white/5'}`}
+                           : 'text-slate-300 hover:text-text-primary hover:bg-white/5'}`}
             >
               <span className="hidden sm:inline mr-1">{icon}</span>
               {label}

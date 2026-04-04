@@ -130,8 +130,8 @@ const Z_FOCUSED = 15;
 
 // ── MempoolFloor (적응형 높이) ──
 function MempoolFloor({ bitfeedRef, mempoolCount, onTxClick, sidebarWidth = 0 }) {
-  const [expanded, setExpanded] = useState(true);
-  const height = expanded ? 280 : 140;
+  const [expanded, setExpanded] = useState(false);
+  const height = expanded ? 180 : 100;
 
   return (
     <div
@@ -297,6 +297,7 @@ export default function App() {
   // ── 네트워크 상태 ──
   const [mode, setMode] = useState('connecting');
   const [serverMode, setServerMode] = useState(null);
+  const [rpcConnected, setRpcConnected] = useState(true);
   const [chain, setChain] = useState(null);
   const [blockHeight, setBlockHeight] = useState(null);
   const [mempoolCount, setMempoolCount] = useState(null);
@@ -608,6 +609,7 @@ export default function App() {
         errorTimerRef.current = null;
       }
       setShowErrorOverlay(false);
+      if (data.rpcConnected != null) setRpcConnected(data.rpcConnected);
       if (data.chain) setChain(data.chain);
       if (data.blocks != null) setBlockHeight(data.blocks);
       if (data.bestBlockHash) setBestBlockHash(data.bestBlockHash);
@@ -842,7 +844,7 @@ export default function App() {
   return (
     <div className="relative w-screen h-screen overflow-hidden">
       {/* 3D 지구본 — 전체 배경 */}
-      <div className="absolute inset-0" style={{ right: ccCollapsed ? 0 : CC_WIDTH }}>
+      <div className="absolute inset-0" style={{ right: ccCollapsed ? 28 : CC_WIDTH }}>
         <GlobeScene nodePoints={nodePoints} arcs={combinedArcs} rings={rings} isServerMode={sourceType === 'server'} onReady={() => setGlobeReady(true)} />
       </div>
 
@@ -873,7 +875,7 @@ export default function App() {
 
       {/* 상단 토글 바 */}
       <div className="absolute top-0 left-0 z-[var(--z-modal)] flex justify-center pt-3 pointer-events-none"
-           style={{ right: ccCollapsed ? 0 : CC_WIDTH }}>
+           style={{ right: ccCollapsed ? 28 : CC_WIDTH }}>
         <div className="pointer-events-auto">
           <ToggleBar visible={visible} onToggle={handleToggle} onSettingsClick={() => setSettingsOpen(true)} />
         </div>
@@ -881,7 +883,7 @@ export default function App() {
 
       {/* 검색 바 */}
       <div className="absolute top-3 z-[var(--z-modal)] max-sm:right-2"
-           style={{ right: ccCollapsed ? 16 : CC_WIDTH + 16 }}>
+           style={{ right: ccCollapsed ? 44 : CC_WIDTH + 16 }}>
         <SearchBar
           onSearchBlock={handleSearchBlock}
           onSearchTx={handleSearchTx}
@@ -898,7 +900,7 @@ export default function App() {
 
       {/* 체인 스트립 — Globe 상단 */}
       <div className="absolute top-[48px] left-0 z-[var(--z-strip)]"
-           style={{ right: ccCollapsed ? 0 : CC_WIDTH }}>
+           style={{ right: ccCollapsed ? 28 : CC_WIDTH }}>
         <ChainStrip
           ref={chainStripRef}
           recentBlocks={recentBlocks}
@@ -923,20 +925,22 @@ export default function App() {
         bitfeedRef={bitfeedRef}
         mempoolCount={mempoolCount}
         onTxClick={handleTxClick}
-        sidebarWidth={ccCollapsed ? 0 : CC_WIDTH}
+        sidebarWidth={ccCollapsed ? 28 : CC_WIDTH}
       />
 
       {/* 우측: 통합 관제센터 */}
       <div
         className="absolute top-0 bottom-0 right-0 z-[var(--z-hud)]
                    transition-[width] duration-300 ease-out overflow-hidden"
-        style={{ width: ccCollapsed ? 0 : CC_WIDTH }}
+        style={{ width: ccCollapsed ? 28 : CC_WIDTH }}
       >
           <ControlCenter
             activeTab={ccTab}
             onTabChange={setCcTab}
             collapsed={ccCollapsed}
             onToggleCollapse={() => setCcCollapsed(c => !c)}
+            mode={mode}
+            blockHeight={blockHeight}
           >
             {/* 노드 정보 탭 */}
             {ccTab === 'nodeInfo' && (
@@ -946,6 +950,7 @@ export default function App() {
                 visible={true}
                 mode={mode}
                 serverMode={serverMode}
+                rpcConnected={rpcConnected}
                 chain={chain}
                 blockHeight={blockHeight}
                 mempoolCount={mempoolCount}
@@ -1023,6 +1028,7 @@ export default function App() {
           onTxClick={handleTxClick}
           sourceType={sourceType}
           onAddressClick={(addr) => { setSelectedBlock(null); setSelectedAddress(addr); }}
+          sidebarWidth={ccCollapsed ? 28 : CC_WIDTH}
         />
       )}
 
@@ -1033,6 +1039,7 @@ export default function App() {
           onClose={() => setSelectedTx(null)}
           sourceType={sourceType}
           onAddressClick={(addr) => { setSelectedTx(null); setSelectedAddress(addr); }}
+          sidebarWidth={ccCollapsed ? 28 : CC_WIDTH}
         />
       )}
 
@@ -1042,6 +1049,7 @@ export default function App() {
           address={selectedAddress}
           onClose={() => setSelectedAddress(null)}
           onTxClick={handleTxClick}
+          sidebarWidth={ccCollapsed ? 28 : CC_WIDTH}
         />
       )}
 

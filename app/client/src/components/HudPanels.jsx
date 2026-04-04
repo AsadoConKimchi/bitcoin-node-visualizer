@@ -24,15 +24,20 @@ const SERVER_MODE_SUFFIX = {
 
 function Row({ label, value, valueColor }) {
   return (
-    <div className="flex justify-between gap-4 py-0.5 overflow-hidden">
+    <div className="flex justify-between gap-2 py-0.5 overflow-hidden min-w-0">
       <span className="text-text-secondary shrink-0">{label}</span>
-      <span className={`font-mono text-right shrink min-w-0 truncate ${valueColor || 'text-text-primary'}`}>{value ?? '—'}</span>
+      <span
+        className={`font-mono text-right min-w-0 truncate ${valueColor || 'text-text-primary'}`}
+        title={typeof value === 'string' ? value : undefined}
+      >
+        {value ?? '—'}
+      </span>
     </div>
   );
 }
 
 const HudPanels = forwardRef(function HudPanels({
-  mode, serverMode, chain, blockHeight, mempoolCount, feeRate, halfHourFee, hourFee,
+  mode, serverMode, rpcConnected = true, chain, blockHeight, mempoolCount, feeRate, halfHourFee, hourFee,
   diffAdj, txPerSec, visible, sourceType, mempoolInfo, nodeInfo, utxoStats, bestBlockHash,
   minimized, onClose, onMinimize, zIndex, onFocus,
   embedded = false,
@@ -128,6 +133,14 @@ const HudPanels = forwardRef(function HudPanels({
           <span className="font-bold text-xs tracking-wide">NODE INFO</span>
           <span className={`text-xs font-mono ${dotColorClass}`}>{statusLabel}</span>
         </div>
+
+        {/* RPC 연결 실패 배너 */}
+        {isServer && !rpcConnected && (
+          <div className="bg-red-900/60 border border-red-500/40 rounded px-2 py-1 mb-2
+                         text-xs text-red-300 text-center">
+            ⚠ RPC 미연결 — ZMQ 전용 모드 (블록/멤풀/피어 정보 제한)
+          </div>
+        )}
 
         {/* IBD 배너 */}
         {isIBD && (
