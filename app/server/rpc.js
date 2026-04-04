@@ -24,7 +24,7 @@ async function rpcCall(method, params = []) {
       'Content-Type': 'application/json',
       Authorization: `Basic ${AUTH}`,
     },
-    body: JSON.stringify({ jsonrpc: '1.1', id, method, params }),
+    body: JSON.stringify({ jsonrpc: '1.0', id, method, params }),
     signal: AbortSignal.timeout(10_000),
     });
   } catch (err) {
@@ -144,7 +144,7 @@ async function getTxOutSetInfo() {
       'Content-Type': 'application/json',
       Authorization: `Basic ${AUTH}`,
     },
-    body: JSON.stringify({ jsonrpc: '1.1', id, method: 'gettxoutsetinfo', params: [] }),
+    body: JSON.stringify({ jsonrpc: '1.0', id, method: 'gettxoutsetinfo', params: [] }),
     signal: AbortSignal.timeout(60_000),
   });
   if (!res.ok) throw new Error(`RPC HTTP ${res.status}: gettxoutsetinfo`);

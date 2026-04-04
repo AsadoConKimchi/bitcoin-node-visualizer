@@ -16,6 +16,9 @@ const { startZmq, getMode } = require('./zmq');
 
 const app = express();
 
+// Umbrel app_proxy 리버스 프록시 뒤에서 동작 — X-Forwarded-For 신뢰
+app.set('trust proxy', 1);
+
 // 외부 IP 기반 노드 위치 캐시 (서버 시작 시 1회 조회)
 let _externalIpLocation = null;
 (async () => {
