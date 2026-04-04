@@ -250,20 +250,32 @@ function TxTypeBar({ txTypeStats, txids, blockHash, sourceType }) {
         {pTaproot > 0 && <div className="bg-block-purple" style={{ width: `${pTaproot}%` }} />}
       </div>
       <div className="flex justify-between text-label-sm">
-        <span className="text-btc-orange">Legacy {pLegacy}%</span>
-        <span className="text-tx-blue">SegWit {pSegwit}%</span>
-        <span className="text-block-purple">Taproot {pTaproot}%</span>
+        <span className="text-btc-orange">Legacy {legacy}건 ({pLegacy}%)</span>
+        <span className="text-tx-blue">SegWit {segwit}건 ({pSegwit}%)</span>
+        <span className="text-block-purple">Taproot {taproot}건 ({pTaproot}%)</span>
       </div>
     </div>
   );
 }
 
 // Block Treemap — weight 비례 사각형 + fee rate 색상
-function BlockTreemap({ txids, blockHash, sourceType }) {
+function BlockTreemap({ txids, blockHash, sourceType, selectedTxid, onCellClick }) {
   const [txData, setTxData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadedCount, setLoadedCount] = useState(0);
   const canvasRef = useRef(null);
+  const rectsRef = useRef([]);
+
+  // 캔버스 클릭 → 셀 찾기 → 콜백
+  const handleCanvasClick = useCallback((e) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !rectsRef.current.length) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const found = rectsRef.current.find(r => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
+    if (found?.txid) onCellClick?.(found.txid);
+  }, [onCellClick]);
   const containerRef = useRef(null);
 
   const total = txids?.length || 0;
@@ -393,6 +405,7 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
       const items = txData.map(tx => ({ ...tx, weight: tx.vsize }));
       items.sort((a, b) => b.feeRate - a.feeRate);
       const rects = squarify(items, w, h);
+      rectsRef.current = rects;
 
       ctx.clearRect(0, 0, w, h);
 
@@ -400,6 +413,13 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
         ctx.globalAlpha = 0.9;
         ctx.fillStyle = feeColor(rect.feeRate);
         ctx.fillRect(rect.x, rect.y, rect.w - 0.5, rect.h - 0.5);
+
+        // 선택된 TX 하이라이트
+        if (rect.txid === selectedTxid) {
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(rect.x + 1, rect.y + 1, rect.w - 2.5, rect.h - 2.5);
+        }
       }
 
       ctx.globalAlpha = 1;
@@ -407,7 +427,7 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
 
     const rafId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(rafId);
-  }, [txData]);
+  }, [txData, selectedTxid]);
 
   if (!total) {
     return (
@@ -427,7 +447,8 @@ function BlockTreemap({ txids, blockHash, sourceType }) {
           }
         </div>
       )}
-      <canvas ref={canvasRef} className="block" role="img" aria-label="블록 내 트랜잭션 분포를 트리맵으로 시각화. 각 셀은 TX를 나타내며 색상은 수수료율입니다." />
+      <canvas ref={canvasRef} className="block cursor-pointer" onClick={handleCanvasClick}
+              role="img" aria-label="블록 내 트랜잭션 분포를 트리맵으로 시각화. 각 셀은 TX를 나타내며 색상은 수수료율입니다." />
       <div className="absolute bottom-1 right-1.5 text-label-xs text-white/40 pointer-events-none">
         {total.toLocaleString()} TX
       </div>
@@ -464,7 +485,7 @@ function FeeBar({ feeRange }) {
 }
 
 // TX 목록 (fee, size, in/out 정보 포함)
-function TxListEnriched({ visibleTxids, txDetails, setTxDetails, sourceType, onTxClick, txLoading, hasMore, txids, onLoadMore }) {
+function TxListEnriched({ visibleTxids, txDetails, setTxDetails, sourceType, onTxClick, txLoading, hasMore, txids, onLoadMore, highlightTxid, setTxPage }) {
   // 표시 중인 TX의 상세 정보를 lazy-fetch
   useEffect(() => {
     const toFetch = visibleTxids.filter(txid => !txDetails[txid]);
@@ -497,6 +518,20 @@ function TxListEnriched({ visibleTxids, txDetails, setTxDetails, sourceType, onT
     return () => { cancelled = true; };
   }, [visibleTxids.length, sourceType]);
 
+  // 하이라이트 TX가 현재 페이지에 없으면 페이지 확장 후 스크롤
+  useEffect(() => {
+    if (!highlightTxid) return;
+    const idx = txids.indexOf(highlightTxid);
+    if (idx === -1) return;
+    const neededPage = Math.ceil((idx + 1) / 25);
+    const currentMaxPage = Math.ceil(visibleTxids.length / 25);
+    if (neededPage > currentMaxPage) setTxPage?.(neededPage);
+    setTimeout(() => {
+      const el = document.getElementById(`tx-row-${highlightTxid}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  }, [highlightTxid]);
+
   return (
     <div className="px-2 pb-2 flex-1 overflow-y-auto min-h-0">
       {txLoading && (
@@ -506,8 +541,8 @@ function TxListEnriched({ visibleTxids, txDetails, setTxDetails, sourceType, onT
       <div className="grid grid-cols-[36px_1fr_64px_80px_56px_56px_48px] gap-1 items-center text-label-xs text-muted py-1 border-b border-white/10 mb-0.5">
         <span>#</span>
         <span>TXID</span>
-        <span className="text-right">Fee</span>
-        <span className="text-right">Value</span>
+        <span className="text-right">s/vB</span>
+        <span className="text-right">BTC</span>
         <span className="text-right">Weight</span>
         <span className="text-right">In/Out</span>
         <span className="text-right">Type</span>
@@ -533,12 +568,15 @@ function TxListEnriched({ visibleTxids, txDetails, setTxDetails, sourceType, onT
           else txType = 'Leg';
         }
 
+        const isHighlighted = txid === highlightTxid;
         return (
           <div
             key={txid}
+            id={`tx-row-${txid}`}
             onClick={(e) => { e.stopPropagation(); onTxClick?.({ txid, data: tx || {} }); }}
-            className="grid grid-cols-[36px_1fr_64px_80px_56px_56px_48px] gap-1 items-center text-xs py-1.5 px-1
-                       border-b border-dark-surface cursor-pointer hover:bg-btc-orange/5 rounded"
+            className={`grid grid-cols-[36px_1fr_64px_80px_56px_56px_48px] gap-1 items-center text-xs py-1.5 px-1
+                       border-b border-dark-surface cursor-pointer hover:bg-btc-orange/5 rounded
+                       ${isHighlighted ? 'bg-btc-orange/15 border-l-2 border-l-btc-orange' : ''}`}
           >
             <span className={`text-text-dim ${i === 0 ? 'text-btc-orange font-bold' : ''}`}>
               {i === 0 ? 'CB' : i}
@@ -601,6 +639,8 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
   const [txPage, setTxPage] = useState(1);
   // TX 상세 캐시 (lazy fetch)
   const [txDetails, setTxDetails] = useState({});
+  // 트리맵 셀 선택 → TX 목록 하이라이트
+  const [selectedTreemapTxid, setSelectedTreemapTxid] = useState(null);
 
   // 현재 블록 height 추적 (prev/next 네비게이션)
   const [navHeight, setNavHeight] = useState(block?.height ?? null);
@@ -792,7 +832,7 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
               </div>
 
               {/* 우측 — Pending 블록 정보 */}
-              <div className="flex-[3] max-sm:w-full space-y-3 min-w-0">
+              <div className="flex-[3] max-sm:w-full space-y-3 min-w-0 pr-3">
                 <div className="space-y-0.5">
                   {pendingNTx != null && <InfoRow label="TX Count" value={`~${pendingNTx.toLocaleString()}`} />}
                   {pendingVSize != null && <InfoRow label="Block vSize" value={`${(pendingVSize / 1_000_000).toFixed(3)} MvB`} />}
@@ -836,6 +876,8 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
                         txids={txids.length > 0 ? txids : (detail._txids || [])}
                         blockHash={navHash || block?.hash}
                         sourceType={sourceType}
+                        selectedTxid={selectedTreemapTxid}
+                        onCellClick={setSelectedTreemapTxid}
                       />
                     </div>
                     {/* Fee 색상 범례 */}
@@ -851,7 +893,7 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
                   </div>
 
                   {/* 우측 — 블록 정보 + 통계 */}
-                  <div className="flex-[3] max-sm:w-full space-y-3 min-w-0">
+                  <div className="flex-[3] max-sm:w-full space-y-3 min-w-0 pr-3">
                     {/* 블록 메타정보 */}
                     <div className="space-y-0.5">
                       <InfoRow label="Hash" value={detail.id || block?.hash} mono copyable />
@@ -908,6 +950,18 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
                         mempool.space에서 보기 ↗
                       </a>
                     </div>
+
+                    {/* 블록 통계 (서버 집계) */}
+                    {detail.blockStats && (
+                      <div className="p-2 bg-dark-surface rounded border border-dark-border space-y-0.5">
+                        <div className="text-muted text-label-sm font-bold mb-1">BLOCK STATISTICS</div>
+                        <InfoRow label="총 수수료" value={detail.blockStats.totalFees != null ? `${formatBtc(detail.blockStats.totalFees)} BTC` : null} highlight />
+                        <InfoRow label="평균 Fee Rate" value={detail.blockStats.avgFeeRate != null ? `${detail.blockStats.avgFeeRate} sat/vB` : null} />
+                        <InfoRow label="중간 Fee Rate" value={detail.blockStats.medianFeeRate != null ? `${detail.blockStats.medianFeeRate} sat/vB` : null} />
+                        <InfoRow label="최대 TX 출력" value={detail.blockStats.maxTxValue != null ? `${formatBtc(detail.blockStats.maxTxValue)} BTC` : null} />
+                        <InfoRow label="평균 TX 크기" value={detail.blockStats.avgTxSize != null ? `${detail.blockStats.avgTxSize} B` : null} />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -933,6 +987,8 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
                         hasMore={hasMore}
                         txids={txids}
                         onLoadMore={() => setTxPage(p => p + 1)}
+                        highlightTxid={selectedTreemapTxid}
+                        setTxPage={setTxPage}
                       />
                     )}
                   </div>

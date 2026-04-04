@@ -95,5 +95,6 @@ export function normalizeRpcBlock(rpc) {
     extras: null,
     _txids: rpc.tx || [],
     txTypeStats: rpc.txTypeStats || null,
+    blockStats: rpc.blockStats || null,
   };
 }

@@ -470,21 +470,46 @@ app.get('/api/block/:hash', async (req, res) => {
   try {
     const data = await rpc.getBlock(req.params.hash, 2);
 
-    // TX 유형 전수 집계
+    // TX 유형 전수 집계 + 블록 통계 계산
     let legacy = 0, segwit = 0, taproot = 0;
+    let totalFeesSats = 0, feeRates = [], txValues = [], txSizes = [];
+
     for (const tx of data.tx) {
       const hasTaproot = tx.vout?.some(v => v.scriptPubKey?.type === 'witness_v1_taproot');
       const hasWitness = tx.vin?.some(v => v.txinwitness?.length > 0);
       if (hasTaproot) taproot++;
       else if (hasWitness) segwit++;
       else legacy++;
+
+      // 수수료 계산 (coinbase 제외)
+      const isCoinbase = tx.vin?.[0]?.coinbase;
+      if (!isCoinbase && tx.fee != null) {
+        const feeSats = Math.round(tx.fee * 1e8);
+        totalFeesSats += feeSats;
+        const vsize = tx.weight ? tx.weight / 4 : tx.vsize || tx.size;
+        if (vsize > 0) feeRates.push(feeSats / vsize);
+      }
+      const outVal = tx.vout?.reduce((s, v) => s + (v.value || 0), 0) || 0;
+      txValues.push(outVal);
+      txSizes.push(tx.size || 0);
     }
 
-    // TX 본문 제거 → TXID만 + 집계 결과 (응답 경량화)
+    feeRates.sort((a, b) => a - b);
+    const medianFeeRate = feeRates.length > 0 ? feeRates[Math.floor(feeRates.length / 2)] : null;
+    const avgFeeRate = feeRates.length > 0 ? feeRates.reduce((s, v) => s + v, 0) / feeRates.length : null;
+
+    // TX 본문 제거 → TXID만 + 집계 + 통계 (응답 경량화)
     res.json({
       ...data,
       tx: data.tx.map(t => t.txid),
       txTypeStats: { legacy, segwit, taproot, total: data.tx.length },
+      blockStats: {
+        totalFees: totalFeesSats,
+        avgFeeRate: avgFeeRate != null ? Math.round(avgFeeRate * 10) / 10 : null,
+        medianFeeRate: medianFeeRate != null ? Math.round(medianFeeRate * 10) / 10 : null,
+        maxTxValue: Math.round(Math.max(...txValues) * 1e8),
+        avgTxSize: Math.round(txSizes.reduce((s, v) => s + v, 0) / txSizes.length),
+      },
     });
   } catch (err) {
     console.error(`[api/block]`, err.message);

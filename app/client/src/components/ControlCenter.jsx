@@ -61,7 +61,7 @@ export default function ControlCenter({
 
   return (
     <div className="flex flex-col h-full w-full bg-panel-bg border-l border-white/10 backdrop-blur-xl overflow-hidden"
-         style={{ paddingRight: 12 }}>
+         style={{ paddingRight: 16 }}>
       {/* Reorg 배너 (탭과 무관하게 항상 표시) */}
       {reorgBanner}
 
