@@ -122,13 +122,13 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick,
               </div>
               <div className="flex gap-2 mt-1.5 flex-wrap">
                 {detail?.status?.confirmed ? (() => {
-                  const confs = latestHeight && detail.status.block_height
-                    ? latestHeight - detail.status.block_height + 1 : null;
+                  const confs = detail.status.confirmations
+                    ?? (latestHeight && detail.status.block_height ? latestHeight - detail.status.block_height + 1 : null);
                   return (
                   <span className="text-label bg-green-500/15 border border-green-500/30 text-green-400 px-1.5 py-0.5 rounded">
-                    {detail.status.block_height
-                      ? `Confirmed (Block #${detail.status.block_height.toLocaleString()}${confs != null ? ` · ${confs.toLocaleString()} confirmations` : ''})`
-                      : 'Confirmed'}
+                    Confirmed
+                    {detail.status.block_height ? ` (Block #${detail.status.block_height.toLocaleString()})` : ''}
+                    {confs != null ? ` · ${confs.toLocaleString()} confirmations` : ''}
                   </span>);
                 })() : detail ? (
                   <span className="text-label bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 px-1.5 py-0.5 rounded">

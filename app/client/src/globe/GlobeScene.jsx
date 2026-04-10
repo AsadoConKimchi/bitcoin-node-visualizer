@@ -167,7 +167,7 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isS
       const dx = e.clientX - prevMouse.x;
       const dy = e.clientY - prevMouse.y;
       globe.rotation.y += dx * 0.004;
-      globe.rotation.x = Math.max(-0.5, Math.min(0.5, globe.rotation.x + dy * 0.004));
+      globe.rotation.x = Math.max(-1.2, Math.min(1.2, globe.rotation.x + dy * 0.004));
       velocity = { x: dy * 0.004, y: dx * 0.004 };
       prevMouse = { x: e.clientX, y: e.clientY };
     };

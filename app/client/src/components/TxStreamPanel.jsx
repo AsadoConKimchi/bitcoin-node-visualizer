@@ -215,7 +215,7 @@ export default function TxStreamPanel({
                           w-[300px] max-h-[60vh] overflow-y-auto
                           bg-panel-bg-solid border border-tx-blue/20 rounded-xl
                           px-4 py-3 font-mono text-sm backdrop-blur-md shadow-lg"
-               style={{ top: 56, right: 396 }}>
+               style={{ top: 120, right: 396 }}>
             <div className="flex justify-between items-center mb-2">
               <span className="text-tx-blue font-bold text-xs tracking-wide">TX 검증 상세</span>
               <button onClick={() => setExpandedTxid(null)}

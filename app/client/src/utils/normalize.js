@@ -73,6 +73,7 @@ export function normalizeRpcTx(rpc) {
       confirmed: rpc.blockhash != null,
       block_height: rpc.blockheight ?? null,
       block_time: rpc.blocktime ?? null,
+      confirmations: rpc.confirmations ?? null,
     },
   };
 }
