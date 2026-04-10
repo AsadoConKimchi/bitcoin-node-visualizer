@@ -237,6 +237,13 @@ const ChainStrip = forwardRef(function ChainStrip({
     setLoading(false);
   }, [loading, reachedGenesis, allBlocks, latestHeight, sourceType]);
 
+  // 좌측 스크롤 가능 여부 감지
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const updateScrollIndicator = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) setCanScrollLeft(el.scrollLeft > 10);
+  }, []);
+
   // 스크롤 좌측 끝 감지 (디바운스)
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -394,13 +401,6 @@ const ChainStrip = forwardRef(function ChainStrip({
       </div>
     );
   }
-
-  // 좌측 스크롤 가능 여부 감지
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const updateScrollIndicator = useCallback(() => {
-    const el = scrollRef.current;
-    if (el) setCanScrollLeft(el.scrollLeft > 10);
-  }, []);
 
   return (
     <div className="relative w-full z-[var(--z-strip)]
