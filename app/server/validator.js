@@ -347,6 +347,8 @@ async function processRawBlock(buf) {
     broadcaster.broadcast('block:received', summary);
     setTimeout(() => broadcaster.broadcast('block:validated', { ...summary, merkleOk: merkleMatch }), 500);
     setTimeout(() => broadcaster.broadcast('block:propagated', summary), 1000);
+    // 멤풀 sweep용 — 블록에 포함된 TX 목록 전송
+    setTimeout(() => broadcaster.broadcast('block:mined', { count: txids.length, txids }), 1500);
 
     console.log(
       `[validator] 블록 수신 height=? hash=${blockHash.slice(0, 12)}... txs=${txids.length} merkle=${merkleMatch ? 'OK' : 'FAIL'}`
@@ -398,6 +400,8 @@ async function processBlock(block, source = 'rpc') {
     broadcaster.broadcast('block:received', summary);
     setTimeout(() => broadcaster.broadcast('block:validated', summary), 500);
     setTimeout(() => broadcaster.broadcast('block:propagated', summary), 1000);
+    // 멤풀 sweep용 — 블록에 포함된 TX 목록 전송
+    setTimeout(() => broadcaster.broadcast('block:mined', { count: txids.length, txids }), 1500);
 
     console.log(
       `[validator] 블록 처리 height=${block.height} hash=${block.hash.slice(0, 12)}... txs=${txids.length} merkle=${merkleOk ? 'OK' : 'FAIL'}`

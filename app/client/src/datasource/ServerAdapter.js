@@ -198,6 +198,9 @@ export class ServerAdapter extends EventBus {
       case 'block:propagated':
         this.emit('block:propagated', data);
         break;
+      case 'block:mined':
+        this.emit('block:mined', data);
+        break;
       case 'tx:verified':
         this.emit('tx:verified', data);
         break;
