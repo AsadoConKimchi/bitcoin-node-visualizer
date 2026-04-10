@@ -86,14 +86,21 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick,
     if (addr && onAddressClick) onAddressClick(addr);
   };
 
+  // ESC 키로 모달 닫기
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   return (
     <>
       <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[var(--z-modal-backdrop)]"
            style={{ right: sidebarWidth }} />
 
       <div className="absolute top-1/2 -translate-y-1/2
-                      w-[720px] max-h-[85vh] overflow-y-auto bg-panel-bg-solid
-                      border border-white/10 rounded-xl px-5 py-4
+                      w-[720px] max-h-[85vh] flex flex-col overflow-hidden bg-panel-bg-solid
+                      border border-white/10 rounded-xl
                       font-mono text-sm text-text-primary backdrop-blur-md z-[var(--z-modal)]
                       max-sm:w-[calc(100vw-16px)] max-sm:max-h-[90vh]"
            style={{
@@ -103,39 +110,44 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick,
              boxShadow: 'var(--shadow-modal)',
            }}>
 
-        {/* 1. Header — TXID + Copy + 확인 배지 */}
-        <div className="flex justify-between items-start mb-3 pb-2 border-b border-white/10">
-          <div className="flex-1 min-w-0">
-            <div className="text-tx-blue font-bold text-base mb-1">Transaction</div>
-            <div className="flex items-center gap-1">
-              <span className="text-label text-text-dim font-mono break-all">{tx?.txid}</span>
-              {tx?.txid && <CopyButton text={tx.txid} />}
+        {/* 1. Header — TXID + Copy + 확인 배지 (항상 보이도록 shrink-0) */}
+        <div className="shrink-0 px-5 pt-4 pb-0">
+          <div className="flex justify-between items-start mb-3 pb-2 border-b border-white/10">
+            <div className="flex-1 min-w-0">
+              <div className="text-tx-blue font-bold text-base mb-1">Transaction</div>
+              <div className="flex items-center gap-1">
+                <span className="text-label text-text-dim font-mono break-all">{tx?.txid}</span>
+                {tx?.txid && <CopyButton text={tx.txid} />}
+              </div>
+              <div className="flex gap-2 mt-1.5 flex-wrap">
+                {detail?.status?.confirmed ? (
+                  <span className="text-label bg-green-500/15 border border-green-500/30 text-green-400 px-1.5 py-0.5 rounded">
+                    {detail.status.block_height
+                      ? `Confirmed (Block #${detail.status.block_height.toLocaleString()})`
+                      : 'Confirmed'}
+                  </span>
+                ) : detail ? (
+                  <span className="text-label bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 px-1.5 py-0.5 rounded">
+                    Unconfirmed
+                  </span>
+                ) : null}
+                {features.map((f, i) => (
+                  <FeatureBadge key={i} label={f.label} color={f.color} />
+                ))}
+              </div>
             </div>
-            <div className="flex gap-2 mt-1.5 flex-wrap">
-              {detail?.status?.confirmed ? (
-                <span className="text-label bg-green-500/15 border border-green-500/30 text-green-400 px-1.5 py-0.5 rounded">
-                  {detail.status.block_height
-                    ? `Confirmed (Block #${detail.status.block_height.toLocaleString()})`
-                    : 'Confirmed'}
-                </span>
-              ) : detail ? (
-                <span className="text-label bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 px-1.5 py-0.5 rounded">
-                  Unconfirmed
-                </span>
-              ) : null}
-              {features.map((f, i) => (
-                <FeatureBadge key={i} label={f.label} color={f.color} />
-              ))}
-            </div>
+            <button
+              onClick={onClose}
+              className="bg-transparent border border-white/10 rounded text-muted
+                        cursor-pointer px-2 py-0.5 text-sm hover:text-text-primary hover:bg-white/5 shrink-0 ml-2"
+            >
+              ✕
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="bg-transparent border border-white/10 rounded text-muted
-                      cursor-pointer px-2 py-0.5 text-sm hover:text-text-primary hover:bg-white/5 shrink-0 ml-2"
-          >
-            ✕
-          </button>
         </div>
+
+        {/* 스크롤 가능한 콘텐츠 영역 */}
+        <div className="flex-1 overflow-y-auto px-5 pb-4">
 
         {loading && !detail && (
           <div className="text-text-dim text-center py-4">로드 중…</div>
@@ -367,7 +379,7 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick,
           </>
         )}
 
-        {!detail && !loading && (
+        {!detail && !loading && detail === null && (
           <div className="space-y-1">
             <div className="flex justify-between py-1 border-b border-dark-surface">
               <span className="text-muted text-sm">Inputs</span>
@@ -379,6 +391,7 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick,
             </div>
           </div>
         )}
+        </div>{/* 스크롤 영역 끝 */}
       </div>
     </>
   );

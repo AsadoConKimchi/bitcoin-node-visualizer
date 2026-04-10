@@ -31,7 +31,12 @@ export default function TxTooltip({ tx, x, y }) {
   const voutCount = tx.vout ?? tx.outputCount ?? '?';
   const vbytes = tx.weight ? (tx.weight / 4).toFixed(2) : tx.size ? tx.size : '?';
   const feeRate = tx.feeRate ?? (tx.fee && tx.weight ? (tx.fee / (tx.weight / 4)).toFixed(2) : '?');
-  const fee = tx.fee ?? '?';
+  // fee가 없으면 feeRate * vbytes로 추정
+  const fee = tx.fee != null
+    ? tx.fee
+    : (tx.feeRate && tx.weight)
+      ? `~${Math.round(tx.feeRate * tx.weight / 4)}`
+      : '?';
 
   // BTC 값 포맷
   let valueStr = null;

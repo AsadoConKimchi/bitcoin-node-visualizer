@@ -166,7 +166,7 @@ const HudPanels = forwardRef(function HudPanels({
           <div className="text-label text-white/40 mb-0.5">📍 Seoul (default)</div>
         )}
         {isServer && nodeInfo?.subversion && (
-          <div className="text-label text-white/50 mb-0.5">
+          <div className="text-label text-white/50 mb-0.5 truncate" title={`${nodeInfo.subversion.replace(/\//g, '')} · ${nodeInfo.connections ?? '?'} peers`}>
             {nodeInfo.subversion.replace(/\//g, '')}
             {' · '}{nodeInfo.connections ?? '?'} peers
             {nodeInfo.inbound != null && ` (${nodeInfo.outbound}↑ ${nodeInfo.inbound}↓)`}
@@ -283,7 +283,7 @@ const HudPanels = forwardRef(function HudPanels({
 
         {/* 노드 정보 (서버 모드) */}
         {isServer && nodeInfo?.subversion && (
-          <div className="text-label text-white/50 mb-0.5">
+          <div className="text-label text-white/50 mb-0.5 truncate" title={`${nodeInfo.subversion.replace(/\//g, '')} · ${nodeInfo.connections ?? '?'} peers`}>
             {nodeInfo.subversion.replace(/\//g, '')}
             {' · '}{nodeInfo.connections ?? '?'} peers
             {nodeInfo.inbound != null && ` (${nodeInfo.outbound}↑ ${nodeInfo.inbound}↓)`}

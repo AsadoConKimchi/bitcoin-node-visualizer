@@ -125,8 +125,8 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isS
     globe.arcEndLat('endLat');
     globe.arcEndLng('endLng');
     globe.arcColor('color');
-    globe.arcAltitudeAutoScale(0.15);
-    globe.arcAltitude(d => d.type === 'connection' ? 0.08 : 0.08);
+    globe.arcAltitudeAutoScale(0.45);
+    globe.arcAltitude(d => d.type === 'connection' ? 0.15 : 0.12);
     globe.arcStroke(d => d.type === 'connection' ? 0.5 : d.type === 'block' ? 3.0 : 2.0);
     globe.arcDashLength(d => d.type === 'connection' ? 1.0 : d.type === 'block' ? 0.04 : 0.03);
     globe.arcDashGap(d => d.type === 'connection' ? 0 : 1.0);
@@ -249,6 +249,25 @@ const GlobeScene = forwardRef(function GlobeScene({ nodePoints, arcs, rings, isS
 
   useImperativeHandle(ref, () => ({
     getGlobe: () => sceneRef.current?.globe,
+    // P2P 모드 진입 시 특정 좌표로 지구본 회전
+    pointToCoords: (lat, lng) => {
+      const globe = sceneRef.current?.globe;
+      if (!globe) return;
+      const targetY = -lng * (Math.PI / 180);
+      const targetX = -lat * (Math.PI / 180) * 0.5;
+      const startY = globe.rotation.y;
+      const startX = globe.rotation.x;
+      const duration = 1200;
+      const startTime = Date.now();
+      const tick = () => {
+        const t = Math.min(1, (Date.now() - startTime) / duration);
+        const ease = t * (2 - t); // easeOutQuad
+        globe.rotation.y = startY + (targetY - startY) * ease;
+        globe.rotation.x = startX + (targetX - startX) * ease;
+        if (t < 1) requestAnimationFrame(tick);
+      };
+      tick();
+    },
   }));
 
   return (

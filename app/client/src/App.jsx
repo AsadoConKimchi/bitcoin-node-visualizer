@@ -186,6 +186,7 @@ export default function App() {
   // ── BitfeedFloor ref ──
   const bitfeedRef = useRef(null);
   const chainStripRef = useRef(null);
+  const globeRef = useRef(null);
 
   // ── 마운트 시 자동 감지 ──
   useEffect(() => {
@@ -506,6 +507,14 @@ export default function App() {
         blockVerify: { ...ws.blockVerify, visible: next.verifyCenter },
         nodeInfo: { ...ws.nodeInfo, visible: next.p2p },
       }));
+
+      // P2P 모드 진입 시 내 노드 위치로 지구본 회전
+      if (next.p2p) {
+        const myNode = nodePointsRef.current.find(n => n.isMyNode);
+        if (myNode) {
+          setTimeout(() => globeRef.current?.pointToCoords(myNode.lat, myNode.lng), 100);
+        }
+      }
 
       if (next.verifyCenter) {
         const blocks = recentBlocksRef.current;
@@ -855,7 +864,7 @@ export default function App() {
         right: ccCollapsed ? 28 : CC_WIDTH,
         visibility: selectedBlock ? 'hidden' : 'visible',
       }}>
-        <GlobeScene nodePoints={nodePoints} arcs={combinedArcs} rings={rings} isServerMode={sourceType === 'server'} onReady={() => setGlobeReady(true)} />
+        <GlobeScene ref={globeRef} nodePoints={nodePoints} arcs={combinedArcs} rings={rings} isServerMode={sourceType === 'server'} onReady={() => setGlobeReady(true)} />
       </div>
 
       {/* 블록 상세 — Globe 영역 대체 */}

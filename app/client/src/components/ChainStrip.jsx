@@ -241,11 +241,12 @@ const ChainStrip = forwardRef(function ChainStrip({
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
+    updateScrollIndicator();
     if (el.scrollLeft < 200) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => loadOlderBlocks(), DEBOUNCE_MS);
     }
-  }, [loadOlderBlocks]);
+  }, [loadOlderBlocks, updateScrollIndicator]);
 
   // 초기 프리로드
   useEffect(() => {
@@ -394,9 +395,21 @@ const ChainStrip = forwardRef(function ChainStrip({
     );
   }
 
+  // 좌측 스크롤 가능 여부 감지
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const updateScrollIndicator = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) setCanScrollLeft(el.scrollLeft > 10);
+  }, []);
+
   return (
-    <div className="absolute top-[48px] left-0 right-0 z-[var(--z-strip)]
+    <div className="relative w-full z-[var(--z-strip)]
                     bg-dark-bg/80 backdrop-blur-sm border-b border-dark-border">
+      {/* 좌측 fade — 스크롤 가능할 때만 표시 */}
+      {canScrollLeft && (
+        <div className="absolute left-0 top-0 bottom-0 w-12 z-10 pointer-events-none"
+             style={{ background: 'linear-gradient(to right, rgba(5,8,16,0.95), transparent)' }} />
+      )}
       {/* 모바일 접기 버튼 */}
       {isMobile && (
         <button
