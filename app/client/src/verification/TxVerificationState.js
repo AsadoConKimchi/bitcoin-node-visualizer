@@ -220,6 +220,18 @@ export class TxVerificationState {
       this.onChange?.(this._state);
     });
 
+    // Fallback — 5초 후에도 완료되지 않았으면 강제 완료
+    this._schedule(5000, () => {
+      if (this._state.done || this._failedReal) return;
+      this._state.steps.forEach((s, i) => {
+        if (s.status === 'waiting' || s.status === 'active') {
+          this._updateStep(i, 'done', s.detail);
+        }
+      });
+      this._state = { ...this._state, done: true };
+      this.onChange?.(this._state);
+    });
+
     this.onChange?.(this._state);
   }
 

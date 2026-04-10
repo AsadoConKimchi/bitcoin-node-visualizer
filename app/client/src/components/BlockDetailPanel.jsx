@@ -763,7 +763,8 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
   return (
       <div className="absolute inset-0 overflow-y-auto overflow-x-hidden bg-panel-bg-solid
                       font-mono text-sm text-text-primary z-[var(--z-modal)]
-                      px-5 py-4 flex flex-col border-r border-white/10">
+                      px-5 py-4 flex flex-col border-r border-white/10"
+           style={{ right: sidebarWidth }}>
 
         {/* 1. Header */}
         <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/10">

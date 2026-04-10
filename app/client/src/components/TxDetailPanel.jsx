@@ -21,7 +21,7 @@ function FeatureBadge({ label, color }) {
   );
 }
 
-export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick, sidebarWidth = 0 }) {
+export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick, sidebarWidth = 0, latestHeight }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -121,13 +121,16 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick,
                 {tx?.txid && <CopyButton text={tx.txid} />}
               </div>
               <div className="flex gap-2 mt-1.5 flex-wrap">
-                {detail?.status?.confirmed ? (
+                {detail?.status?.confirmed ? (() => {
+                  const confs = latestHeight && detail.status.block_height
+                    ? latestHeight - detail.status.block_height + 1 : null;
+                  return (
                   <span className="text-label bg-green-500/15 border border-green-500/30 text-green-400 px-1.5 py-0.5 rounded">
                     {detail.status.block_height
-                      ? `Confirmed (Block #${detail.status.block_height.toLocaleString()})`
+                      ? `Confirmed (Block #${detail.status.block_height.toLocaleString()}${confs != null ? ` · ${confs.toLocaleString()} confirmations` : ''})`
                       : 'Confirmed'}
-                  </span>
-                ) : detail ? (
+                  </span>);
+                })() : detail ? (
                   <span className="text-label bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 px-1.5 py-0.5 rounded">
                     Unconfirmed
                   </span>

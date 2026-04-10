@@ -934,7 +934,7 @@ export default function App() {
       />
 
       {/* 체인 스트립 — Globe 상단 (블록 상세 열려있으면 숨김) */}
-      <div className="absolute top-[48px] left-0 z-[var(--z-strip)]"
+      <div className="absolute top-[56px] left-0 z-[var(--z-strip)]"
            style={{ right: ccCollapsed ? 28 : CC_WIDTH, display: selectedBlock ? 'none' : undefined }}>
         <ChainStrip
           ref={chainStripRef}
@@ -1064,6 +1064,7 @@ export default function App() {
           sourceType={sourceType}
           onAddressClick={(addr) => { setSelectedTx(null); setSelectedAddress(addr); }}
           sidebarWidth={ccCollapsed ? 28 : CC_WIDTH}
+          latestHeight={blockHeight}
         />
       )}
 
