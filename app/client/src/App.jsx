@@ -756,10 +756,12 @@ export default function App() {
       // 블록 채굴 알림 배너
       setMineAlert({ height: data.height, txCount: data.txCount || data.nTx });
       setTimeout(() => setMineAlert(null), 4000);
-      // 블록 수신 시 검증센터로 전환 + 관제센터 블록 탭
-      setVisible({ p2p: false, verifyCenter: true, internals: false });
-      setCcTab('blockVerify');
-      setCcCollapsed(false);
+      // 블록 수신 시 검증센터로 전환 + 관제센터 블록 탭 (블록 상세 열려있으면 사이드바 유지)
+      if (!selectedBlockRef.current) {
+        setVisible({ p2p: false, verifyCenter: true, internals: false });
+        setCcTab('blockVerify');
+        setCcCollapsed(false);
+      }
     }));
 
     unsubs.push(ds.subscribe('block:validated', (data) => {
@@ -951,7 +953,7 @@ export default function App() {
       {/* 예상 블록 (P2P 모드) */}
       <MempoolBlocksPanel
         mempoolBlocks={mempoolBlocks}
-        visible={visible.p2p && mempoolBlocks.length > 0}
+        visible={visible.p2p && mempoolBlocks.length > 0 && !selectedBlock}
         topOffset={0}
       />
 

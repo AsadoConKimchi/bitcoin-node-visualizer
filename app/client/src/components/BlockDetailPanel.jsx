@@ -761,7 +761,7 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
   const pendingTotalFees = pendingBlock?.totalFees;
 
   return (
-      <div className="absolute inset-0 overflow-y-auto overflow-x-hidden bg-panel-bg-solid
+      <div className="absolute inset-0 overflow-y-auto bg-panel-bg-solid
                       font-mono text-sm text-text-primary z-[var(--z-modal)]
                       px-5 py-4 flex flex-col border-r border-white/10">
 
@@ -872,7 +872,7 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
             {detail && (
               <>
                 {/* 2. Treemap(좌) + 블록 정보(우) 사이드바이사이드 */}
-                <div className="flex gap-3 mb-3 max-sm:flex-col overflow-hidden">
+                <div className="flex gap-3 mb-3 max-sm:flex-col">
                   {/* 좌측 — TX FEE RATE MAP (정사각형) */}
                   <div className="w-[40%] shrink-0 min-w-0 bg-dark-surface/60 border border-dark-border rounded-lg p-2">
                     <div className="text-label text-muted font-bold mb-1">TX FEE RATE MAP</div>
@@ -899,7 +899,7 @@ export default function BlockDetailPanel({ block, mempoolBlocks, onClose, onTxCl
                   </div>
 
                   {/* 우측 — 블록 정보 + 통계 */}
-                  <div className="flex-1 max-sm:w-full space-y-3 min-w-0 overflow-hidden pr-8">
+                  <div className="flex-1 max-sm:w-full space-y-3 min-w-0 pr-4">
                     {/* 블록 메타정보 */}
                     <div className="space-y-0.5">
                       <InfoRow label="Hash" value={detail.id || block?.hash} mono copyable />
