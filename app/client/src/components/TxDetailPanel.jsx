@@ -98,14 +98,15 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick,
       <div onClick={onClose} className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[var(--z-modal-backdrop)]"
            style={{ right: sidebarWidth }} />
 
-      <div className="absolute top-1/2 -translate-y-1/2
+      {/* 센터링 래퍼 — fixed로 뷰포트 기준 정렬 */}
+      <div className="fixed inset-0 flex items-center justify-center z-[var(--z-modal)] pointer-events-none"
+           style={{ right: sidebarWidth }}>
+      <div className="pointer-events-auto
                       w-[720px] max-h-[85vh] flex flex-col overflow-hidden bg-panel-bg-solid
                       border border-white/10 rounded-xl
-                      font-mono text-sm text-text-primary backdrop-blur-md z-[var(--z-modal)]
+                      font-mono text-sm text-text-primary backdrop-blur-md
                       max-sm:w-[calc(100vw-16px)] max-sm:max-h-[90vh]"
            style={{
-             left: `calc((100vw - ${sidebarWidth}px) / 2)`,
-             transform: 'translate(-50%, -50%)',
              maxWidth: `calc(100vw - ${sidebarWidth}px - 32px)`,
              boxShadow: 'var(--shadow-modal)',
            }}>
@@ -393,6 +394,7 @@ export default function TxDetailPanel({ tx, onClose, sourceType, onAddressClick,
         )}
         </div>{/* 스크롤 영역 끝 */}
       </div>
+      </div>{/* 센터링 래퍼 끝 */}
     </>
   );
 }

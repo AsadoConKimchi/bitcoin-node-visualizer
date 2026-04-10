@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import MacWindow from './MacWindow.jsx';
 import { feeColor } from '../utils/colors.js';
 
@@ -183,8 +184,8 @@ export default function TxStreamPanel({
                   </div>
                 </div>
 
-                {/* 인라인 검증 상세 (임베디드) */}
-                {isExpanded && detailTx?.verifySnapshot && (
+                {/* 인라인 요약 — 클릭하면 플로팅 패널에서 상세 표시 */}
+                {isExpanded && detailTx?.verifySnapshot && !embedded && (
                   <div className="ml-4 mr-1 my-1 p-2.5 bg-dark-surface/50 rounded-lg border border-tx-blue/15">
                     <div className="text-tx-blue font-bold text-label tracking-wide mb-1">
                       ▸ TX 검증 상세
@@ -206,6 +207,34 @@ export default function TxStreamPanel({
           <div className="py-1.5 border-t border-dark-border text-mempool-green text-label text-center mt-2">
             → Mempool: {doneCount}건 이동 중
           </div>
+        )}
+
+        {/* 플로팅 검증 상세 패널 — 사이드바 왼쪽에 표시 */}
+        {expandedTxid && detailTx?.verifySnapshot && createPortal(
+          <div className="fixed z-[var(--z-hud-float)] pointer-events-auto
+                          w-[300px] max-h-[60vh] overflow-y-auto
+                          bg-panel-bg-solid border border-tx-blue/20 rounded-xl
+                          px-4 py-3 font-mono text-sm backdrop-blur-md shadow-lg"
+               style={{ top: 56, right: 396 }}>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-tx-blue font-bold text-xs tracking-wide">TX 검증 상세</span>
+              <button onClick={() => setExpandedTxid(null)}
+                      className="text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-sm">✕</button>
+            </div>
+            <div className="text-text-dim text-label font-mono mb-2 break-all">{detailTx.txid}</div>
+            {detailTx.verifySnapshot.done && detailTx.status !== 'failed' && (
+              <div className="text-success text-label mb-2 bg-green-500/10 rounded px-2 py-1">검증 완료 ✓</div>
+            )}
+            {detailTx.status === 'failed' && (
+              <div className="text-error text-label mb-2 bg-red-500/10 rounded px-2 py-1">검증 실패 ✗</div>
+            )}
+            <div className="space-y-0.5">
+              {detailTx.verifySnapshot.steps.map((step, i) => (
+                <InlineStepRow key={i} step={step} />
+              ))}
+            </div>
+          </div>,
+          document.body
         )}
       </div>
     );
